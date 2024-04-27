@@ -1,0 +1,14 @@
+/basis/cpp/build/CMakeFiles/edit_cache.dir
+/basis/cpp/build/CMakeFiles/rebuild_cache.dir
+/basis/cpp/build/core/CMakeFiles/edit_cache.dir
+/basis/cpp/build/core/CMakeFiles/rebuild_cache.dir
+/basis/cpp/build/core/serialization/CMakeFiles/basis_core_serialization.dir
+/basis/cpp/build/core/serialization/CMakeFiles/edit_cache.dir
+/basis/cpp/build/core/serialization/CMakeFiles/rebuild_cache.dir
+/basis/cpp/build/core/transport/CMakeFiles/edit_cache.dir
+/basis/cpp/build/core/transport/CMakeFiles/rebuild_cache.dir
+/basis/cpp/build/core/transport/inproc/CMakeFiles/edit_cache.dir
+/basis/cpp/build/core/transport/inproc/CMakeFiles/rebuild_cache.dir
+/basis/cpp/build/core/transport/test/CMakeFiles/test_basic_transport.dir
+/basis/cpp/build/core/transport/test/CMakeFiles/edit_cache.dir
+/basis/cpp/build/core/transport/test/CMakeFiles/rebuild_cache.dir

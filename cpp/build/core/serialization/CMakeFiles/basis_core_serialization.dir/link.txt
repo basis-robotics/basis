@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -shared -Wl,-soname,libbasis_core_serialization.so -o libbasis_core_serialization.so CMakeFiles/basis_core_serialization.dir/src/serialization.cpp.o 

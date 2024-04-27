@@ -1,0 +1,5 @@
+if(EXISTS "/basis/cpp/build/core/transport/test/test_basic_transport[1]_tests.cmake")
+  include("/basis/cpp/build/core/transport/test/test_basic_transport[1]_tests.cmake")
+else()
+  add_test(test_basic_transport_NOT_BUILT test_basic_transport_NOT_BUILT)
+endif()

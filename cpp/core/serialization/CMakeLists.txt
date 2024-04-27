@@ -1,0 +1,4 @@
+project(basis_core_serialization)
+
+add_library(basis_core_serialization SHARED src/serialization.cpp)
+target_include_directories(basis_core_serialization PUBLIC include)
