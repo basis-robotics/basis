@@ -427,3 +427,42 @@ events:
       
       
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/usr/share/cmake-3.28/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "build/_deps/googletest-src/googletest/cmake/internal_utils.cmake:70 (find_package)"
+      - "build/_deps/googletest-src/googletest/CMakeLists.txt:88 (config_compiler_and_linker)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/basis/cpp/build/CMakeFiles/CMakeScratch/TryCompile-rBPWyG"
+      binary: "/basis/cpp/build/CMakeFiles/CMakeScratch/TryCompile-rBPWyG"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_C_FLAGS: ""
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/basis/cpp/build/CMakeFiles/CMakeScratch/TryCompile-rBPWyG'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_10926/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_10926.dir/build.make CMakeFiles/cmTC_10926.dir/build
+        gmake[1]: Entering directory '/basis/cpp/build/CMakeFiles/CMakeScratch/TryCompile-rBPWyG'
+        Building C object CMakeFiles/cmTC_10926.dir/src.c.o
+        /usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -MD -MT CMakeFiles/cmTC_10926.dir/src.c.o -MF CMakeFiles/cmTC_10926.dir/src.c.o.d -o CMakeFiles/cmTC_10926.dir/src.c.o -c /basis/cpp/build/CMakeFiles/CMakeScratch/TryCompile-rBPWyG/src.c
+        Linking C executable cmTC_10926
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_10926.dir/link.txt --verbose=1
+        /usr/bin/cc CMakeFiles/cmTC_10926.dir/src.c.o -o cmTC_10926 
+        gmake[1]: Leaving directory '/basis/cpp/build/CMakeFiles/CMakeScratch/TryCompile-rBPWyG'
+        
+      exitCode: 0
+...

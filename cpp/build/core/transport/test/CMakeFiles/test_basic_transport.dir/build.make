@@ -92,6 +92,10 @@ test_basic_transport_EXTERNAL_OBJECTS =
 
 core/transport/test/test_basic_transport: core/transport/test/CMakeFiles/test_basic_transport.dir/test_basic_transport.cpp.o
 core/transport/test/test_basic_transport: core/transport/test/CMakeFiles/test_basic_transport.dir/build.make
+core/transport/test/test_basic_transport: lib/libgtest_main.a
+core/transport/test/test_basic_transport: core/transport/libbasis_core_transport_inproc.a
+core/transport/test/test_basic_transport: lib/libgtest.a
+core/transport/test/test_basic_transport: core/time/libbasis_core_time.a
 core/transport/test/test_basic_transport: core/transport/test/CMakeFiles/test_basic_transport.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable test_basic_transport"
 	cd /basis/cpp/build/core/transport/test && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/test_basic_transport.dir/link.txt --verbose=$(VERBOSE)
