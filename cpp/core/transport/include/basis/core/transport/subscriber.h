@@ -12,6 +12,9 @@ namespace transport {
 class SubscriberBase {
 public:
     virtual ~SubscriberBase() = default;
+
+    // TODO: this might not belong here at all, only needed by inproc?
+    virtual void OnRawPointer(const void* data, size_t size) = 0;
 };
 
 struct TopicInfo {
@@ -23,7 +26,7 @@ struct TopicInfo {
 };
 
 template<typename T_MSG> 
-struct MessageEvent<T_MSG> {
+struct MessageEvent {
     Time time;
     TopicInfo topic_info;
     
@@ -38,7 +41,9 @@ struct MessageEvent<T_MSG> {
 template<typename T_MSG>
 class SubscriberBaseT : public SubscriberBase {
 public:
-    std::function<(bool)(MessageEvent<T_MSG> message)> callback;
+    // TODO: this forces callbacks to be copyable
+    SubscriberBaseT(const std::function<void(const MessageEvent<T_MSG>& message)> callback) : callback(std::move(callback)) {}
+    std::function<void(MessageEvent<T_MSG> message)> callback;
 };
 
 }

@@ -7,6 +7,7 @@ namespace transport {
  */
 class PublisherBase {
 public:
+    PublisherBase() = default;
     virtual ~PublisherBase() = default;
 };
 

@@ -1,10 +1,21 @@
 #include <gtest/gtest.h>
 #include <basis/core/transport/inproc.h>
 
+using namespace basis::core::transport;
+
 TEST(Inproc, PubSub) {
     // Create a Coordinator
     InprocCoordinator coordinator;
     // Create a publisher
+    auto publisher = coordinator.Advertise<int>("topic");
+
+    auto subscriber = coordinator.Subscribe<int>("topic", [](const MessageEvent<int>& message) {
+        printf("Received message %i\n", *message.message);
+    });
+
+    for(int i = 0; i < 10; i++) {
+        publisher->Publish(i);
+    }
     // Create a subscriber
     // Subscribe the subscriber to the publisher
     // Publish a message
