@@ -13,8 +13,6 @@ class SubscriberBase {
 public:
     virtual ~SubscriberBase() = default;
 
-    // TODO: this might not belong here at all, only needed by inproc?
-    virtual void OnRawPointer(const void* data, size_t size) = 0;
 };
 
 struct TopicInfo {
@@ -30,7 +28,7 @@ struct MessageEvent {
     Time time;
     TopicInfo topic_info;
     
-    std::shared_ptr<T_MSG> message;
+    std::shared_ptr<const T_MSG> message;
 };
 
 /**
@@ -43,6 +41,9 @@ class SubscriberBaseT : public SubscriberBase {
 public:
     // TODO: this forces callbacks to be copyable
     SubscriberBaseT(const std::function<void(const MessageEvent<T_MSG>& message)> callback) : callback(std::move(callback)) {}
+
+    virtual void OnMessage(std::shared_ptr<const T_MSG> msg) = 0;
+
     std::function<void(MessageEvent<T_MSG> message)> callback;
 };
 

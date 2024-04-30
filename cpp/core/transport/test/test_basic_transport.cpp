@@ -5,11 +5,11 @@ using namespace basis::core::transport;
 
 TEST(Inproc, PubSub) {
     // Create a Coordinator
-    InprocCoordinator coordinator;
+    InprocCoordinator<int> coordinator;
     // Create a publisher
-    auto publisher = coordinator.Advertise<int>("topic");
+    auto publisher = coordinator.Advertise("topic");
 
-    auto subscriber = coordinator.Subscribe<int>("topic", [](const MessageEvent<int>& message) {
+    auto subscriber = coordinator.Subscribe("topic", [](const MessageEvent<int>& message) {
         printf("Received message %i\n", *message.message);
     });
 
