@@ -6,5 +6,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/basis/cpp/core/transport/include -I/basis/cpp/core/time/include -isystem /basis/cpp/build/_deps/googletest-src/googletest/include -isystem /basis/cpp/build/_deps/googletest-src/googletest
 
-CXX_FLAGS = -std=gnu++20
+CXX_FLAGS = -g -std=gnu++20
 

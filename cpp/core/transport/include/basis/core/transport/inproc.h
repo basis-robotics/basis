@@ -47,14 +47,34 @@ private:
 
 template<typename T_MSG>
 class InprocSubscriber : public SubscriberBaseT<T_MSG> {
+    // TODO: buffer size
 public:
     InprocSubscriber(const std::function<void(const MessageEvent<T_MSG>& message)> callback) : SubscriberBaseT<T_MSG>(callback) {}
 
-    virtual void OnMessage(std::shared_ptr<const T_MSG> msg) {
+    virtual void OnMessage(std::shared_ptr<const T_MSG> msg) override {
+        std::lock_guard lock(buffer_mutex);
         MessageEvent<T_MSG> event;
         event.message = msg;
-        this->callback(event);
+        buffer.emplace_back(std::move(event));
     }
+
+    // TODO: if done this way, no cb needed
+    virtual void ConsumeMessages() override {
+        std::vector<MessageEvent<T_MSG>> messages_out;
+            printf("callback\n");
+
+        {
+            std::lock_guard lock(buffer_mutex);
+            std::swap(messages_out, buffer);    
+        }
+        for(auto& message : messages_out) {
+            this->callback(message);
+        }
+
+    }
+
+    std::mutex buffer_mutex;
+    std::vector<MessageEvent<T_MSG>> buffer;
 };
 
 
@@ -73,10 +93,10 @@ public:
         return publisher;
     }
 
-    std::unique_ptr<SubscriberBaseT<T_MSG>> Subscribe(std::string_view topic, std::function<void(MessageEvent<T_MSG> message)> callback) {
+    std::shared_ptr<SubscriberBaseT<T_MSG>> Subscribe(std::string_view topic, std::function<void(MessageEvent<T_MSG> message)> callback) {
         auto subscriber = std::make_shared<InprocSubscriber<T_MSG>>(callback);
         subscribers.insert({std::string{topic}, subscriber});
-        return nullptr;
+        return subscriber;
     }
 
 
@@ -102,6 +122,7 @@ private:
         }
     }
 */
+
     std::unordered_map<std::string, std::shared_ptr<PublisherBase>> publishers;
     // mutex please
 

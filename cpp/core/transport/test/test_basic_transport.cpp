@@ -16,6 +16,8 @@ TEST(Inproc, PubSub) {
     for(int i = 0; i < 10; i++) {
         publisher->Publish(i);
     }
+
+    subscriber->ConsumeMessages();
     // Create a subscriber
     // Subscribe the subscriber to the publisher
     // Publish a message

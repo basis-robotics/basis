@@ -44,6 +44,8 @@ public:
 
     virtual void OnMessage(std::shared_ptr<const T_MSG> msg) = 0;
 
+    virtual void ConsumeMessages() = 0;
+
     std::function<void(MessageEvent<T_MSG> message)> callback;
 };
 
