@@ -6,4 +6,4 @@ target_include_directories(basis_plugins_transport_tcp PUBLIC include)
 
 add_library(basis::plugins::transport::tcp ALIAS basis_plugins_transport_tcp)
 
-# add_subdirectory(test)
+add_subdirectory(test)

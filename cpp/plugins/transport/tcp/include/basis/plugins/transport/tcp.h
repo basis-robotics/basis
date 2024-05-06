@@ -1,12 +1,27 @@
 #include <basis/core/transport/subscriber.h>
 #include <basis/core/transport/publisher.h>
+#include <basis/core/transport/transport.h>
 #include <basis/core/networking/socket.h>
 
 
-namespace basis {
-namespace plugins {
-namespace transport {
+namespace basis::plugins::transport {
 
+class TcpSender : public core::transport::TransportSender {
+    TcpSender(std::string_view address)
+
+    virtual int Send(const char* data, size_t len) override;
+    
+    TcpSocket socket;
+};
+
+class TcpReceiver : public core::transport::TransportReceiver {
+    virtual int Receive(char* buffer, size_t buffer_len) override;
+
+    TcpSocket socket;
+};
+
+
+#if 0
 // TODO: why does this need to be typed?
 
 template<typename T_MSG>
@@ -44,8 +59,6 @@ public:
     
 };
 
+#endif
 
-
-} // namespace transport
-} // namespace plugins
-} // namespace basis
+} // namespace basis::plugins::transport
