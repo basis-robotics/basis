@@ -289,6 +289,32 @@ example/fast:
 .PHONY : example/fast
 
 #=============================================================================
+# Target rules for targets named basis_core_networking
+
+# Build rule for target.
+basis_core_networking: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 basis_core_networking
+.PHONY : basis_core_networking
+
+# fast build rule for target.
+basis_core_networking/fast:
+	$(MAKE) $(MAKESILENT) -f core/networking/CMakeFiles/basis_core_networking.dir/build.make core/networking/CMakeFiles/basis_core_networking.dir/build
+.PHONY : basis_core_networking/fast
+
+#=============================================================================
+# Target rules for targets named test_tcp
+
+# Build rule for target.
+test_tcp: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_tcp
+.PHONY : test_tcp
+
+# fast build rule for target.
+test_tcp/fast:
+	$(MAKE) $(MAKESILENT) -f core/networking/test/CMakeFiles/test_tcp.dir/build.make core/networking/test/CMakeFiles/test_tcp.dir/build
+.PHONY : test_tcp/fast
+
+#=============================================================================
 # Target rules for targets named basis_plugins_transport_tcp
 
 # Build rule for target.
@@ -314,6 +340,7 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... test"
+	@echo "... basis_core_networking"
 	@echo "... basis_core_serialization"
 	@echo "... basis_core_time"
 	@echo "... basis_core_transport_inproc"
@@ -324,6 +351,7 @@ help:
 	@echo "... gtest"
 	@echo "... gtest_main"
 	@echo "... test_basic_transport"
+	@echo "... test_tcp"
 .PHONY : help
 
 

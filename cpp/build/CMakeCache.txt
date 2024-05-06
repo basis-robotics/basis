@@ -330,6 +330,24 @@ basis_core_IS_TOP_LEVEL:STATIC=OFF
 basis_core_SOURCE_DIR:STATIC=/basis/cpp/core
 
 //Value Computed by CMake
+basis_core_network_BINARY_DIR:STATIC=/basis/cpp/build/core/networking
+
+//Value Computed by CMake
+basis_core_network_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+basis_core_network_SOURCE_DIR:STATIC=/basis/cpp/core/networking
+
+//Value Computed by CMake
+basis_core_networking_BINARY_DIR:STATIC=/basis/cpp/build/core/networking
+
+//Value Computed by CMake
+basis_core_networking_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+basis_core_networking_SOURCE_DIR:STATIC=/basis/cpp/core/networking
+
+//Value Computed by CMake
 basis_core_serialization_BINARY_DIR:STATIC=/basis/cpp/build/core/serialization
 
 //Value Computed by CMake
@@ -337,6 +355,15 @@ basis_core_serialization_IS_TOP_LEVEL:STATIC=OFF
 
 //Value Computed by CMake
 basis_core_serialization_SOURCE_DIR:STATIC=/basis/cpp/core/serialization
+
+//Value Computed by CMake
+basis_core_socket_BINARY_DIR:STATIC=/basis/cpp/build/core/socket
+
+//Value Computed by CMake
+basis_core_socket_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+basis_core_socket_SOURCE_DIR:STATIC=/basis/cpp/core/socket
 
 //Value Computed by CMake
 basis_core_time_BINARY_DIR:STATIC=/basis/cpp/build/core/time
@@ -572,7 +599,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=11
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=13
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP

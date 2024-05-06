@@ -139,6 +139,7 @@ core/all: core/serialization/all
 core/all: core/time/all
 core/all: core/transport/all
 core/all: core/unit/all
+core/all: core/networking/all
 .PHONY : core/all
 
 # Recursive "preinstall" directory target.
@@ -146,6 +147,7 @@ core/preinstall: core/serialization/preinstall
 core/preinstall: core/time/preinstall
 core/preinstall: core/transport/preinstall
 core/preinstall: core/unit/preinstall
+core/preinstall: core/networking/preinstall
 .PHONY : core/preinstall
 
 # Recursive "clean" directory target.
@@ -153,7 +155,40 @@ core/clean: core/serialization/clean
 core/clean: core/time/clean
 core/clean: core/transport/clean
 core/clean: core/unit/clean
+core/clean: core/networking/clean
 .PHONY : core/clean
+
+#=============================================================================
+# Directory level rules for directory core/networking
+
+# Recursive "all" directory target.
+core/networking/all: core/networking/CMakeFiles/basis_core_networking.dir/all
+core/networking/all: core/networking/test/all
+.PHONY : core/networking/all
+
+# Recursive "preinstall" directory target.
+core/networking/preinstall: core/networking/test/preinstall
+.PHONY : core/networking/preinstall
+
+# Recursive "clean" directory target.
+core/networking/clean: core/networking/CMakeFiles/basis_core_networking.dir/clean
+core/networking/clean: core/networking/test/clean
+.PHONY : core/networking/clean
+
+#=============================================================================
+# Directory level rules for directory core/networking/test
+
+# Recursive "all" directory target.
+core/networking/test/all: core/networking/test/CMakeFiles/test_tcp.dir/all
+.PHONY : core/networking/test/all
+
+# Recursive "preinstall" directory target.
+core/networking/test/preinstall:
+.PHONY : core/networking/test/preinstall
+
+# Recursive "clean" directory target.
+core/networking/test/clean: core/networking/test/CMakeFiles/test_tcp.dir/clean
+.PHONY : core/networking/test/clean
 
 #=============================================================================
 # Directory level rules for directory core/serialization
@@ -254,7 +289,7 @@ plugins/transport/tcp/clean: plugins/transport/tcp/CMakeFiles/basis_plugins_tran
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
 	$(MAKE) $(MAKESILENT) -f _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/depend
 	$(MAKE) $(MAKESILENT) -f _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=11,12 "Built target gmock"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=13,14 "Built target gmock"
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/all
 
 # Build rule for subdir invocation for target.
@@ -281,7 +316,7 @@ _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/all: _deps/googletes
 _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
 	$(MAKE) $(MAKESILENT) -f _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/depend
 	$(MAKE) $(MAKESILENT) -f _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=13,14 "Built target gmock_main"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=15,16 "Built target gmock_main"
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/all
 
 # Build rule for subdir invocation for target.
@@ -307,7 +342,7 @@ _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/clean:
 _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all:
 	$(MAKE) $(MAKESILENT) -f _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest.dir/depend
 	$(MAKE) $(MAKESILENT) -f _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=15,16 "Built target gtest"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=17,18 "Built target gtest"
 .PHONY : _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
 
 # Build rule for subdir invocation for target.
@@ -333,7 +368,7 @@ _deps/googletest-build/googletest/CMakeFiles/gtest.dir/clean:
 _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
 	$(MAKE) $(MAKESILENT) -f _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/depend
 	$(MAKE) $(MAKESILENT) -f _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=17,18 "Built target gtest_main"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=19,20 "Built target gtest_main"
 .PHONY : _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/all
 
 # Build rule for subdir invocation for target.
@@ -359,7 +394,7 @@ _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/clean:
 core/serialization/CMakeFiles/basis_core_serialization.dir/all:
 	$(MAKE) $(MAKESILENT) -f core/serialization/CMakeFiles/basis_core_serialization.dir/build.make core/serialization/CMakeFiles/basis_core_serialization.dir/depend
 	$(MAKE) $(MAKESILENT) -f core/serialization/CMakeFiles/basis_core_serialization.dir/build.make core/serialization/CMakeFiles/basis_core_serialization.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=1,2 "Built target basis_core_serialization"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=3,4 "Built target basis_core_serialization"
 .PHONY : core/serialization/CMakeFiles/basis_core_serialization.dir/all
 
 # Build rule for subdir invocation for target.
@@ -385,7 +420,7 @@ core/serialization/CMakeFiles/basis_core_serialization.dir/clean:
 core/time/CMakeFiles/basis_core_time.dir/all:
 	$(MAKE) $(MAKESILENT) -f core/time/CMakeFiles/basis_core_time.dir/build.make core/time/CMakeFiles/basis_core_time.dir/depend
 	$(MAKE) $(MAKESILENT) -f core/time/CMakeFiles/basis_core_time.dir/build.make core/time/CMakeFiles/basis_core_time.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=3,4 "Built target basis_core_time"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=5,6 "Built target basis_core_time"
 .PHONY : core/time/CMakeFiles/basis_core_time.dir/all
 
 # Build rule for subdir invocation for target.
@@ -411,7 +446,7 @@ core/time/CMakeFiles/basis_core_time.dir/clean:
 core/transport/CMakeFiles/basis_core_transport_inproc.dir/all: core/time/CMakeFiles/basis_core_time.dir/all
 	$(MAKE) $(MAKESILENT) -f core/transport/CMakeFiles/basis_core_transport_inproc.dir/build.make core/transport/CMakeFiles/basis_core_transport_inproc.dir/depend
 	$(MAKE) $(MAKESILENT) -f core/transport/CMakeFiles/basis_core_transport_inproc.dir/build.make core/transport/CMakeFiles/basis_core_transport_inproc.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=5,6 "Built target basis_core_transport_inproc"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=7,8 "Built target basis_core_transport_inproc"
 .PHONY : core/transport/CMakeFiles/basis_core_transport_inproc.dir/all
 
 # Build rule for subdir invocation for target.
@@ -440,7 +475,7 @@ core/transport/test/CMakeFiles/test_basic_transport.dir/all: core/time/CMakeFile
 core/transport/test/CMakeFiles/test_basic_transport.dir/all: core/transport/CMakeFiles/basis_core_transport_inproc.dir/all
 	$(MAKE) $(MAKESILENT) -f core/transport/test/CMakeFiles/test_basic_transport.dir/build.make core/transport/test/CMakeFiles/test_basic_transport.dir/depend
 	$(MAKE) $(MAKESILENT) -f core/transport/test/CMakeFiles/test_basic_transport.dir/build.make core/transport/test/CMakeFiles/test_basic_transport.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=19,20 "Built target test_basic_transport"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=21,22 "Built target test_basic_transport"
 .PHONY : core/transport/test/CMakeFiles/test_basic_transport.dir/all
 
 # Build rule for subdir invocation for target.
@@ -466,7 +501,7 @@ core/transport/test/CMakeFiles/test_basic_transport.dir/clean:
 core/unit/CMakeFiles/example.dir/all:
 	$(MAKE) $(MAKESILENT) -f core/unit/CMakeFiles/example.dir/build.make core/unit/CMakeFiles/example.dir/depend
 	$(MAKE) $(MAKESILENT) -f core/unit/CMakeFiles/example.dir/build.make core/unit/CMakeFiles/example.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=9,10 "Built target example"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=11,12 "Built target example"
 .PHONY : core/unit/CMakeFiles/example.dir/all
 
 # Build rule for subdir invocation for target.
@@ -486,19 +521,74 @@ core/unit/CMakeFiles/example.dir/clean:
 .PHONY : core/unit/CMakeFiles/example.dir/clean
 
 #=============================================================================
+# Target rules for target core/networking/CMakeFiles/basis_core_networking.dir
+
+# All Build rule for target.
+core/networking/CMakeFiles/basis_core_networking.dir/all:
+	$(MAKE) $(MAKESILENT) -f core/networking/CMakeFiles/basis_core_networking.dir/build.make core/networking/CMakeFiles/basis_core_networking.dir/depend
+	$(MAKE) $(MAKESILENT) -f core/networking/CMakeFiles/basis_core_networking.dir/build.make core/networking/CMakeFiles/basis_core_networking.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=1,2 "Built target basis_core_networking"
+.PHONY : core/networking/CMakeFiles/basis_core_networking.dir/all
+
+# Build rule for subdir invocation for target.
+core/networking/CMakeFiles/basis_core_networking.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /basis/cpp/build/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 core/networking/CMakeFiles/basis_core_networking.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /basis/cpp/build/CMakeFiles 0
+.PHONY : core/networking/CMakeFiles/basis_core_networking.dir/rule
+
+# Convenience name for target.
+basis_core_networking: core/networking/CMakeFiles/basis_core_networking.dir/rule
+.PHONY : basis_core_networking
+
+# clean rule for target.
+core/networking/CMakeFiles/basis_core_networking.dir/clean:
+	$(MAKE) $(MAKESILENT) -f core/networking/CMakeFiles/basis_core_networking.dir/build.make core/networking/CMakeFiles/basis_core_networking.dir/clean
+.PHONY : core/networking/CMakeFiles/basis_core_networking.dir/clean
+
+#=============================================================================
+# Target rules for target core/networking/test/CMakeFiles/test_tcp.dir
+
+# All Build rule for target.
+core/networking/test/CMakeFiles/test_tcp.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
+core/networking/test/CMakeFiles/test_tcp.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/all
+core/networking/test/CMakeFiles/test_tcp.dir/all: core/networking/CMakeFiles/basis_core_networking.dir/all
+	$(MAKE) $(MAKESILENT) -f core/networking/test/CMakeFiles/test_tcp.dir/build.make core/networking/test/CMakeFiles/test_tcp.dir/depend
+	$(MAKE) $(MAKESILENT) -f core/networking/test/CMakeFiles/test_tcp.dir/build.make core/networking/test/CMakeFiles/test_tcp.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=23,24 "Built target test_tcp"
+.PHONY : core/networking/test/CMakeFiles/test_tcp.dir/all
+
+# Build rule for subdir invocation for target.
+core/networking/test/CMakeFiles/test_tcp.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /basis/cpp/build/CMakeFiles 8
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 core/networking/test/CMakeFiles/test_tcp.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /basis/cpp/build/CMakeFiles 0
+.PHONY : core/networking/test/CMakeFiles/test_tcp.dir/rule
+
+# Convenience name for target.
+test_tcp: core/networking/test/CMakeFiles/test_tcp.dir/rule
+.PHONY : test_tcp
+
+# clean rule for target.
+core/networking/test/CMakeFiles/test_tcp.dir/clean:
+	$(MAKE) $(MAKESILENT) -f core/networking/test/CMakeFiles/test_tcp.dir/build.make core/networking/test/CMakeFiles/test_tcp.dir/clean
+.PHONY : core/networking/test/CMakeFiles/test_tcp.dir/clean
+
+#=============================================================================
 # Target rules for target plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir
 
 # All Build rule for target.
 plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/all: core/time/CMakeFiles/basis_core_time.dir/all
 plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/all: core/transport/CMakeFiles/basis_core_transport_inproc.dir/all
+plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/all: core/networking/CMakeFiles/basis_core_networking.dir/all
 	$(MAKE) $(MAKESILENT) -f plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/build.make plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/depend
 	$(MAKE) $(MAKESILENT) -f plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/build.make plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=7,8 "Built target basis_plugins_transport_tcp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/basis/cpp/build/CMakeFiles --progress-num=9,10 "Built target basis_plugins_transport_tcp"
 .PHONY : plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/all
 
 # Build rule for subdir invocation for target.
 plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /basis/cpp/build/CMakeFiles 6
+	$(CMAKE_COMMAND) -E cmake_progress_start /basis/cpp/build/CMakeFiles 8
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /basis/cpp/build/CMakeFiles 0
 .PHONY : plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/rule
