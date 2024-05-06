@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <basis/core/transport/inproc.h>
-
+#include <thread>
 using namespace basis::core::transport;
 
 TEST(Inproc, PubSub) {
@@ -9,8 +9,10 @@ TEST(Inproc, PubSub) {
     // Create a publisher
     auto publisher = coordinator.Advertise("topic");
 
-    auto subscriber = coordinator.Subscribe("topic", [](const MessageEvent<int>& message) {
-        printf("Received message %i\n", *message.message);
+    int num_recv = 0;
+
+    auto subscriber = coordinator.Subscribe("topic", [&num_recv](const MessageEvent<int>& message) {
+        GTEST_ASSERT_EQ(*message.message, num_recv++);
     });
 
     for(int i = 0; i < 10; i++) {
@@ -18,17 +20,31 @@ TEST(Inproc, PubSub) {
     }
 
     subscriber->ConsumeMessages();
-    // Create a subscriber
-    // Subscribe the subscriber to the publisher
-    // Publish a message
-    // Check that the subscriber received the message
-
+    GTEST_ASSERT_EQ(num_recv, 10);
 }
 
-// Demonstrate some basic assertions.
-TEST(HelloTest, BasicAssertions) {
-  // Expect two strings not to be equal.
-  EXPECT_STRNE("hello", "world");
-  // Expect equality.
-  EXPECT_EQ(7 * 6, 42);
+TEST(Inproc, PubSubWait) {
+    // Create a Coordinator
+    InprocCoordinator<int> coordinator;
+    // Create a publisher
+    auto publisher = coordinator.Advertise("topic");
+
+    int num_recv = 0;
+
+    auto subscriber = coordinator.Subscribe("topic", [&num_recv](const MessageEvent<int>& message) {
+        GTEST_ASSERT_EQ(*message.message, num_recv++);
+    });
+
+    std::thread pub_thread([&](){
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        for(int i = 0; i < 10; i++) {
+            publisher->Publish(i);
+        }
+    });
+
+    subscriber->ConsumeMessages(true);
+    GTEST_ASSERT_GT(num_recv, 0);
+    pub_thread.join();
+    subscriber->ConsumeMessages();
+    GTEST_ASSERT_EQ(num_recv, 10);
 }

@@ -6,5 +6,5 @@ CXX_DEFINES = -Dbasis_core_serialization_EXPORTS
 
 CXX_INCLUDES = -I/basis/cpp/core/serialization/include
 
-CXX_FLAGS = -g -std=gnu++20 -fPIC
+CXX_FLAGS = -stdlib=libc++ -std=gnu++23 -fPIC
 

@@ -77,3 +77,11 @@
 /basis/cpp/build/core/unit/CMakeFiles/install.dir
 /basis/cpp/build/core/unit/CMakeFiles/install/local.dir
 /basis/cpp/build/core/unit/CMakeFiles/install/strip.dir
+/basis/cpp/build/plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir
+/basis/cpp/build/plugins/transport/tcp/CMakeFiles/test.dir
+/basis/cpp/build/plugins/transport/tcp/CMakeFiles/edit_cache.dir
+/basis/cpp/build/plugins/transport/tcp/CMakeFiles/rebuild_cache.dir
+/basis/cpp/build/plugins/transport/tcp/CMakeFiles/list_install_components.dir
+/basis/cpp/build/plugins/transport/tcp/CMakeFiles/install.dir
+/basis/cpp/build/plugins/transport/tcp/CMakeFiles/install/local.dir
+/basis/cpp/build/plugins/transport/tcp/CMakeFiles/install/strip.dir

@@ -1,6 +1,7 @@
 #pragma once
 
 // TODO: this should probably be pulled out into plugins/?
+// TODO: is this header only??
 
 #include <memory>
 #include <string_view>
@@ -56,25 +57,29 @@ public:
         MessageEvent<T_MSG> event;
         event.message = msg;
         buffer.emplace_back(std::move(event));
+        buffer_cv.notify_one();
     }
 
     // TODO: if done this way, no cb needed
-    virtual void ConsumeMessages() override {
+    // TODO: wait timeout
+    virtual void ConsumeMessages(const bool wait = false) override {
         std::vector<MessageEvent<T_MSG>> messages_out;
-            printf("callback\n");
-
         {
-            std::lock_guard lock(buffer_mutex);
+            std::unique_lock lock(buffer_mutex);
+            if(wait && buffer.empty()) {
+                buffer_cv.wait(lock, [this] { return !buffer.empty(); });
+            }
+            
             std::swap(messages_out, buffer);    
         }
         for(auto& message : messages_out) {
             this->callback(message);
         }
-
     }
 
     std::mutex buffer_mutex;
     std::vector<MessageEvent<T_MSG>> buffer;
+    std::condition_variable buffer_cv;
 };
 
 
@@ -102,7 +107,6 @@ public:
 
 private:
     virtual void Publish(const std::string& topic, std::shared_ptr<const T_MSG> msg) {
-        printf("Publishing\n");
         auto range = subscribers.equal_range(topic);
         if(range.first == range.second) {
             return;

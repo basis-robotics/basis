@@ -25,7 +25,7 @@ CMAKE_AR:FILEPATH=/usr/bin/ar
 
 //Choose the type of build, options are: None Debug Release RelWithDebInfo
 // MinSizeRel ...
-CMAKE_BUILD_TYPE:STRING=Debug
+CMAKE_BUILD_TYPE:STRING=
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
@@ -366,6 +366,15 @@ basis_core_unit_IS_TOP_LEVEL:STATIC=OFF
 basis_core_unit_SOURCE_DIR:STATIC=/basis/cpp/core/unit
 
 //Value Computed by CMake
+basis_plugins_transport_tcp_BINARY_DIR:STATIC=/basis/cpp/build/plugins/transport/tcp
+
+//Value Computed by CMake
+basis_plugins_transport_tcp_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+basis_plugins_transport_tcp_SOURCE_DIR:STATIC=/basis/cpp/plugins/transport/tcp
+
+//Value Computed by CMake
 gmock_BINARY_DIR:STATIC=/basis/cpp/build/_deps/googletest-build/googlemock
 
 //Value Computed by CMake
@@ -563,7 +572,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=10
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=11
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP

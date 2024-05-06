@@ -288,6 +288,19 @@ example/fast:
 	$(MAKE) $(MAKESILENT) -f core/unit/CMakeFiles/example.dir/build.make core/unit/CMakeFiles/example.dir/build
 .PHONY : example/fast
 
+#=============================================================================
+# Target rules for targets named basis_plugins_transport_tcp
+
+# Build rule for target.
+basis_plugins_transport_tcp: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 basis_plugins_transport_tcp
+.PHONY : basis_plugins_transport_tcp
+
+# fast build rule for target.
+basis_plugins_transport_tcp/fast:
+	$(MAKE) $(MAKESILENT) -f plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/build.make plugins/transport/tcp/CMakeFiles/basis_plugins_transport_tcp.dir/build
+.PHONY : basis_plugins_transport_tcp/fast
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -304,6 +317,7 @@ help:
 	@echo "... basis_core_serialization"
 	@echo "... basis_core_time"
 	@echo "... basis_core_transport_inproc"
+	@echo "... basis_plugins_transport_tcp"
 	@echo "... example"
 	@echo "... gmock"
 	@echo "... gmock_main"
