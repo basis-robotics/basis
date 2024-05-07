@@ -7,17 +7,45 @@
 namespace basis::plugins::transport {
 
 class TcpSender : public core::transport::TransportSender {
-    TcpSender(std::string_view address)
+    public:
+    TcpSender(core::networking::TcpSocket&& socket) : socket(std::move(socket)) {
+        
+    }
+
+    bool IsConnected() {
+        return socket.IsValid();
+    }
 
     virtual int Send(const char* data, size_t len) override;
-    
-    TcpSocket socket;
+    private:
+    core::networking::TcpSocket socket;
+
 };
 
 class TcpReceiver : public core::transport::TransportReceiver {
-    virtual int Receive(char* buffer, size_t buffer_len) override;
+    public:
+    TcpReceiver(std::string_view address, uint16_t port) : address(address), port(port) {
+        
+    }
 
-    TcpSocket socket;
+    virtual bool Connect() {
+        auto maybe_socket = core::networking::TcpSocket::Connect(address, port);
+        if(maybe_socket) {
+            socket = std::move(maybe_socket.value());
+            return true;
+        }
+        return false;
+    }
+    bool IsConnected() {
+        return socket.IsValid();
+    }
+
+    virtual int Receive(char* buffer, size_t buffer_len, int timeout_s) override;
+private:
+    core::networking::TcpSocket socket;
+
+    std::string address;
+    uint16_t port;
 };
 
 

@@ -81,11 +81,11 @@ using SocketError = Socket::Error;
 
 class TcpSocket : public Socket {
 public:
-    TcpSocket(int fd /* todo: pass in address info */) : Socket(fd) {
+    TcpSocket(int fd = -1 /* todo: pass in address info */) : Socket(fd) {
         
     }
      
-    static std::expected<TcpSocket, SocketError> Connect(const std::string& host, uint16_t port);
+    static std::expected<TcpSocket, SocketError> Connect(std::string_view host, uint16_t port);
 };
 
 

@@ -63,7 +63,7 @@ std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
 
 
 
-std::expected<TcpSocket, SocketError> TcpSocket::Connect(const std::string& host, uint16_t port) {
+std::expected<TcpSocket, SocketError> TcpSocket::Connect(std::string_view address, uint16_t port) {
     struct addrinfo hints, *res;
     int sockfd;
 
@@ -71,7 +71,7 @@ std::expected<TcpSocket, SocketError> TcpSocket::Connect(const std::string& host
     hints.ai_family = AF_UNSPEC;  // allow ipv4 or ipv6
     hints.ai_socktype = SOCK_STREAM;
 
-    int ret = getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints, &res);
+    int ret = getaddrinfo(std::string{address}.c_str(), std::to_string(port).c_str(), &hints, &res);
     if(ret != 0) {
         return std::unexpected(SocketError{Socket::ErrorSource::GETADDRINFO, ret});
     }

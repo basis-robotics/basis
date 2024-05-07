@@ -4,11 +4,11 @@
 
 namespace basis::core::transport {
 class TransportSender {
-    virtual void Send(const char* data, size_t len) = 0;
+    virtual int Send(const char* data, size_t len) = 0;
 };
 
 class TransportReceiver {
-    virtual int RecvInto(char* buffer, size_t buffer_len, int timeout_s) = 0;
+    virtual int Receive(char* buffer, size_t buffer_len, int timeout_s) = 0;
 };
 #if 0
 class Transport {
