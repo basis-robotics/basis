@@ -16,9 +16,12 @@ class TcpSender : public core::transport::TransportSender {
         return socket.IsValid();
     }
 
+
     virtual int Send(const char* data, size_t len) override;
-    private:
+private:
     core::networking::TcpSocket socket;
+
+//    std::thread thread;
 
 };
 

@@ -34,13 +34,12 @@ Currently:
 - make (or your build system of choice)
 - libprotobuf-dev
 - googletest 
-- libc++-17-dev
 
 Alternatively, go try out the docker container in `docker/`.
 
 ### Build
 
-`basis` requires a C++23 compatible compiler and standard library. Work will be done to provide shims for older compilers on request.
+`basis` (for now) requires a C++23 compatible compiler and standard library. In the very short term, shims will be introduced to give compatability with C++20 and 17.
 
 ```
 cd cpp/

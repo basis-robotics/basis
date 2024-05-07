@@ -16,6 +16,7 @@ Initial hitlist (1-2 months?):
     - query topics, types, etc
 - Transport Plugin testing
 - Inproc shared object testing
+- Time
 - Document everything
 - Logo
 - Domain/Email/Incorporate?
