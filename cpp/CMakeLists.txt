@@ -2,9 +2,16 @@ cmake_minimum_required(VERSION 3.28)
 project(basis)
 enable_testing()
 
+# TODO: support lower C++ versions by shimming new libraries with lite/abseil
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-stdlib=libc++")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # Workaround for std::expected not available in clang
+  add_compile_options(
+    -stdlib=libstdc++ -D__cpp_concepts=202002 -Wno-builtin-macro-redefined
+  )
+endif()
 
 include(FetchContent)
 FetchContent_Declare(

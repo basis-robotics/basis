@@ -29,4 +29,8 @@ TEST(TcpTransport, NoCoordinator) {
     receiver->Receive(buffer, 1024, 1);
 
     ASSERT_STREQ(buffer, message.c_str());
+
+
+//    using RawMessage = std::span<std::byte>;
+    //RawMessage m(message.data(), message.size())
 }
