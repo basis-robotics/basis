@@ -25,7 +25,7 @@ struct TopicInfo {
 
 template<typename T_MSG> 
 struct MessageEvent {
-    Time time;
+    MonotonicTime time;
     TopicInfo topic_info;
     
     std::shared_ptr<const T_MSG> message;
