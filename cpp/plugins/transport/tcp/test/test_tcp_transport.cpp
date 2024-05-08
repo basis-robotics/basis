@@ -33,9 +33,6 @@ TEST(TcpTransport, NoCoordinator) {
 
     ASSERT_STREQ(buffer, message.c_str());
 
-
-    //auto foobar = std::make_shared<std::byte[]>(message.size() + 1);
-
     auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, message.size() + 1);
     strcpy((char*)shared_message->GetMutablePayload().data(), message.data());
     printf("Mutable string is %s\n", shared_message->GetMutablePayload().data());
@@ -45,8 +42,12 @@ TEST(TcpTransport, NoCoordinator) {
     printf("Done sleeping\n");
     buffer[0] = 0;
     int rret = receiver->Receive(buffer, 1024, 1);
-    printf("recv got %i", rret);
+    printf("recv got %i bytes\n", rret);
 
     ASSERT_STREQ(buffer + sizeof(basis::core::transport::MessageHeader), message.c_str());
+
+    core::transport::MessageHeader* header = reinterpret_cast<core::transport::MessageHeader*>(buffer);
+    printf("Magic is %c %c %c %i\n", header->magic_version[0], header->magic_version[1], header->magic_version[2], header->magic_version[3]);
+    ASSERT_EQ(memcmp(header->magic_version, std::array<char, 4>{'B', 'A', 'S', 0}.data(), 4), 0);
 }
 }

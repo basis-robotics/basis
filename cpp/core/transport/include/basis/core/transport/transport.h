@@ -41,7 +41,6 @@ class RawMessage {
 public:
     RawMessage(MessageHeader::DataType data_type, uint32_t data_size)
         : storage(std::make_unique<std::byte[]>(data_size + sizeof(MessageHeader)))
-       // , span(storage.get(), data_size + sizeof(MessageHeader))
     {
         InitializeHeader(data_type, data_size);
     }
@@ -56,15 +55,24 @@ public:
     }
 
     //...it may be useful to be able to ask a shared memory transport for allocation, and then pass in a non owning handle to it (but dangerous!)
-
 #endif
-    std::span<const std::byte> GetPacket() const {
-        return std::span<const std::byte>(storage.get(), reinterpret_cast<const MessageHeader*>(storage.get())->data_size + sizeof(MessageHeader));
+
+    const MessageHeader* GetMessageHeader() const {
+        return reinterpret_cast<const MessageHeader*>(storage.get());
     }
+
+    std::span<const std::byte> GetPacket() const {
+        return std::span<const std::byte>(storage.get(), GetMessageHeader()->data_size + sizeof(MessageHeader));
+    }
+
     std::span<std::byte> GetMutablePayload() {
-        return std::span<std::byte>(storage.get() + sizeof(MessageHeader), reinterpret_cast<MessageHeader*>(storage.get())->data_size );
+        return std::span<std::byte>(storage.get() + sizeof(MessageHeader), GetMessageHeader()->data_size );
     }
 private:
+    MessageHeader* GetMessageHeader() {
+        return reinterpret_cast<MessageHeader*>(storage.get());
+    }
+
     void InitializeHeader(MessageHeader::DataType data_type, const uint32_t data_size) {
         MessageHeader* header = new(storage.get()) MessageHeader;
 
