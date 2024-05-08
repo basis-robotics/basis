@@ -1,6 +1,6 @@
 project(basis_plugins_transport_tcp)
 
-add_library(basis_plugins_transport_tcp STATIC src/tcp.cpp)
+add_library(basis_plugins_transport_tcp SHARED src/tcp.cpp)
 target_link_libraries(basis_plugins_transport_tcp basis::core::time basis::core::transport basis::core::networking)
 target_include_directories(basis_plugins_transport_tcp PUBLIC include)
 

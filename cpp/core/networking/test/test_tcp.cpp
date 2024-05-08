@@ -32,7 +32,7 @@ TEST(TcpListenSocket, TestAcceptSuccess) {
     
     const std::string message = "Hello, World!";
 
-    client_socket.Send(message.c_str(), message.size() + 1);
+    client_socket.Send((std::byte*)message.c_str(), message.size() + 1);
 
     char buffer[1024];
 
@@ -44,7 +44,7 @@ TEST(TcpListenSocket, TestAcceptSuccess) {
 
     memset(buffer, 0, 1024);
 
-    server_socket.Send(response.c_str(), response.size() + 1);
+    server_socket.Send((std::byte*)response.c_str(), response.size() + 1);
 
     client_socket.RecvInto(buffer, 1024);
 

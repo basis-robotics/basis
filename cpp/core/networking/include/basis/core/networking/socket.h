@@ -29,7 +29,7 @@ public:
     using Error = std::pair<Socket::ErrorSource, int>;
 
 
-    bool IsValid() {
+    bool IsValid() const {
         return fd != -1;
     }
 
@@ -61,7 +61,7 @@ protected:
 public:
 
     // TODO: should this be wrapped to handle partial sends?
-    int Send(const char* data, size_t len);
+    int Send(const std::byte* data, size_t len);
 
     // TODO: this should be moved out to a static to handle select on multiple sockets
     std::optional<Error> Select( int timeout_s, int timeout_ns);

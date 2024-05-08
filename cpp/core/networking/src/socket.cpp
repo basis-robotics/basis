@@ -23,7 +23,7 @@ void Socket::Close() {
     close(fd);
     fd = -1;
 }
-int Socket::Send(const char* data, size_t len) {
+int Socket::Send(const std::byte* data, size_t len) {
     return send(fd, data, len, 0);
 }
 

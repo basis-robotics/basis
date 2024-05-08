@@ -1,11 +1,14 @@
 #include <memory>
+#include <span>
 #include <thread>
 
 #include <gtest/gtest.h>
 #include <basis/plugins/transport/tcp.h>
 
-using namespace basis::plugins::transport;
 using namespace basis::core::networking;
+
+namespace basis::plugins::transport {
+
 
 TEST(TcpTransport, NoCoordinator) {
     auto maybe_listen_socket = TcpListenSocket::Create(4242);
@@ -23,7 +26,7 @@ TEST(TcpTransport, NoCoordinator) {
     ASSERT_TRUE(sender.IsConnected());
 
     const std::string message = "Hello, World!";
-    sender.Send(message.c_str(), message.size() + 1);
+    sender.Send((std::byte*)message.c_str(), message.size() + 1);
 
     char buffer[1024];
     receiver->Receive(buffer, 1024, 1);
@@ -31,6 +34,19 @@ TEST(TcpTransport, NoCoordinator) {
     ASSERT_STREQ(buffer, message.c_str());
 
 
-//    using RawMessage = std::span<std::byte>;
-    //RawMessage m(message.data(), message.size())
+    //auto foobar = std::make_shared<std::byte[]>(message.size() + 1);
+
+    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, message.size() + 1);
+    strcpy((char*)shared_message->GetMutablePayload().data(), message.data());
+    printf("Mutable string is %s\n", shared_message->GetMutablePayload().data());
+    sender.SendMessage(shared_message);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    printf("Done sleeping\n");
+    buffer[0] = 0;
+    int rret = receiver->Receive(buffer, 1024, 1);
+    printf("recv got %i", rret);
+
+    ASSERT_STREQ(buffer + sizeof(basis::core::transport::MessageHeader), message.c_str());
+}
 }

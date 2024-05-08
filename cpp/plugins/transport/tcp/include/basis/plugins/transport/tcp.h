@@ -1,4 +1,8 @@
-//#include <thread>
+#pragma once
+
+#include <thread>
+#include <vector>
+#include <condition_variable>
 
 #include <basis/core/transport/subscriber.h>
 #include <basis/core/transport/publisher.h>
@@ -9,24 +13,55 @@
 namespace basis::plugins::transport {
 
 class TcpSender : public core::transport::TransportSender {
-    public:
+public:
     TcpSender(core::networking::TcpSocket&& socket) : socket(std::move(socket)) {
-        
+        StartThread();
+    }
+
+    ~TcpSender() {
+        // TODO: call close on tcp handle to terminate?
+        Stop(true);
+
     }
 
     bool IsConnected() {
+        // TODO: this does not handle failure cases - needs to query socket internally for validity
         return socket.IsValid();
     }
 
+    // TODO: do we want to be able to send high priority packets?
+    virtual void SendMessage(std::shared_ptr<core::transport::RawMessage> message) override;
 
-    virtual int Send(const char* data, size_t len) override;
+
+    void Stop(bool wait = false) {
+        stop_thread = true;
+        
+        send_cv.notify_one();
+        if(wait) {
+            if(send_thread.joinable()) {
+                send_thread.join();
+            }
+        }
+    }
+
+protected:
+    friend class TcpTransport_NoCoordinator_Test;
+    virtual bool Send(const std::byte* data, size_t len) override;
 private:
+    void StartThread();
+
     core::networking::TcpSocket socket;
 
-//    std::thread thread;
+    std::thread send_thread;
+    std::condition_variable send_cv;
+    std::mutex send_mutex;
+    std::vector<std::shared_ptr<const core::transport::RawMessage>> send_buffer;
+    std::atomic<bool> stop_thread = false;
+    
 
 };
 
+// TODO: these should be pooled. If multiple subscribers to the same topic are created, we should only have to recieve once
 class TcpReceiver : public core::transport::TransportReceiver {
     public:
     TcpReceiver(std::string_view address, uint16_t port) : address(address), port(port) {
@@ -41,7 +76,7 @@ class TcpReceiver : public core::transport::TransportReceiver {
         }
         return false;
     }
-    bool IsConnected() {
+    bool IsConnected() const {
         return socket.IsValid();
     }
 
