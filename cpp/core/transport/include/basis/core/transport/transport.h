@@ -6,7 +6,7 @@
 namespace basis::core::transport {
 
 struct MessageHeader {
-    enum class DataType : uint8_t {
+    enum  DataType : uint8_t {
         INVALID = 0,
         HELLO,   // Initial connection packet, specifying data type, any transport specific options
         DISCONNECT, // Disconnect warning, with reason for disconnect
@@ -17,6 +17,7 @@ struct MessageHeader {
     */
         MAX_DATA_TYPE,
     };
+
     /*
     * Versioning is handled by the last byte of the magic.
     * Different header versions may have different sizes.
@@ -32,6 +33,9 @@ struct MessageHeader {
     } 
 }  __attribute__((packed));
 
+// We use placement new to initialize these, ensure there's no destructors
+static_assert(std::is_standard_layout<MessageHeader>::value);
+static_assert(std::is_trivially_destructible<MessageHeader>::value);
 
 class RawMessage {
 public:
@@ -62,7 +66,8 @@ public:
     }
 private:
     void InitializeHeader(MessageHeader::DataType data_type, const uint32_t data_size) {
-        MessageHeader* header = reinterpret_cast<MessageHeader*>(storage.get());
+        MessageHeader* header = new(storage.get()) MessageHeader;
+
         header->data_type = data_type;
         header->data_size = data_size;
     }
