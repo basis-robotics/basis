@@ -6,7 +6,7 @@
 namespace basis::core::transport {
 
 struct MessageHeader {
-    enum  DataType : uint8_t {
+    enum DataType : uint8_t {
         INVALID = 0,
         HELLO,   // Initial connection packet, specifying data type, any transport specific options
         DISCONNECT, // Disconnect warning, with reason for disconnect
@@ -39,12 +39,23 @@ static_assert(std::is_trivially_destructible<MessageHeader>::value);
 
 class RawMessage {
 public:
+    /**
+     * Construct given a packet type and size. Typically used when preparing to send data.
+     */
     RawMessage(MessageHeader::DataType data_type, uint32_t data_size)
         : storage(std::make_unique<std::byte[]>(data_size + sizeof(MessageHeader)))
     {
         InitializeHeader(data_type, data_size);
     }
 
+    /**
+     * Construct given a header. Typically used when receiving data.
+     */
+    RawMessage(MessageHeader header)
+        : storage(std::make_unique<std::byte[]>(header.data_size + sizeof(MessageHeader)))
+    {
+        *(MessageHeader*)storage.get() = header;
+    }
 #if 0
     // More dangerous, assumes the constructor knows what they are doing
     // This will be needed for in place serialization
@@ -63,6 +74,10 @@ public:
 
     std::span<const std::byte> GetPacket() const {
         return std::span<const std::byte>(storage.get(), GetMessageHeader()->data_size + sizeof(MessageHeader));
+    }
+
+    std::span<const std::byte> GetPayload() const {
+        return std::span<const std::byte>(storage.get() + sizeof(MessageHeader), GetMessageHeader()->data_size );
     }
 
     std::span<std::byte> GetMutablePayload() {
@@ -88,11 +103,12 @@ class TransportSender {
     // TODO: do all transports actually need to declare this?
     virtual bool Send(const std::byte* data, size_t len) = 0;
 
+    // TODO: why is this a shared_ptr?
     virtual void SendMessage(std::shared_ptr<RawMessage> message) = 0;
 };
 
 class TransportReceiver {
-    virtual int Receive(char* buffer, size_t buffer_len, int timeout_s) = 0;
+    virtual bool Receive(std::byte* buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
 #if 0

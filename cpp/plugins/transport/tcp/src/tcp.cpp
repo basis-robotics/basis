@@ -39,10 +39,11 @@ namespace basis::plugins::transport {
             }
         });
     }
-
+    
     bool TcpSender::Send(const std::byte* data, size_t len) {
+        // TODO: this loop should go on a helper on Socket
         while(len) {
-            size_t sent_size = socket.Send(data, len);
+            int sent_size = socket.Send(data, len);
             if(sent_size < 0) {
                 return false;
             }
@@ -59,8 +60,15 @@ namespace basis::plugins::transport {
         send_cv.notify_one();
     }
 
-
-    int TcpReceiver::Receive(char* buffer, size_t buffer_len, int timeout_s) {
-        return socket.RecvInto(buffer, buffer_len, timeout_s);
+    bool TcpReceiver::Receive(std::byte* buffer, size_t buffer_len, int timeout_s) {
+        while(buffer_len) {
+            int recv_size = socket.RecvInto((char*)buffer, buffer_len, timeout_s);
+            if(recv_size < 0) {
+                return false;
+            }
+            buffer += recv_size;
+            buffer_len -= recv_size;
+        }
+        return true; 
     }
 } // namespace basis::plugins::transport

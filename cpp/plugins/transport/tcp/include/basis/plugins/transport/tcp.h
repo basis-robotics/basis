@@ -9,7 +9,6 @@
 #include <basis/core/transport/transport.h>
 #include <basis/core/networking/socket.h>
 
-
 namespace basis::plugins::transport {
 
 class TcpSender : public core::transport::TransportSender {
@@ -19,9 +18,10 @@ public:
     }
 
     ~TcpSender() {
-        // TODO: call close on tcp handle to terminate?
+        // TODO: do _not_ manually call Close() here - either switch to nonblocking mode or signal the send thread.
+        // Doing otherwise could lead to race conditions.
+        // socket.Close();
         Stop(true);
-
     }
 
     bool IsConnected() {
@@ -57,13 +57,16 @@ private:
     std::mutex send_mutex;
     std::vector<std::shared_ptr<const core::transport::RawMessage>> send_buffer;
     std::atomic<bool> stop_thread = false;
-    
-
 };
 
-// TODO: these should be pooled. If multiple subscribers to the same topic are created, we should only have to recieve once
+/**
+ * 
+ * 
+ * @todo these could be pooled. If multiple subscribers to the same topic are created, we should only have to recieve once.
+ * It's a bit of an early optimization, though.
+ */
 class TcpReceiver : public core::transport::TransportReceiver {
-    public:
+public:
     TcpReceiver(std::string_view address, uint16_t port) : address(address), port(port) {
         
     }
@@ -80,7 +83,31 @@ class TcpReceiver : public core::transport::TransportReceiver {
         return socket.IsValid();
     }
 
-    virtual int Receive(char* buffer, size_t buffer_len, int timeout_s) override;
+    /**
+     * 
+     *
+     * returns unique as it's expected a transport will handle this
+     */
+    std::unique_ptr<const core::transport::RawMessage> ReceiveMessage(int timeout_s) {
+        core::transport::MessageHeader header;
+        if(!Receive((std::byte*)&header, sizeof(header), timeout_s)) {
+            return {};
+        }
+
+        auto message = std::make_unique<core::transport::RawMessage> (header);
+        std::span<std::byte> payload(message->GetMutablePayload());
+        if(!Receive(payload.data(), payload.size(), timeout_s)) {
+            return {};
+        }
+
+        return message;
+        
+    }
+
+    /**
+    * @todo error handling
+     */
+    virtual bool Receive(std::byte* buffer, size_t buffer_len, int timeout_s) override;
 private:
     core::networking::TcpSocket socket;
 

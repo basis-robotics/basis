@@ -11,9 +11,11 @@ namespace basis {
 namespace core {
 namespace networking {
 
+/**
+ * Wrapper around raw sockets, handling destruction and adding error handling.
+ */
 class Socket {
 public:
-
     enum class ErrorSource {
         TIMEOUT,
         ACCEPT,
@@ -28,11 +30,18 @@ public:
 
     using Error = std::pair<Socket::ErrorSource, int>;
 
-
+    /**
+     * Checks if the Socket _could_ be a valid. Note that a valid fd could still be in a disconnected state.
+     */
     bool IsValid() const {
         return fd != -1;
     }
 
+    /**
+     * Returns the underlying fd, for use with external APIs.
+     *
+     * It's recommended not to hold onto the result of this, unless you are ensuring that it doesn't survive past the lifetime of the Socket. 
+     */
     const int GetFd() {
         return fd;
     }
@@ -45,39 +54,57 @@ protected:
     Socket& operator=(const Socket&) = delete;
     Socket(Socket&& other) {
         Close();
-        std::swap(fd, other.fd);
+        
+        fd = other.fd;
+        other.fd = -1;
     }
     Socket& operator=(Socket&& other) {
         Close();
-        std::swap(fd, other.fd);
+        
+        fd = other.fd;
+        other.fd = -1;
         return *this;
     }
     
+    virtual ~Socket();
 
+    /**
+     * Calls basic unix close()
+     * 
+     * @todo add a flag to check if socket is valid to avoid race conditions and threading.
+     * could we copy out the fd to a temporary, set to -1 and then close? that might satisfy ordering requirements
+     */
     void Close();
-
-    ~Socket();
-
 public:
-
-    // TODO: should this be wrapped to handle partial sends?
+    /**
+     * Sends data over the socket - returns the number of bytes sent, or -1 on error.
+     * Currently it's on the caller to handle the error.
+     *
+     * @todo Make a proper error handling API here
+     */
     int Send(const std::byte* data, size_t len);
 
-    // TODO: this should be moved out to a static to handle select on multiple sockets
+    /**
+     * select()
+     * 
+     * @todo this should be moved out to a static to handle select on multiple sockets
+     * @todo deprecate this in favor of poll based options
+     */
     std::optional<Error> Select( int timeout_s, int timeout_ns);
 
-    // TODO: error handling
-    int RecvInto(char* buffer, size_t buffer_len, int timeout_s = -1);
+    /**
+     * Receives data into the requested buffer,
+     *
+     * @todo Make a proper error handling API here
+     * @todo Use basis::core::Time
+     */
+     int RecvInto(char* buffer, size_t buffer_len, int timeout_s = -1);
 
 protected:
-
+    
     int fd {-1};
 
 };
-
-using SocketError = Socket::Error;
-
-
 
 class TcpSocket : public Socket {
 public:
@@ -85,7 +112,7 @@ public:
         
     }
      
-    static std::expected<TcpSocket, SocketError> Connect(std::string_view host, uint16_t port);
+    static std::expected<TcpSocket, Socket::Error> Connect(std::string_view host, uint16_t port);
 };
 
 
@@ -96,10 +123,10 @@ protected:
 
     }
 public:
-    static std::expected<TcpListenSocket, SocketError> Create(uint16_t port);
+    static std::expected<TcpListenSocket, Socket::Error> Create(uint16_t port);
 
     // TODO: time integration
-    std::expected<TcpSocket, SocketError> Accept(int timeout_s = -1);
+    std::expected<TcpSocket, Socket::Error> Accept(int timeout_s = -1);
 
 
 private:
