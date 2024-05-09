@@ -9,14 +9,11 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/bin_to_hex.h"
 
-
 // removeme
 #include <queue>
 #include <sys/epoll.h>
 #include <fcntl.h>
-
-
-
+#include <basis/core/threading/thread_pool.h>
 
 
 using namespace basis::core::networking;
@@ -95,10 +92,11 @@ struct Epoll {
      * @todo need to ensure that we remove the handle from epoll before we close it. This means a two way reference
      * @todo a careful reading of the epoll spec implies that one should read from the socket once after adding here
      * @todo error handling
+     * @todo return a handle that can reactivate itself 
      */
-    bool AddHandle(int fd, std::function<void(int)> callback) {
+    bool AddFd(int fd, std::function<void(int)> callback) {
         assert(callbacks.count(fd) == 0);
-        spdlog::debug("AddHandle {}" , fd);
+        spdlog::debug("AddFd {}" , fd);
         int flags = fcntl(fd, F_GETFL);
         fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
@@ -138,37 +136,54 @@ struct Epoll {
 };
 
 
-struct ForceDebugOn {
-    ForceDebugOn() {
+class TestTcpTransport : public testing::Test {
+public:
+    TestTcpTransport() {
         spdlog::set_level(spdlog::level::debug);
     }
+
+    TcpListenSocket CreateListenSocket(uint16_t port = 4242) {
+        spdlog::debug("Create TcpListenSocket");
+        auto maybe_listen_socket = TcpListenSocket::Create(4242);
+        EXPECT_TRUE(maybe_listen_socket.has_value());
+        return {std::move(maybe_listen_socket.value())};
+    }
+
+    std::unique_ptr<TcpReceiver> SubscribeToPort(uint16_t port = 4242) {
+        spdlog::debug("Construct TcpReceiver");
+        auto receiver = std::make_unique<TcpReceiver>("127.0.0.1", 4242);
+        EXPECT_FALSE(receiver->IsConnected());
+        receiver->Connect();
+
+        spdlog::debug("Connect TcpReceiver to listen socket");
+        EXPECT_TRUE(receiver->IsConnected());
+        return receiver;
+    }
+
+    std::unique_ptr<TcpSender> AcceptOneKnownClient(TcpListenSocket& listen_socket) {
+        spdlog::debug("Check for new connections via Accept");
+        auto maybe_sender_socket = listen_socket.Accept(-1);
+        EXPECT_TRUE(maybe_sender_socket.has_value());
+        auto sender = std::make_unique<TcpSender>(std::move(maybe_sender_socket.value()));
+        EXPECT_TRUE(sender->IsConnected());
+        return std::move(sender);
+    }
+
+    // Work around privateness
+    bool Send(TcpSender& sender, const std::byte* data, size_t len) {
+        return sender.Send(data, len);
+    }
+
 };
-ForceDebugOn on;
 
-
-TEST(TcpTransport, NoCoordinator) {
-    spdlog::debug("Create TcpListenSocket");
-    auto maybe_listen_socket = TcpListenSocket::Create(4242);
-    ASSERT_TRUE(maybe_listen_socket.has_value());
-    TcpListenSocket socket{std::move(maybe_listen_socket.value())};
-    
-    spdlog::debug("Construct TcpReceiver");
-    auto receiver = std::make_unique<TcpReceiver>("127.0.0.1", 4242);
-    ASSERT_FALSE(receiver->IsConnected());
-    
-    spdlog::debug("Connect TcpReceiver to listen socket");
-    receiver->Connect();
-    ASSERT_TRUE(receiver->IsConnected());
-
-    spdlog::debug("Check for new connections via Accept");
-    auto maybe_sender_socket = socket.Accept(1);
-    ASSERT_TRUE(maybe_sender_socket.has_value());
-    TcpSender sender(std::move(maybe_sender_socket.value()));
-    ASSERT_TRUE(sender.IsConnected());
+TEST_F(TestTcpTransport, NoCoordinator) {
+    TcpListenSocket listen_socket = CreateListenSocket();    
+    std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+    std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
 
     spdlog::debug("Send raw bytes");
     const std::string hello = "Hello, World!";
-    sender.Send((std::byte*)hello.c_str(), hello.size() + 1);
+    Send(*sender, (std::byte*)hello.c_str(), hello.size() + 1);
 
     spdlog::debug("Receive raw bytes");
     char buffer[1024];
@@ -179,7 +194,7 @@ TEST(TcpTransport, NoCoordinator) {
     spdlog::debug("Construct and send proper message packet");
     auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
     strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
-    sender.SendMessage(shared_message);
+    sender->SendMessage(shared_message);
 
     spdlog::debug("Sleep for a bit to allow the message to send");
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -196,9 +211,9 @@ TEST(TcpTransport, NoCoordinator) {
     ASSERT_EQ(header->data_size, hello.size() + 1);
     ASSERT_STREQ((const char*)msg->GetPayload().data(), hello.c_str());
 
-    sender.SendMessage(shared_message);
-    sender.SendMessage(shared_message);
-    sender.SendMessage(shared_message);
+    sender->SendMessage(shared_message);
+    sender->SendMessage(shared_message);
+    sender->SendMessage(shared_message);
     
     ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
     ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
@@ -207,34 +222,17 @@ TEST(TcpTransport, NoCoordinator) {
     ASSERT_EQ(receiver->ReceiveMessage(1.0), nullptr);
 }
 
-TEST(TcpTransport, Poller) {
-    auto maybe_listen_socket = TcpListenSocket::Create(4242);
-    ASSERT_TRUE(maybe_listen_socket.has_value());
-    TcpListenSocket socket{std::move(maybe_listen_socket.value())};
-    
-    spdlog::debug("Make recv");
-    auto receiver = std::make_unique<TcpReceiver>("127.0.0.1", 4242);
-    receiver->Connect();
-    ASSERT_TRUE(receiver->IsConnected());
-
-    spdlog::debug("accept");
-    auto maybe_sender_socket = socket.Accept(1);
-    ASSERT_TRUE(maybe_sender_socket.has_value());
-    TcpSender sender(std::move(maybe_sender_socket.value()));
-    ASSERT_TRUE(sender.IsConnected());
+TEST_F(TestTcpTransport, WorkQueue) {
+    TcpListenSocket listen_socket = CreateListenSocket();    
+    std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+    std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
 
     const std::string hello = "Hello, World!";
 
     auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
     strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
-
-    // Subscribers will share a work queue - any subscribers in the same queue will be mutually exclusive
-    std::queue<std::unique_ptr<basis::core::transport::RawMessage>> work_queue;
-
     Epoll poller;
 
-
-    spdlog::info("socket is {}", maybe_sender_socket.value().GetFd());
     core::transport::IncompleteRawMessage incomplete;
     auto callback = [&incomplete, &receiver, &poller, &hello](int fd) {
         spdlog::info("Running poller callback");
@@ -255,30 +253,67 @@ TEST(TcpTransport, Poller) {
         poller.ReactivateHandle(receiver->GetSocket().GetFd());
     };
 
-    ASSERT_TRUE(poller.AddHandle(receiver->GetSocket().GetFd(), callback));
+    ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(), callback));
 
-    /*
-    spdlog::info("Sending full packet");
-    sender.SendMessage(shared_message);
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-*/
     std::span<const std::byte> packet = shared_message->GetPacket();
     for(int i = 0; i < packet.size(); i++) {
         // todo: learn how to iterate on spans
         spdlog::trace("Sending byte {}: {}", i, *(packet.data() + i));
-        sender.Send(packet.data() + i, 1);
+        Send(*sender, packet.data() + i, 1);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-        
-    sender.SendMessage(shared_message);
+            
+    sender->SendMessage(shared_message);
+
     std::this_thread::sleep_for(std::chrono::seconds(1));
     
+    // todo: test error conditions
 
     // 0. TCP socket is configured as non-blocking
     // 1. Worker pool gets notification that there's a waiting socket for a receiver
     // 2. It runs recv and tries to fill output until there's no more data
     // 3. 
+}
+
+
+TEST_F(TestTcpTransport, Poller) {
+    TcpListenSocket listen_socket = CreateListenSocket();    
+    std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+    std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
+
+    const std::string hello = "Hello, World!";
+
+    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
+    strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
+
+    Epoll poller;
+    core::threading::ThreadPool thread_pool(4);
+
+    core::transport::IncompleteRawMessage incomplete;
+    auto callback = [&](int fd) {
+        thread_pool.enqueue([&] {
+            spdlog::info("Running poller callback");
+            
+            if(receiver->ReceiveMessage(incomplete)) {
+                spdlog::info("Got full message");
+                auto msg = incomplete.GetCompletedMessage();
+                ASSERT_NE(msg, nullptr);
+                spdlog::info("{}",  spdlog::to_hex(msg->GetPacket()));
+                spdlog::info("{}", (const char*)msg->GetPayload().data());
+                ASSERT_STREQ((const char*)msg->GetPayload().data(), hello.c_str());
+            }
+            else {
+                if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                    spdlog::info("Got error {}", strerror(errno));
+                }
+            }
+            poller.ReactivateHandle(receiver->GetSocket().GetFd());
+        });
+    };
+
+    ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(), callback));
+
 }
 
 }

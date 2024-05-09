@@ -53,8 +53,7 @@ public:
     }
 
 protected:
-    friend class TcpTransport_NoCoordinator_Test;
-    friend class TcpTransport_Poller_Test;
+    friend class TestTcpTransport;
     virtual bool Send(const std::byte* data, size_t len) override;
 private:
     void StartThread();
