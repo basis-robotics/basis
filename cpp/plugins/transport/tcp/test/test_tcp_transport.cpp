@@ -4,12 +4,18 @@
 
 #include <gtest/gtest.h>
 #include <basis/plugins/transport/tcp.h>
+#include "spdlog/cfg/env.h"
+
+#include "spdlog/spdlog.h"
+#include "spdlog/fmt/bin_to_hex.h"
 
 
 // removeme
 #include <queue>
 #include <sys/epoll.h>
 #include <fcntl.h>
+
+
 
 
 
@@ -50,7 +56,7 @@ struct Epoll {
     Epoll& operator=(Epoll&& other) = default;
 */
     ~Epoll() {
-        printf("~Epoll\n");
+        spdlog::debug("~Epoll");
         stop = true;
         if(epoll_main_thread.joinable()) {
             epoll_main_thread.join();
@@ -69,13 +75,13 @@ struct Epoll {
             // to get faster shutdown
             int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 1000);
             if(nfds < 0) {
-                printf("epoll dieing\n");
+                spdlog::debug("epoll dieing");
                 return;
             }
             for(int n = 0; n < nfds; ++n) {
                 int fd = events[n].data.fd;
+                spdlog::trace("Socket {} ready.", events[n].data.fd);
                 callbacks.at(fd)(fd);
-                printf("Socket %i ready.\n", events[n].data.fd);
             }
         }
     }
@@ -92,7 +98,7 @@ struct Epoll {
      */
     bool AddHandle(int fd, std::function<void(int)> callback) {
         assert(callbacks.count(fd) == 0);
-        printf("AddHandle %i\n" , fd);
+        spdlog::debug("AddHandle {}" , fd);
         int flags = fcntl(fd, F_GETFL);
         fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
@@ -103,7 +109,7 @@ struct Epoll {
         // This is safe across threads
         // https://bugzilla.kernel.org/show_bug.cgi?id=43072
         if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event)) {
-            printf("Failed to add file descriptor to epoll\n");
+            spdlog::debug("Failed to add file descriptor to epoll");
             return false;
         }
         callbacks[fd] = callback;
@@ -118,7 +124,7 @@ struct Epoll {
         // This is safe across threads
         // https://bugzilla.kernel.org/show_bug.cgi?id=43072
         if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event)) {
-            printf("Failed to wake up fd with epoll\n");
+            spdlog::debug("Failed to wake up fd with epoll");
             return false;
         }
         return true;
@@ -132,49 +138,63 @@ struct Epoll {
 };
 
 
+struct ForceDebugOn {
+    ForceDebugOn() {
+        spdlog::set_level(spdlog::level::debug);
+    }
+};
+ForceDebugOn on;
+
+
 TEST(TcpTransport, NoCoordinator) {
+    spdlog::debug("Create TcpListenSocket");
     auto maybe_listen_socket = TcpListenSocket::Create(4242);
     ASSERT_TRUE(maybe_listen_socket.has_value());
     TcpListenSocket socket{std::move(maybe_listen_socket.value())};
     
-    printf("Make recv\n");
+    spdlog::debug("Construct TcpReceiver");
     auto receiver = std::make_unique<TcpReceiver>("127.0.0.1", 4242);
     ASSERT_FALSE(receiver->IsConnected());
+    
+    spdlog::debug("Connect TcpReceiver to listen socket");
     receiver->Connect();
     ASSERT_TRUE(receiver->IsConnected());
 
-    printf("accept\n");
+    spdlog::debug("Check for new connections via Accept");
     auto maybe_sender_socket = socket.Accept(1);
     ASSERT_TRUE(maybe_sender_socket.has_value());
     TcpSender sender(std::move(maybe_sender_socket.value()));
     ASSERT_TRUE(sender.IsConnected());
 
-    printf("send\n");
-    const std::string message = "Hello, World!";
-    sender.Send((std::byte*)message.c_str(), message.size() + 1);
-    printf("recv\n");
-    char buffer[1024];
-    receiver->Receive((std::byte*)buffer, message.size() + 1, 1);
+    spdlog::debug("Send raw bytes");
+    const std::string hello = "Hello, World!";
+    sender.Send((std::byte*)hello.c_str(), hello.size() + 1);
 
-    ASSERT_STREQ(buffer, message.c_str());
-    printf("make shared msg\n");
-    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, message.size() + 1);
-    strcpy((char*)shared_message->GetMutablePayload().data(), message.data());
-    printf("Mutable string is %s\n", shared_message->GetMutablePayload().data());
+    spdlog::debug("Receive raw bytes");
+    char buffer[1024];
+    receiver->Receive((std::byte*)buffer, hello.size() + 1, 1);
+    ASSERT_STREQ(buffer, hello.c_str());
+    memset(buffer, 0, sizeof(buffer));
+
+    spdlog::debug("Construct and send proper message packet");
+    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
+    strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
     sender.SendMessage(shared_message);
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    printf("Done sleeping\n");
-    buffer[0] = 0;
-
+    spdlog::debug("Sleep for a bit to allow the message to send");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    spdlog::debug("Done sleeping");
+    
+    spdlog::debug("Get the message");
     auto msg = receiver->ReceiveMessage(1.0);
     ASSERT_NE(msg, nullptr);
 
+    spdlog::debug("Validate the header");
     const core::transport::MessageHeader* header = msg->GetMessageHeader();
-    printf("Magic is %c %c %c %i\n", header->magic_version[0], header->magic_version[1], header->magic_version[2], header->magic_version[3]);
+    spdlog::debug("Magic is {}{}", std::string_view((char*)header->magic_version, 3), header->magic_version[3]);
     ASSERT_EQ(memcmp(header->magic_version, std::array<char, 4>{'B', 'A', 'S', 0}.data(), 4), 0);
-
-    ASSERT_STREQ((const char*)msg->GetPayload().data(), message.c_str());
+    ASSERT_EQ(header->data_size, hello.size() + 1);
+    ASSERT_STREQ((const char*)msg->GetPayload().data(), hello.c_str());
 
     sender.SendMessage(shared_message);
     sender.SendMessage(shared_message);
@@ -183,8 +203,8 @@ TEST(TcpTransport, NoCoordinator) {
     ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
     ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
     ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
+    // This should fail, we've run out of messages
     ASSERT_EQ(receiver->ReceiveMessage(1.0), nullptr);
-
 }
 
 TEST(TcpTransport, Poller) {
@@ -192,61 +212,68 @@ TEST(TcpTransport, Poller) {
     ASSERT_TRUE(maybe_listen_socket.has_value());
     TcpListenSocket socket{std::move(maybe_listen_socket.value())};
     
-    printf("Make recv\n");
+    spdlog::debug("Make recv");
     auto receiver = std::make_unique<TcpReceiver>("127.0.0.1", 4242);
     receiver->Connect();
     ASSERT_TRUE(receiver->IsConnected());
 
-    printf("accept\n");
+    spdlog::debug("accept");
     auto maybe_sender_socket = socket.Accept(1);
     ASSERT_TRUE(maybe_sender_socket.has_value());
     TcpSender sender(std::move(maybe_sender_socket.value()));
     ASSERT_TRUE(sender.IsConnected());
 
-    const std::string message = "Hello, World!";
+    const std::string hello = "Hello, World!";
 
-    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, message.size() + 1);
-    strcpy((char*)shared_message->GetMutablePayload().data(), message.data());
-
+    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
+    strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
 
     // Subscribers will share a work queue - any subscribers in the same queue will be mutually exclusive
     std::queue<std::unique_ptr<basis::core::transport::RawMessage>> work_queue;
 
-
     Epoll poller;
 
+
+    spdlog::info("socket is {}", maybe_sender_socket.value().GetFd());
     core::transport::IncompleteRawMessage incomplete;
-    auto callback = [&incomplete, &receiver, &poller](int fd) {
-        printf("callback\n");
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        
+    auto callback = [&incomplete, &receiver, &poller, &hello](int fd) {
+        spdlog::info("Running poller callback");
         
         if(receiver->ReceiveMessage(incomplete)) {
-            printf("Got full message\n");
-            printf("%s\n", (const char*)incomplete.GetCompletedMessage()->GetPayload().data());
+            spdlog::info("Got full message");
+            auto msg = incomplete.GetCompletedMessage();
+            ASSERT_NE(msg, nullptr);
+            spdlog::info("{}",  spdlog::to_hex(msg->GetPacket()));
+            spdlog::info("{}", (const char*)msg->GetPayload().data());
+            ASSERT_STREQ((const char*)msg->GetPayload().data(), hello.c_str());
         }
         else {
-            printf("Got error %s\n", strerror(errno));
+            if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                spdlog::info("Got error {}", strerror(errno));
+            }
         }
-        //ASSERT_EQ(receiver->ReceiveMessage(incomplete), true);
-        //ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
-        //ASSERT_EQ(receiver->ReceiveMessage(1.0), nullptr);
         poller.ReactivateHandle(receiver->GetSocket().GetFd());
     };
 
-
     ASSERT_TRUE(poller.AddHandle(receiver->GetSocket().GetFd(), callback));
 
-    // sender.SendMessage(shared_message);
-    //         std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    // ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
-
-    while(true) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        sender.SendMessage(shared_message);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    /*
+    spdlog::info("Sending full packet");
+    sender.SendMessage(shared_message);
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+*/
+    std::span<const std::byte> packet = shared_message->GetPacket();
+    for(int i = 0; i < packet.size(); i++) {
+        // todo: learn how to iterate on spans
+        spdlog::trace("Sending byte {}: {}", i, *(packet.data() + i));
+        sender.Send(packet.data() + i, 1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
+        
+    sender.SendMessage(shared_message);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    
 
     // 0. TCP socket is configured as non-blocking
     // 1. Worker pool gets notification that there's a waiting socket for a receiver

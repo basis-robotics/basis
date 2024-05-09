@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #include <string.h>
-
+#include <spdlog/spdlog.h>
 #include <basis/core/networking/socket.h>
 namespace basis {
 namespace core {
@@ -23,14 +23,18 @@ void Socket::Close() {
     close(fd);
 }
 int Socket::Send(const std::byte* data, size_t len) {
+    if(fd == -1) {
+        spdlog::critical("Trying to send() on an invalid socket");
+    }
     return send(fd, data, len, 0);
 }
 
 int Socket::RecvInto(char* buffer, size_t buffer_len, int timeout_s) {
+    // TODO: remove this, force consumer to call select themselves
     if(timeout_s >= 0) {
         auto error = Select(timeout_s, 0);
         if(error) {
-            return 0;
+            return -1;
         }
     }
 

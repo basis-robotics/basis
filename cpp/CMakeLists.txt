@@ -21,6 +21,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 
+include(FetchContent)
+FetchContent_Declare(
+  spdlog
+  URL  https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.zip
+)
+FetchContent_MakeAvailable(spdlog)
+target_compile_options(spdlog PUBLIC -fPIC)
 add_subdirectory(core)
 
 add_subdirectory(plugins/transport/tcp)

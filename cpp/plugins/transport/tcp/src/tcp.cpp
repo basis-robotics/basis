@@ -2,6 +2,8 @@
 
 #include <basis/plugins/transport/tcp.h>
 
+#include <spdlog/spdlog.h>
+
 
 namespace basis::plugins::transport {
     void TcpSender::StartThread() {
@@ -21,15 +23,15 @@ namespace basis::plugins::transport {
                 }
 
                 for(auto& message : buffer) {
-                    printf("sending message... '%s'\n", message->GetPacket().data() + sizeof(core::transport::MessageHeader));
+                    spdlog::debug("sending message... '{}'", (char*)(message->GetPacket().data() + sizeof(core::transport::MessageHeader)));
                     std::span<const std::byte> packet = message->GetPacket();
                     if(!Send(packet.data(), packet.size())) {
-                        printf("Stopping send thread due to %s\n", strerror(errno));
+                        spdlog::debug("Stopping send thread due to {}: {}", errno, strerror(errno));
                         stop_thread = true;
                     }
-                    printf("Sent\n");
+                    spdlog::debug("Sent");
                     if(stop_thread) {
-                        printf("stop\n");
+                        spdlog::debug("stop TcpSender");
                         return;
                     }
                 }
@@ -75,19 +77,48 @@ namespace basis::plugins::transport {
         }
         return true; 
     }
+    
+    std::unique_ptr<const core::transport::RawMessage> TcpReceiver::ReceiveMessage(int timeout_s) {
+        core::transport::MessageHeader header;
+        if(!Receive((std::byte*)&header, sizeof(header), timeout_s)) {
+            spdlog::error("ReceiveMessage failed to get header due to {} {}", errno, strerror(errno));
+            spdlog::error("Failed to get header");
+            return {};
+        }
 
+        auto message = std::make_unique<core::transport::RawMessage> (header);
+        std::span<std::byte> payload(message->GetMutablePayload());
+        if(!Receive(payload.data(), payload.size(), timeout_s)) {
+            spdlog::error("ReceiveMessage failed to get payload due to {} {}", errno, strerror(errno));
+
+            spdlog::error("Failed to get payload");
+            return {};
+        }
+
+        return message;
+    }
+    
     bool TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage& incomplete) {
-        size_t count = 0;
+        int count = 0;
         do {
             std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
 
             // Download some bytes
-            count = socket.RecvInto((char*)buffer.data(), buffer.size(), 0);
+            count = socket.RecvInto((char*)buffer.data(), buffer.size());
             if(count < 0) {
+                if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                    spdlog::trace("ReceiveMessage failed due to {} {}", errno, strerror(errno));
+                }
                 // todo: this needs to return the error type
                 return false;
             }
-            printf("Got %i bytes\n", count);
+            if(count == 0) {
+                spdlog::error("ReceiveMessage {} {}", errno, strerror(errno));
+                return false;
+            }
+            if(count > 0) {
+                spdlog::debug("ReceiveMessage Got {} bytes", count);
+            }
             // todo: handle EAGAIN
         // Continue downloading until we've gotten the whole message
         } while(!incomplete.AdvanceCounter(count));

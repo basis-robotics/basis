@@ -54,6 +54,7 @@ public:
 
 protected:
     friend class TcpTransport_NoCoordinator_Test;
+    friend class TcpTransport_Poller_Test;
     virtual bool Send(const std::byte* data, size_t len) override;
 private:
     void StartThread();
@@ -97,29 +98,14 @@ public:
      *
      * returns unique as it's expected a transport will handle this
      */
-    std::unique_ptr<const core::transport::RawMessage> ReceiveMessage(int timeout_s) {
-        core::transport::MessageHeader header;
-        if(!Receive((std::byte*)&header, sizeof(header), timeout_s)) {
-            printf("Failed to get header\n");
-            return {};
-        }
-
-        auto message = std::make_unique<core::transport::RawMessage> (header);
-        std::span<std::byte> payload(message->GetMutablePayload());
-        if(!Receive(payload.data(), payload.size(), timeout_s)) {
-            printf("Failed to get payload\n");
-            return {};
-        }
-
-        return message;
-    }
+    std::unique_ptr<const core::transport::RawMessage> ReceiveMessage(int timeout_s);
     
     bool ReceiveMessage(core::transport::IncompleteRawMessage& message);
 
     /**
     * @todo error handling
      */
-    virtual bool Receive(std::byte* buffer, size_t buffer_len, int timeout_s) override;
+    virtual bool Receive(std::byte* buffer, size_t buffer_len, int timeout_s = -1) override;
 
     const core::networking::Socket& GetSocket() const {
         return socket;

@@ -8,6 +8,9 @@ Initial hitlist (1-2 months?):
 - Protobuf Serializer
 - Coordinator
 - logging
+    - spdlog ftw
+    - need to make logging helper file for setting up log dirs, etc, wrapping spdlog?
+    - https://github.com/gabime/spdlog/issues/730 need to do a small fork to allow for differing time source
 - crash handling
 - clang formatting
 - ci

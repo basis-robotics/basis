@@ -39,6 +39,7 @@ struct MessageHeader {
 static_assert(std::is_standard_layout<MessageHeader>::value);
 static_assert(std::is_trivially_destructible<MessageHeader>::value);
 
+// todo: rename to PackagedMessage
 class RawMessage {
 public:
     /**

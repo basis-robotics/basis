@@ -1,7 +1,7 @@
 project(basis_core_networking)
 
 add_library(basis_core_networking SHARED src/socket.cpp)
-target_link_libraries(basis_core_networking )
+target_link_libraries(basis_core_networking spdlog)
 target_include_directories(basis_core_networking PUBLIC include)
 
 add_library(basis::core::networking ALIAS basis_core_networking)
