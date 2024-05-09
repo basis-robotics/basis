@@ -25,13 +25,10 @@ struct MessageHeader {
     */
     uint8_t magic_version[4] = {'B', 'A', 'S', 0};
     DataType data_type = DataType::INVALID;
+    uint8_t reserved[3] = {};
     uint32_t data_size = 0;
     uint64_t send_time = 0xFFFFFFFF;
     
-    /**
-     * Reserved
-     */
-    uint64_t reserved = 0;
 
     uint8_t GetHeaderVersion() {
         return magic_version[3];
@@ -89,7 +86,7 @@ public:
         return std::span<std::byte>(storage.get() + sizeof(MessageHeader), GetMessageHeader()->data_size );
     }
 private:
-    MessageHeader* GetMessageHeader() {
+    MessageHeader* GetMutableMessageHeader() {
         return reinterpret_cast<MessageHeader*>(storage.get());
     }
 
@@ -101,6 +98,65 @@ private:
     }
 
     std::unique_ptr<std::byte[]> storage;
+};
+
+/**
+ * Helper for holding incomplete messages.
+ *
+ * To use: 
+
+    size_t count = 0;
+    do {
+        // Request space to download in
+        std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
+
+        // Download some bytes
+        count = recv(buffer.data(), buffer.size());
+    // Continue downloading until we've gotten the whole message
+    } while(!incomplete.AdvanceCounter(count));
+
+ */
+class IncompleteRawMessage {
+public:
+    IncompleteRawMessage() = default;
+
+    std::span<std::byte> GetCurrentBuffer() {
+        if(incomplete_message) {
+            std::span<std::byte> ret = incomplete_message->GetMutablePayload();
+            return ret.subspan(progress_counter);
+        }
+        else {
+            return std::span<std::byte>(incomplete_header + progress_counter, sizeof(MessageHeader) - progress_counter);
+        }
+    }
+
+    bool AdvanceCounter(size_t amount) {
+        progress_counter += amount;
+        if(!incomplete_message && progress_counter == sizeof(MessageHeader)) {
+            // todo: check for header validity here
+            progress_counter = 0;
+            incomplete_message = std::make_unique<RawMessage>(completed_header);
+        }
+        if(!incomplete_message) {
+            return false;
+        }
+        return progress_counter == incomplete_message->GetMessageHeader()->data_size;
+    }
+
+    std::unique_ptr<RawMessage> GetCompletedMessage() {
+        //assert(incomplete_message);
+        //assert(progress_counter == incomplete_message->GetMessageHeader()->data_size); 
+        progress_counter = 0;
+        return std::move(incomplete_message);
+    }
+private:
+    union {
+        std::byte incomplete_header[sizeof(MessageHeader)] = {};
+        MessageHeader completed_header;
+    };
+    std::unique_ptr<RawMessage> incomplete_message;
+
+    size_t progress_counter = 0;
 };
 
 class TransportSender {

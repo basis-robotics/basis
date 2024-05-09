@@ -100,23 +100,30 @@ public:
     std::unique_ptr<const core::transport::RawMessage> ReceiveMessage(int timeout_s) {
         core::transport::MessageHeader header;
         if(!Receive((std::byte*)&header, sizeof(header), timeout_s)) {
+            printf("Failed to get header\n");
             return {};
         }
 
         auto message = std::make_unique<core::transport::RawMessage> (header);
         std::span<std::byte> payload(message->GetMutablePayload());
         if(!Receive(payload.data(), payload.size(), timeout_s)) {
+            printf("Failed to get payload\n");
             return {};
         }
 
         return message;
-        
     }
+    
+    bool ReceiveMessage(core::transport::IncompleteRawMessage& message);
 
     /**
     * @todo error handling
      */
     virtual bool Receive(std::byte* buffer, size_t buffer_len, int timeout_s) override;
+
+    const core::networking::Socket& GetSocket() const {
+        return socket;
+    }
 private:
     core::networking::TcpSocket socket;
 

@@ -42,7 +42,7 @@ public:
      *
      * It's recommended not to hold onto the result of this, unless you are ensuring that it doesn't survive past the lifetime of the Socket. 
      */
-    const int GetFd() {
+    int GetFd() const {
         return fd;
     }
 

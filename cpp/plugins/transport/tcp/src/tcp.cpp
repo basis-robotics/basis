@@ -66,6 +66,7 @@ namespace basis::plugins::transport {
                 return false;
             }
             if(recv_size < 0) {
+                printf("Error: %i", errno);
                 // should disconnect here
                 return false;
             }
@@ -74,4 +75,24 @@ namespace basis::plugins::transport {
         }
         return true; 
     }
+
+    bool TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage& incomplete) {
+        size_t count = 0;
+        do {
+            std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
+
+            // Download some bytes
+            count = socket.RecvInto((char*)buffer.data(), buffer.size(), 0);
+            if(count < 0) {
+                // todo: this needs to return the error type
+                return false;
+            }
+            printf("Got %i bytes\n", count);
+            // todo: handle EAGAIN
+        // Continue downloading until we've gotten the whole message
+        } while(!incomplete.AdvanceCounter(count));
+
+        return true;
+    }
+
 } // namespace basis::plugins::transport
