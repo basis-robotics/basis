@@ -27,7 +27,6 @@ int Socket::Send(const std::byte* data, size_t len) {
 }
 
 int Socket::RecvInto(char* buffer, size_t buffer_len, int timeout_s) {
-
     if(timeout_s >= 0) {
         auto error = Select(timeout_s, 0);
         if(error) {
@@ -35,6 +34,7 @@ int Socket::RecvInto(char* buffer, size_t buffer_len, int timeout_s) {
         }
     }
 
+    // todo: error handling + close
     return recv(fd, buffer, buffer_len, 0);
 }
 

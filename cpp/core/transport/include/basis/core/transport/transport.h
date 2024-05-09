@@ -27,6 +27,11 @@ struct MessageHeader {
     DataType data_type = DataType::INVALID;
     uint32_t data_size = 0;
     uint64_t send_time = 0xFFFFFFFF;
+    
+    /**
+     * Reserved
+     */
+    uint64_t reserved = 0;
 
     uint8_t GetHeaderVersion() {
         return magic_version[3];

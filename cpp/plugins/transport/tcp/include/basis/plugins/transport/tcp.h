@@ -11,6 +11,14 @@
 
 namespace basis::plugins::transport {
 
+
+/**
+ * Used to send serialized data over TCP.
+ * 
+ * Currently spawns thread per publisher. This should be performant but will waste memory in stack allocations.
+ *
+ * @todo Move to using a worker/thread pool - should be relatively easy.
+ */
 class TcpSender : public core::transport::TransportSender {
 public:
     TcpSender(core::networking::TcpSocket&& socket) : socket(std::move(socket)) {
@@ -60,7 +68,7 @@ private:
 };
 
 /**
- * 
+ * Used to receive serialized data over TCP.
  * 
  * @todo these could be pooled. If multiple subscribers to the same topic are created, we should only have to recieve once.
  * It's a bit of an early optimization, though.
@@ -79,6 +87,7 @@ public:
         }
         return false;
     }
+
     bool IsConnected() const {
         return socket.IsValid();
     }

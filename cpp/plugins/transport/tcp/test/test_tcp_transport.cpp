@@ -5,6 +5,8 @@
 #include <gtest/gtest.h>
 #include <basis/plugins/transport/tcp.h>
 
+#include <queue>
+
 using namespace basis::core::networking;
 
 namespace basis::plugins::transport {
@@ -52,9 +54,23 @@ TEST(TcpTransport, NoCoordinator) {
     printf("Magic is %c %c %c %i\n", header->magic_version[0], header->magic_version[1], header->magic_version[2], header->magic_version[3]);
     ASSERT_EQ(memcmp(header->magic_version, std::array<char, 4>{'B', 'A', 'S', 0}.data(), 4), 0);
 
-
-
     ASSERT_STREQ((const char*)msg->GetPayload().data(), message.c_str());
+
+
+
+    sender.SendMessage(shared_message);
+    sender.SendMessage(shared_message);
+    sender.SendMessage(shared_message);
+    
+    ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
+    ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
+    ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
+    ASSERT_EQ(receiver->ReceiveMessage(1.0), nullptr);
+
+    // How will coordinator work
+
+    // Receiver needs to hold a few different things
+    std::queue<std::unique_ptr<basis::core::transport::RawMessage>> recv_queue;
 
 }
 }

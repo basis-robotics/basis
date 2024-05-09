@@ -1,4 +1,4 @@
-       #include <string.h>
+#include <string.h>
 
 #include <basis/plugins/transport/tcp.h>
 
@@ -8,7 +8,6 @@ namespace basis::plugins::transport {
         printf("Starting thread\n");
         send_thread = std::thread([this]() {
             while(!stop_thread) {
-                printf("loop\n");
                 std::vector<std::shared_ptr<const core::transport::RawMessage>> buffer;
                 {
                     std::unique_lock lock(send_mutex);
@@ -18,11 +17,9 @@ namespace basis::plugins::transport {
                     buffer = std::move(send_buffer);   
                 }
                 if(stop_thread) {
-                    printf("stop\n");
                     return;
                 }
 
-                
                 for(auto& message : buffer) {
                     printf("sending message... '%s'\n", message->GetPacket().data() + sizeof(core::transport::MessageHeader));
                     std::span<const std::byte> packet = message->GetPacket();
@@ -63,7 +60,13 @@ namespace basis::plugins::transport {
     bool TcpReceiver::Receive(std::byte* buffer, size_t buffer_len, int timeout_s) {
         while(buffer_len) {
             int recv_size = socket.RecvInto((char*)buffer, buffer_len, timeout_s);
+            // timeout
+            // todo: error handling
+            if(recv_size == 0) {
+                return false;
+            }
             if(recv_size < 0) {
+                // should disconnect here
                 return false;
             }
             buffer += recv_size;
