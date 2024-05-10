@@ -126,4 +126,18 @@ TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::Incomple
   return ReceiveStatus::DONE;
 }
 
+std::expected<TcpPublisher, Socket::Error> TcpPublisher::Create(uint16_t port) {
+    spdlog::debug("Create TcpListenSocket");
+    auto maybe_listen_socket = TcpListenSocket::Create(port);
+    if(!maybe_listen_socket) {
+        return maybe_listen_socket.error();
+    }
+
+    return TcpPublisher(maybe_listen_socket.value());
+}
+
+TcpPublisher::TcpPublisher(TcpListenSocket listen_socket) : listen_socket(std::move(listen_socket)) {
+
+}
+
 } // namespace basis::plugins::transport

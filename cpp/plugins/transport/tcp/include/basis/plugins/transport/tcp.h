@@ -124,7 +124,17 @@ private:
 };
 
 class TcpPublisher {
+public:
+    static std::expected<TcpPublisher, core::networking::Socket::Error> Create(uint16_t port = 0);
 
+
+    //TcpPublisher(uint16_t port = 0);
+
+protected:
+    TcpPublisher(TcpListenSocket listen_socket);
+
+    TcpListenSocket listen_socket;
+    std::vector<TcpSender> senders;
 };
 
 } // namespace basis::plugins::transport
