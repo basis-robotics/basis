@@ -198,36 +198,31 @@ TEST_F(TestTcpTransport, Poll) {
     const std::string channel_name = "test";
     spdlog::info("Running poller callback on fd {}", fd);
 
-      switch(receiver->ReceiveMessage(incomplete)) {
+    switch (receiver->ReceiveMessage(incomplete)) {
 
-        case TcpReceiver::ReceiveStatus::DONE:
-        {
-          spdlog::debug("TcpReceiver Got full message");
-          auto msg = incomplete.GetCompletedMessage();
-          ASSERT_NE(msg, nullptr);
-          spdlog::info("{}", spdlog::to_hex(msg->GetPacket()));
-          spdlog::info("{}", (const char *)msg->GetPayload().data());
-          ASSERT_STREQ((const char *)msg->GetPayload().data(), hello.c_str());
+    case TcpReceiver::ReceiveStatus::DONE: {
+      spdlog::debug("TcpReceiver Got full message");
+      auto msg = incomplete.GetCompletedMessage();
+      ASSERT_NE(msg, nullptr);
+      spdlog::info("{}", spdlog::to_hex(msg->GetPacket()));
+      spdlog::info("{}", (const char *)msg->GetPayload().data());
+      ASSERT_STREQ((const char *)msg->GetPayload().data(), hello.c_str());
 
-          // TODO: peek
-          break;
-        }
-        case TcpReceiver::ReceiveStatus::DOWNLOADING:
-        {
-          break;
-        }
-        case TcpReceiver::ReceiveStatus::ERROR:
-        {
-          spdlog::error("{} bytes {} - got error {} {}", fd,
-                          incomplete.GetCurrentProgress(), errno, strerror(errno));
-        }
-        case TcpReceiver::ReceiveStatus::DISCONNECTED:
-        {
-          spdlog::error("Disconnecting from channel {}", channel_name);
-          return;
-        }
-      }
-      poller.ReactivateHandle(receiver->GetSocket().GetFd());
+      // TODO: peek
+      break;
+    }
+    case TcpReceiver::ReceiveStatus::DOWNLOADING: {
+      break;
+    }
+    case TcpReceiver::ReceiveStatus::ERROR: {
+      spdlog::error("{} bytes {} - got error {} {}", fd, incomplete.GetCurrentProgress(), errno, strerror(errno));
+    }
+    case TcpReceiver::ReceiveStatus::DISCONNECTED: {
+      spdlog::error("Disconnecting from channel {}", channel_name);
+      return;
+    }
+    }
+    poller.ReactivateHandle(receiver->GetSocket().GetFd());
   };
 
   ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(), callback));
@@ -273,32 +268,28 @@ TEST_F(TestTcpTransport, ThreadPool) {
   auto callback = [&](int fd, std::unique_lock<std::mutex> lock) {
     thread_pool.enqueue([&, lock = std::move(lock)] {
       spdlog::info("Running poller callback");
-    switch(receiver->ReceiveMessage(incomplete)) {
+      switch (receiver->ReceiveMessage(incomplete)) {
 
-        case TcpReceiver::ReceiveStatus::DONE:
-        {
-          spdlog::debug("TcpReceiver Got full message");
-          auto msg = incomplete.GetCompletedMessage();
-          std::string expected_msg = "Hello, World! ";
-          expected_msg += channel_name;
-          ASSERT_STREQ((char *)msg->GetPayload().data(), expected_msg.c_str());
-          // TODO: peek
-          break;
-        }
-        case TcpReceiver::ReceiveStatus::DOWNLOADING:
-        {
-          break;
-        }
-        case TcpReceiver::ReceiveStatus::ERROR:
-        {
-          spdlog::error("{}, {}: bytes {} - got error {} {}", fd, (void *)&incomplete,
-                          incomplete.GetCurrentProgress(), errno, strerror(errno));
-        }
-        case TcpReceiver::ReceiveStatus::DISCONNECTED:
-        {
-          spdlog::error("Disconnecting from channel {}", channel_name);
-          return;
-        }
+      case TcpReceiver::ReceiveStatus::DONE: {
+        spdlog::debug("TcpReceiver Got full message");
+        auto msg = incomplete.GetCompletedMessage();
+        std::string expected_msg = "Hello, World! ";
+        expected_msg += channel_name;
+        ASSERT_STREQ((char *)msg->GetPayload().data(), expected_msg.c_str());
+        // TODO: peek
+        break;
+      }
+      case TcpReceiver::ReceiveStatus::DOWNLOADING: {
+        break;
+      }
+      case TcpReceiver::ReceiveStatus::ERROR: {
+        spdlog::error("{}, {}: bytes {} - got error {} {}", fd, (void *)&incomplete, incomplete.GetCurrentProgress(),
+                      errno, strerror(errno));
+      }
+      case TcpReceiver::ReceiveStatus::DISCONNECTED: {
+        spdlog::error("Disconnecting from channel {}", channel_name);
+        return;
+      }
       }
       poller.ReactivateHandle(receiver->GetSocket().GetFd());
     });
@@ -332,7 +323,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
    *
    * This allows the epoll interface to be completely unaware of what type of work it's being given.
    */
-   std::string channel_name = "test";
+  std::string channel_name = "test";
   auto callback = [&](int fd, std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
     spdlog::info("outer");
     /**
@@ -344,34 +335,28 @@ TEST_F(TestTcpTransport, MPSCQueue) {
       // TODO: add debug only checks for this
       spdlog::info("Running poller callback on {}", fd);
 
-      switch(receiver->ReceiveMessage(*incomplete)) {
+      switch (receiver->ReceiveMessage(*incomplete)) {
 
-        case TcpReceiver::ReceiveStatus::DONE:
-        {
-          spdlog::info("Got full message");
-          output_queue.Emplace(incomplete->GetCompletedMessage());
+      case TcpReceiver::ReceiveStatus::DONE: {
+        spdlog::info("Got full message");
+        output_queue.Emplace(incomplete->GetCompletedMessage());
         break;
-        }
-        case TcpReceiver::ReceiveStatus::DOWNLOADING:
-        {
-          spdlog::info("Downloading...");
-          break;
-        }
-        case TcpReceiver::ReceiveStatus::ERROR:
-        {
-          spdlog::error("{}, {}: bytes {} - got error {} {}", fd, (void *)incomplete.get(),
-                          incomplete->GetCurrentProgress(), errno, strerror(errno));
-        }
-        case TcpReceiver::ReceiveStatus::DISCONNECTED:
-        {
-          spdlog::error("Disconnecting from channel {}", channel_name);
-          return;
-        }
+      }
+      case TcpReceiver::ReceiveStatus::DOWNLOADING: {
+        spdlog::info("Downloading...");
+        break;
+      }
+      case TcpReceiver::ReceiveStatus::ERROR: {
+        spdlog::error("{}, {}: bytes {} - got error {} {}", fd, (void *)incomplete.get(),
+                      incomplete->GetCurrentProgress(), errno, strerror(errno));
+      }
+      case TcpReceiver::ReceiveStatus::DISCONNECTED: {
+        spdlog::error("Disconnecting from channel {}", channel_name);
+        return;
+      }
       };
-        poller.ReactivateHandle(fd);
-        spdlog::info("Rearmed");
-
-
+      poller.ReactivateHandle(fd);
+      spdlog::info("Rearmed");
     });
   };
 
@@ -391,7 +376,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
   for (int i = 0; i < 10; i++) {
     sender->SendMessage(shared_message);
   }
-  
+
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   for (int i = 0; i < 10; i++) {
@@ -414,9 +399,9 @@ TEST_F(TestTcpTransport, Torture) {
    * The metadata here (channel_name) is completely arbitrary. Real code should make up a Context object to hold it all
    * in.
    */
-  auto callback = [&thread_pool, poller = poller.get(),
-                   &output_queue](int fd, std::unique_lock<std::mutex> lock, std::string channel_name, TcpReceiver *receiver,
-                                  std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
+  auto callback = [&thread_pool, poller = poller.get(), &output_queue](
+                      int fd, std::unique_lock<std::mutex> lock, std::string channel_name, TcpReceiver *receiver,
+                      std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
     spdlog::info("Queuing work for {}", fd);
 
     /**
@@ -427,10 +412,9 @@ TEST_F(TestTcpTransport, Torture) {
       // It's an error to actually call this with multiple threads.
       // TODO: add debug only checks for this
       spdlog::debug("Running thread pool callback on {}", fd);
-      switch(receiver->ReceiveMessage(*incomplete)) {
+      switch (receiver->ReceiveMessage(*incomplete)) {
 
-      case TcpReceiver::ReceiveStatus::DONE:
-      {
+      case TcpReceiver::ReceiveStatus::DONE: {
         spdlog::debug("TcpReceiver Got full message");
         auto msg = incomplete->GetCompletedMessage();
         std::string expected_msg = "Hello, World! ";
@@ -442,17 +426,14 @@ TEST_F(TestTcpTransport, Torture) {
         // TODO: peek
         break;
       }
-      case TcpReceiver::ReceiveStatus::DOWNLOADING:
-      {
+      case TcpReceiver::ReceiveStatus::DOWNLOADING: {
         break;
       }
-      case TcpReceiver::ReceiveStatus::ERROR:
-      {
+      case TcpReceiver::ReceiveStatus::ERROR: {
         spdlog::error("{}, {}: bytes {} - got error {} {}", fd, (void *)incomplete.get(),
-                        incomplete->GetCurrentProgress(), errno, strerror(errno));
+                      incomplete->GetCurrentProgress(), errno, strerror(errno));
       }
-      case TcpReceiver::ReceiveStatus::DISCONNECTED:
-      {
+      case TcpReceiver::ReceiveStatus::DISCONNECTED: {
         spdlog::error("Disconnecting from channel {}", channel_name);
         return;
       }
@@ -495,8 +476,9 @@ TEST_F(TestTcpTransport, Torture) {
       auto receiver = SubscribeToPort(4242 + sender_listen_socket_index);
       ASSERT_NE(receiver, nullptr);
       ASSERT_TRUE(poller->AddFd(receiver->GetSocket().GetFd(),
-                                std::bind(callback, std::placeholders::_1,std::placeholders::_2, std::to_string(sender_listen_socket_index),
-                                          receiver.get(), std::make_shared<core::transport::IncompleteRawMessage>())));
+                                std::bind(callback, std::placeholders::_1, std::placeholders::_2,
+                                          std::to_string(sender_listen_socket_index), receiver.get(),
+                                          std::make_shared<core::transport::IncompleteRawMessage>())));
 
       receivers.push_back(std::move(receiver));
       senders.push_back(AcceptOneKnownClient(listen_sockets[sender_listen_socket_index]));
@@ -546,17 +528,16 @@ TEST_F(TestTcpTransport, Torture) {
       }
     }
   }
-    //spdlog::set_level(spdlog::level::debug);
-    spdlog::warn("Removing fds");
-    // On my system this completes in 2-10ms if there are many many messages in flight - usually much less
-    senders_by_index.clear();
-    for(auto& r : receivers) {
-        poller->RemoveFd(r->GetSocket().GetFd());
-    }
-    spdlog::warn("Done removing fds");
-    spdlog::warn("queue size is {}", output_queue.Size());
-    spdlog::warn("Exiting");
-  
+  // spdlog::set_level(spdlog::level::debug);
+  spdlog::warn("Removing fds");
+  // On my system this completes in 2-10ms if there are many many messages in flight - usually much less
+  senders_by_index.clear();
+  for (auto &r : receivers) {
+    poller->RemoveFd(r->GetSocket().GetFd());
+  }
+  spdlog::warn("Done removing fds");
+  spdlog::warn("queue size is {}", output_queue.Size());
+  spdlog::warn("Exiting");
 }
 
 } // namespace basis::plugins::transport
