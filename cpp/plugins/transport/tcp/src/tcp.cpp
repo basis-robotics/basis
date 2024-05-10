@@ -98,7 +98,7 @@ std::unique_ptr<const core::transport::RawMessage> TcpReceiver::ReceiveMessage(i
   return message;
 }
 
-bool TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage &incomplete) {
+TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage &incomplete) {
   spdlog::info("TcpReceiver::ReceiveMessage");
   int count = 0;
   do {
@@ -109,13 +109,12 @@ bool TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage &incomple
     if (count < 0) {
         if(errno != EAGAIN && errno != EWOULDBLOCK) {
             spdlog::error("ReceiveMessage failed due to {} {}", errno, strerror(errno));
+            return ReceiveStatus::ERROR;
         }
-      // todo: this needs to return the error type
-      return false;
+        return ReceiveStatus::DOWNLOADING;
     }
     if (count == 0) {
-      spdlog::error("ReceiveMessage {} {}", errno, strerror(errno));
-      return false;
+      return ReceiveStatus::DISCONNECTED;
     }
     if (count > 0) {
       spdlog::info("ReceiveMessage Got {} bytes", count);
@@ -124,7 +123,7 @@ bool TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage &incomple
     // Continue downloading until we've gotten the whole message
   } while (!incomplete.AdvanceCounter(count));
 
-  return true;
+  return ReceiveStatus::DONE;
 }
 
 } // namespace basis::plugins::transport

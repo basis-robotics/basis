@@ -39,6 +39,7 @@ namespace basis::plugins::transport {
 
         std::lock_guard guard(callback_mutex);
         auto it = callbacks.find(fd);
+        // todo: it should be safe to unlock here as long as we lock the inner mutex _first_
         if(it != callbacks.end()) {
             it->second.callback(fd, std::unique_lock(it->second.mutex));
         }
@@ -63,6 +64,8 @@ namespace basis::plugins::transport {
     epoll_event event;
     event.events = EPOLLIN | EPOLLET | EPOLLONESHOT; // EPOLLEXCLUSIVE shouldn't be needed for single threaded epoll
     event.data.fd = fd;
+
+    //todo: catch EPOLLRDHUP here?
 
     // This is safe across threads
     // https://bugzilla.kernel.org/show_bug.cgi?id=43072

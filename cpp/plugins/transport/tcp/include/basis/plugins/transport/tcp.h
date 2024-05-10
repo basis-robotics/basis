@@ -99,7 +99,14 @@ public:
      */
     std::unique_ptr<const core::transport::RawMessage> ReceiveMessage(int timeout_s);
     
-    bool ReceiveMessage(core::transport::IncompleteRawMessage& message);
+    // todo this needs to return a status enum
+    enum class ReceiveStatus {
+        DOWNLOADING,
+        DONE,
+        ERROR,
+        DISCONNECTED
+    };
+    ReceiveStatus ReceiveMessage(core::transport::IncompleteRawMessage& message);
 
     /**
     * @todo error handling
