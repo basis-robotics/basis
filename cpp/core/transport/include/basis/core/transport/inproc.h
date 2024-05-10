@@ -148,7 +148,7 @@ private:
     std::shared_ptr<PublisherBaseT<T_MSG>> AdvertiseRaw(std::string_view topic, MessageTypeInfo type_info) {
 
     std::unordered_map<std::string, MessageTypeInfo> topic_types;
-        #endif
+    #endif
 
 };
 

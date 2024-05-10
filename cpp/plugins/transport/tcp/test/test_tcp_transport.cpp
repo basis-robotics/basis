@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "spdlog/cfg/env.h"
+#include <basis/plugins/transport/epoll.h>
 #include <basis/plugins/transport/tcp.h>
 #include <gtest/gtest.h>
 
@@ -14,9 +15,8 @@
 
 // removeme
 #include <basis/core/threading/thread_pool.h>
-#include <fcntl.h>
 #include <queue>
-#include <sys/epoll.h>
+
 /*
 void init_logger(){
 
@@ -43,122 +43,6 @@ void init_logger(){
 using namespace basis::core::networking;
 
 namespace basis::plugins::transport {
-
-struct Epoll {
-  // https://stackoverflow.com/questions/39173429/one-shot-level-triggered-epoll-does-epolloneshot-imply-epollet
-  // https://idea.popcount.org/2017-02-20-epoll-is-fundamentally-broken-12/
-
-  // we don't want to be using edge triggered mode per thread
-  // it will force us to drain the socket completely
-  // if this happens enough times we will run out of available workers
-
-  // instead, level triggered once, but with a work queue
-  // one thread pool
-  // one main thread, using epoll_wait
-  // when epoll_wait is ready add an event to the queue, can call a condition variable once
-  //    ...we can probably actually add _all_ events to the queue and notify_all
-  // when a thread wakes up due to cv, it pulls an event off the queue
-  // when a thread gets EAGAIN on reading, it rearms the fd
-  // when a thread finishes a read without EAGAIN, it puts the work back on the queue to signal that there's more to be
-  // done when the thread loops, it locks and checks if there's work to be done, no need to wait for cv
-
-  // todo: check for CAP_BLOCK_SUSPEND
-  Epoll() {
-    epoll_fd = epoll_create1(EPOLL_CLOEXEC);
-    assert(epoll_fd != -1);
-
-    epoll_main_thread = std::thread(&Epoll::MainThread, this);
-  }
-
-  /*
-  Epoll(const Epoll&) = delete;
-  Epoll& operator=(const Epoll&) = delete;
-  Epoll(Epoll&& other) = default;
-  Epoll& operator=(Epoll&& other) = default;
-*/
-  ~Epoll() {
-    spdlog::debug("~Epoll");
-    stop = true;
-    if (epoll_main_thread.joinable()) {
-      epoll_main_thread.join();
-    }
-    close(epoll_fd);
-  }
-
-  void MainThread() {
-    // https://linux.die.net/man/4/epoll
-    constexpr int MAX_EVENTS = 128;
-    epoll_event events[128];
-    while (!stop) {
-      // Wait for events, indefinitely - rely on close() to stop us
-      // todo: we could send a signal or add an additional socket for epoll to listen to
-      // to get faster shutdown
-      spdlog::debug("epoll_wait");
-      int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 1000);
-      if (nfds < 0) {
-        spdlog::debug("epoll dieing");
-        return;
-      }
-      spdlog::debug("epoll_wait nfds {}", nfds);
-      for (int n = 0; n < nfds; ++n) {
-        int fd = events[n].data.fd;
-        spdlog::info("Socket {} ready.", events[n].data.fd);
-        callbacks.at(fd)(fd);
-      }
-    }
-  }
-
-  /**
-   * Adds the fd to the watch interface.
-   * Forces the fd to be non-blocking.
-   *
-   * @todo would it be useful to allow blocking sockets here?
-   * @todo should we enforce a Socket& instead?
-   * @todo need to ensure that we remove the handle from epoll before we close it. This means a two way reference
-   * @todo a careful reading of the epoll spec implies that one should read from the socket once after adding here
-   * @todo error handling
-   * @todo return a handle that can reactivate itself
-   */
-  bool AddFd(int fd, std::function<void(int)> callback) {
-    assert(callbacks.count(fd) == 0);
-    spdlog::debug("AddFd {}", fd);
-    int flags = fcntl(fd, F_GETFL);
-    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-
-    epoll_event event;
-    event.events = EPOLLIN | EPOLLET | EPOLLONESHOT; // EPOLLEXCLUSIVE shouldn't be needed for single threaded epoll
-    event.data.fd = fd;
-
-    // This is safe across threads
-    // https://bugzilla.kernel.org/show_bug.cgi?id=43072
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event)) {
-      spdlog::debug("Failed to add file descriptor to epoll");
-      return false;
-    }
-    callbacks[fd] = callback;
-    return true;
-  }
-
-  bool ReactivateHandle(int fd) {
-    epoll_event event;
-    event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-    event.data.fd = fd;
-
-    // This is safe across threads
-    // https://bugzilla.kernel.org/show_bug.cgi?id=43072
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event)) {
-      spdlog::debug("Failed to wake up fd with epoll");
-      return false;
-    }
-    return true;
-  }
-  // todo https://idea.popcount.org/2017-03-20-epoll-is-fundamentally-broken-22/
-  std::thread epoll_main_thread;
-  int epoll_fd = -1;
-  std::atomic<bool> stop = false;
-  // do we really need multiple callbacks or can we just use one for the whole thing?
-  std::unordered_map<int, std::function<void(int)>> callbacks;
-};
 
 /**
  * Simple thread safe Multi-producer Single Consumer Queue
