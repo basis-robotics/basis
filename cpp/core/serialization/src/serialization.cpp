@@ -1,3 +1,1 @@
-void stub() {
-    
-}
+void stub() {}
