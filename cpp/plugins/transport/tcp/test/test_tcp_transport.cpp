@@ -240,11 +240,6 @@ TEST_F(TestTcpTransport, Poll) {
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
   // todo: test error conditions
-
-  // 0. TCP socket is configured as non-blocking
-  // 1. Worker pool gets notification that there's a waiting socket for a receiver
-  // 2. It runs recv and tries to fill output until there's no more data
-  // 3.
 }
 
 /**
@@ -531,7 +526,9 @@ TEST_F(TestTcpTransport, Torture) {
   // spdlog::set_level(spdlog::level::debug);
   spdlog::warn("Removing fds");
   // On my system this completes in 2-10ms if there are many many messages in flight - usually much less
-  senders_by_index.clear();
+  
+  // Enable this to test disconnect behavior
+  //senders_by_index.clear();
   for (auto &r : receivers) {
     poller->RemoveFd(r->GetSocket().GetFd());
   }

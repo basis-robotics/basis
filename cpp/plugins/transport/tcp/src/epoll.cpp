@@ -37,11 +37,13 @@ namespace basis::plugins::transport {
         int fd = events[n].data.fd;
         spdlog::info("Socket {} ready.", events[n].data.fd);
 
-        std::lock_guard guard(callback_mutex);
+        std::unique_lock map_guard(callbacks_mutex);
         auto it = callbacks.find(fd);
-        // todo: it should be safe to unlock here as long as we lock the inner mutex _first_
+        
         if(it != callbacks.end()) {
-            it->second.callback(fd, std::unique_lock(it->second.mutex));
+            std::unique_lock callback_lock(it->second.mutex);
+            map_guard.unlock();
+            it->second.callback(fd, std::move(callback_lock));
         }
       }
     }
@@ -74,7 +76,7 @@ namespace basis::plugins::transport {
       return false;
     }
     {
-        std::lock_guard guard(callback_mutex);
+        std::lock_guard guard(callbacks_mutex);
         
         callbacks.emplace(fd, callback);
     }
@@ -85,14 +87,14 @@ namespace basis::plugins::transport {
     // First lock and remove this fd from the map to stop more callbacks from coming in
     decltype(callbacks)::node_type node;
     {
-        std::lock_guard guard(callback_mutex);
+        std::lock_guard guard(callbacks_mutex);
         node = callbacks.extract(fd);
     }
     // We already removed this node, or something else happened. Bail.
     if(!node) {
         return;
     }
-    // Tell epoll itself to stop messaging
+    // Tell epoll itself to stop sending events
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
 
     // Now lock the inner mutex, to wait out any workers that are using this fd

@@ -12,6 +12,7 @@
 namespace basis::plugins::transport {
 
 struct Epoll {
+  // TODO: rewrite this comment block
   // https://stackoverflow.com/questions/39173429/one-shot-level-triggered-epoll-does-epolloneshot-imply-epollet
   // https://idea.popcount.org/2017-02-20-epoll-is-fundamentally-broken-12/
 
@@ -23,7 +24,6 @@ struct Epoll {
   // one thread pool
   // one main thread, using epoll_wait
   // when epoll_wait is ready add an event to the queue, can call a condition variable once
-  //    ...we can probably actually add _all_ events to the queue and notify_all
   // when a thread wakes up due to cv, it pulls an event off the queue
   // when a thread gets EAGAIN on reading, it rearms the fd
   // when a thread finishes a read without EAGAIN, it puts the work back on the queue to signal that there's more to be
@@ -62,49 +62,13 @@ private:
   std::thread epoll_main_thread;
   int epoll_fd = -1;
   std::atomic<bool> stop = false;
-  // do we really need multiple callbacks or can we just use one for the whole thing?
-
- 
-    /*
-    To close:
-        Lock outer mutex (corresponding to map access)
-            Find in map
-            // TODO: inner mutex usage can be replaced with atomic flag access.
-            Lock inner mutex
-                if !in_use, can close
-                if in_use, set cookie to close on exit, steal fd from closer
-            Unlock inner mutex
-            if !in_use remove from map
-        Unlock outer mutex
-
-        In callback, check if cookie set. If so, call close(), add to to_remove list in map
-
-
-    alternatively:
-        keep reference counted fd
-        when reference count on fd is 0, it knows it is allowed to delete and remove as nothing else holds the lock!
-
-
-    alternatively:
-        remove from watch, stops new events being generated
-        Lock outer mutex (corresponding to map access)
-            Find in map
-            move out of map
-        unlock outer mutex
-    
-        Lock inner mutex
-            close
-        Unlock inner mutex
-
-
-    */
 
     struct CallbackContext {
         CallbackType callback;
         std::mutex mutex;
     };
 
-  std::mutex callback_mutex;
+  std::mutex callbacks_mutex;
   std::unordered_map<int, CallbackContext> callbacks;
 };
 
