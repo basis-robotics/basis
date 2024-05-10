@@ -135,6 +135,46 @@ struct Epoll {
     std::unordered_map<int, std::function<void(int)>> callbacks;
 };
 
+/**
+ * Simple thread safe Multi-producer Single Consumer Queue
+ * Used as a placeholder for now.
+ * In theory, safe for MPMC as well - needs testing.
+ */
+template<typename T>
+class SimpleMPSCQueue {
+    /**
+     * Adds item to the queue
+     */
+    void Emplace(T&& item) {
+        {
+            std::lock_guard lock(queue_mutex);
+            queue.emplace(item);
+        }
+        queue_cv.notify_one();
+    }
+
+    /**
+     * Removes an item out of the queue - or nothing if there's a timeout.
+     * @todo I don't see why this can't be used as MPMC
+     */
+    std::optional<T> Pop(int sleep_s) {
+        std::unique_lock lock(queue_mutex);
+        if(queue.empty()) {
+            queue_cv.wait_for(lock, std::chrono::seconds(sleep_s), [this] { return !queue.empty(); });
+        }
+        std::optional<T> ret;
+        if(!queue.empty()) {
+            ret = std::move(queue.front());
+            queue.pop();
+        }
+        return ret;
+    }
+
+    std::mutex queue_mutex;
+    std::condition_variable queue_cv;
+    std::queue<T> queue;
+};
+
 
 class TestTcpTransport : public testing::Test {
 public:
@@ -169,13 +209,18 @@ public:
         return std::move(sender);
     }
 
-    // Work around privateness
+    /**
+     * friend-ness isn't inherited, so make a helper here for the tests
+     */
     bool Send(TcpSender& sender, const std::byte* data, size_t len) {
         return sender.Send(data, len);
     }
 
 };
 
+/**
+ * Test raw send/recv with a single pair of sockets
+ */
 TEST_F(TestTcpTransport, NoCoordinator) {
     TcpListenSocket listen_socket = CreateListenSocket();    
     std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
@@ -218,11 +263,17 @@ TEST_F(TestTcpTransport, NoCoordinator) {
     ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
     ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
     ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
-    // This should fail, we've run out of messages
+    // we've run out of messages
     ASSERT_EQ(receiver->ReceiveMessage(1.0), nullptr);
+    sender->SendMessage(shared_message);
+    ASSERT_NE(receiver->ReceiveMessage(1.0), nullptr);
+
 }
 
-TEST_F(TestTcpTransport, WorkQueue) {
+/**
+ * Add epoll() into the mix - now we can test multiple sockets.
+ */
+TEST_F(TestTcpTransport, Poll) {
     TcpListenSocket listen_socket = CreateListenSocket();    
     std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
     std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
@@ -276,8 +327,53 @@ TEST_F(TestTcpTransport, WorkQueue) {
     // 3. 
 }
 
+/**
+ * Add thread pool into the mix.
+ */
+TEST_F(TestTcpTransport, ThreadPool) {
+    TcpListenSocket listen_socket = CreateListenSocket();    
+    std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+    std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
 
-TEST_F(TestTcpTransport, Poller) {
+    const std::string hello = "Hello, World!";
+
+    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
+    strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
+
+    Epoll poller;
+    core::threading::ThreadPool thread_pool(4);
+
+    core::transport::IncompleteRawMessage incomplete;
+    auto callback = [&](int fd) {
+        thread_pool.enqueue([&] {
+            spdlog::info("Running poller callback");
+            
+            if(receiver->ReceiveMessage(incomplete)) {
+                spdlog::info("Got full message");
+                auto msg = incomplete.GetCompletedMessage();
+                ASSERT_NE(msg, nullptr);
+                spdlog::info("{}",  spdlog::to_hex(msg->GetPacket()));
+                spdlog::info("{}", (const char*)msg->GetPayload().data());
+                ASSERT_STREQ((const char*)msg->GetPayload().data(), hello.c_str());
+            }
+            else {
+                if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                    spdlog::info("Got error {}", strerror(errno));
+                }
+            }
+            poller.ReactivateHandle(receiver->GetSocket().GetFd());
+        });
+    };
+
+    ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(), callback));
+
+}
+
+/**
+ * Finally, add a MPSC queue.
+ * @todo: someday we will want multiple consuming threads on the same queue.
+ */
+TEST_F(TestTcpTransport, MPSCQueue) {
     TcpListenSocket listen_socket = CreateListenSocket();    
     std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
     std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);

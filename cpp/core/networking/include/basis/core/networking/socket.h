@@ -98,7 +98,7 @@ public:
      * @todo Make a proper error handling API here
      * @todo Use basis::core::Time
      */
-     int RecvInto(char* buffer, size_t buffer_len, int timeout_s = -1);
+    int RecvInto(char* buffer, size_t buffer_len, int timeout_s = -1);
 
 protected:
     
@@ -109,9 +109,12 @@ protected:
 class TcpSocket : public Socket {
 public:
     TcpSocket(int fd = -1 /* todo: pass in address info */) : Socket(fd) {
-        
+        // Enforce TcpNoDelay by default
+        TcpNoDelay();
     }
-     
+    
+    void TcpNoDelay();
+
     static std::expected<TcpSocket, Socket::Error> Connect(std::string_view host, uint16_t port);
 };
 
@@ -127,7 +130,6 @@ public:
 
     // TODO: time integration
     std::expected<TcpSocket, Socket::Error> Accept(int timeout_s = -1);
-
 
 private:
     static constexpr int max_backlog_connections = 20;

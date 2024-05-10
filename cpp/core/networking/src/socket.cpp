@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-
+#include <netinet/tcp.h>
 #include <string.h>
 #include <spdlog/spdlog.h>
 #include <basis/core/networking/socket.h>
@@ -88,8 +88,15 @@ std::expected<TcpSocket, Socket::Error> TcpSocket::Connect(std::string_view addr
     if(ret == -1) {
         return std::unexpected(Socket::Error{Socket::ErrorSource::CONNECT, errno});
     }
-
+    
     return TcpSocket(sockfd);
+
+}
+
+void TcpSocket::TcpNoDelay() {
+    // Enforce TCP_NODELAY by default
+    int one = 1;
+    setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
 
 }
 
@@ -117,7 +124,6 @@ std::expected<TcpListenSocket, Socket::Error> TcpListenSocket::Create(uint16_t p
     if(ret == -1) {
         return std::unexpected(Socket::Error{Socket::ErrorSource::SETSOCKOPT, errno});
     }
-
 
     // bind it to the port we passed in to getaddrinfo():
     ret = bind(sockfd, res->ai_addr, res->ai_addrlen);
