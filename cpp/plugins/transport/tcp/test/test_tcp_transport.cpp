@@ -195,7 +195,7 @@ TEST_F(TestTcpTransport, Poll) {
   Epoll poller;
 
   core::transport::IncompleteRawMessage incomplete;
-  auto callback = [&incomplete, &receiver, &poller, &hello](int fd) {
+  auto callback = [&incomplete, &receiver, &poller, &hello](int fd, std::unique_lock<std::mutex>) {
     spdlog::info("Running poller callback on fd {}", fd);
 
     if (receiver->ReceiveMessage(incomplete)) {
@@ -207,7 +207,7 @@ TEST_F(TestTcpTransport, Poll) {
       ASSERT_STREQ((const char *)msg->GetPayload().data(), hello.c_str());
     } else {
       if (errno != EAGAIN && errno != EWOULDBLOCK) {
-        spdlog::info("Got error {}", strerror(errno));
+        spdlog::error("Got error {}", strerror(errno));
       }
     }
     poller.ReactivateHandle(receiver->GetSocket().GetFd());
@@ -253,8 +253,8 @@ TEST_F(TestTcpTransport, ThreadPool) {
   core::threading::ThreadPool thread_pool(4);
 
   core::transport::IncompleteRawMessage incomplete;
-  auto callback = [&](int fd) {
-    thread_pool.enqueue([&] {
+  auto callback = [&](int fd, std::unique_lock<std::mutex> lock) {
+    thread_pool.enqueue([&, lock = std::move(lock)] {
       spdlog::info("Running poller callback");
 
       if (receiver->ReceiveMessage(incomplete)) {
@@ -266,7 +266,7 @@ TEST_F(TestTcpTransport, ThreadPool) {
         ASSERT_STREQ((const char *)msg->GetPayload().data(), hello.c_str());
       } else {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-          spdlog::info("Got error {}", strerror(errno));
+          spdlog::error("Got error {}", strerror(errno));
         }
       }
       poller.ReactivateHandle(receiver->GetSocket().GetFd());
@@ -314,10 +314,10 @@ TEST_F(TestTcpTransport, MPSCQueue) {
         spdlog::info("Got full message");
         output_queue.Emplace(incomplete->GetCompletedMessage());
       } else {
-        // if(errno != EAGAIN && errno != EWOULDBLOCK) {
-        spdlog::info("{}, {}: bytes {} - got error {}", fd, (void *)incomplete.get(), incomplete->GetCurrentProgress(),
+        if(errno != EAGAIN && errno != EWOULDBLOCK) {
+        spdlog::error("{}, {}: bytes {} - got error {}", fd, (void *)incomplete.get(), incomplete->GetCurrentProgress(),
                      strerror(errno));
-        //}
+        }
       }
       poller.ReactivateHandle(fd);
       spdlog::info("Rearmed");
@@ -362,7 +362,7 @@ TEST_F(TestTcpTransport, Torture) {
    * in.
    */
   auto callback = [&thread_pool, poller = poller.get(),
-                   &output_queue](int fd, std::string channel_name, TcpReceiver *receiver,
+                   &output_queue](int fd, std::unique_lock<std::mutex> lock, std::string channel_name, TcpReceiver *receiver,
                                   std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
     spdlog::info("Queuing work for {}", fd);
 
@@ -370,7 +370,7 @@ TEST_F(TestTcpTransport, Torture) {
      * This is called by epoll when new data is available on a socket. We immediately do nothing with it, and instead
      * push the work off to the thread pool. This should be a very fast operation.
      */
-    thread_pool.enqueue([fd, receiver, channel_name, &poller, &output_queue, incomplete] {
+    thread_pool.enqueue([fd, receiver, channel_name, &poller, &output_queue, incomplete, lock = std::move(lock)] {
       // It's an error to actually call this with multiple threads.
       // TODO: add debug only checks for this
       spdlog::info("Running thread pool callback on {}", fd);
@@ -426,7 +426,7 @@ TEST_F(TestTcpTransport, Torture) {
       auto receiver = SubscribeToPort(4242 + sender_listen_socket_index);
       ASSERT_NE(receiver, nullptr);
       ASSERT_TRUE(poller->AddFd(receiver->GetSocket().GetFd(),
-                                std::bind(callback, std::placeholders::_1, std::to_string(sender_listen_socket_index),
+                                std::bind(callback, std::placeholders::_1,std::placeholders::_2, std::to_string(sender_listen_socket_index),
                                           receiver.get(), std::make_shared<core::transport::IncompleteRawMessage>())));
 
       receivers.push_back(std::move(receiver));
@@ -468,18 +468,26 @@ TEST_F(TestTcpTransport, Torture) {
     ASSERT_EQ(p.second, MESSAGES_PER_SENDER * SENDER_COUNT);
   }
 
-  spdlog::warn("Exiting");
-  poller = nullptr;
-  // spdlog::warn("Sending {} messages on each sender", MESSAGES_PER_SENDER);
-  // for(int message_count = 0; message_count < MESSAGES_PER_SENDER; message_count++) {
-  //     for(int sender_index = 0; sender_index < SENDER_COUNT; sender_index++) {
-  //         for(auto& sender : senders_by_index[sender_index]) {
-  //             sender->SendMessage(messages_to_send[sender_index]);
-  //         }
-  //     }
-  // }
+  // Spam a bunch more messages
+  for (int message_count = 0; message_count < MESSAGES_PER_SENDER * 10; message_count++) {
+    for (int sender_index = 0; sender_index < SENDER_COUNT; sender_index++) {
+      for (auto &sender : senders_by_index[sender_index]) {
+        sender->SendMessage(messages_to_send[sender_index]);
+      }
+    }
+  }
+    //spdlog::set_level(spdlog::level::debug);
+    spdlog::warn("Removing fds");
+    // On my system this completes in less than 2ms
+    for(auto& r : receivers) {
+        poller->RemoveFd(r->GetSocket().GetFd());
+    }
+    spdlog::warn("Done removing fds");
+    spdlog::warn("queue size is {}", output_queue.Size());
 
-  // TODO: work out kinks around destruction order. Had previously seen bugs with nullptr crashes on shutdown.
+
+    spdlog::warn("Exiting");
+  
 }
 
 } // namespace basis::plugins::transport

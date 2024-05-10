@@ -36,7 +36,12 @@ namespace basis::plugins::transport {
       for (int n = 0; n < nfds; ++n) {
         int fd = events[n].data.fd;
         spdlog::info("Socket {} ready.", events[n].data.fd);
-        callbacks.at(fd)(fd);
+
+        std::lock_guard guard(callback_mutex);
+        auto it = callbacks.find(fd);
+        if(it != callbacks.end()) {
+            it->second.callback(fd, std::unique_lock(it->second.mutex));
+        }
       }
     }
   }
@@ -47,9 +52,9 @@ namespace basis::plugins::transport {
    * @todo need to ensure that we remove the handle from epoll before we close it. This means a two way reference
    * @todo a careful reading of the epoll spec implies that one should read from the socket once after adding here
    * @todo error handling
-   * @todo return a handle that can reactivate itself
+   * @todo return a handle that can reactivate itself?
    */
-  bool Epoll::AddFd(int fd, std::function<void(int)> callback) {
+  bool Epoll::AddFd(int fd, Epoll::CallbackType callback) {
     assert(callbacks.count(fd) == 0);
     SPDLOG_DEBUG("AddFd {}", fd);
     int flags = fcntl(fd, F_GETFL);
@@ -65,9 +70,34 @@ namespace basis::plugins::transport {
       SPDLOG_DEBUG("Failed to add file descriptor to epoll");
       return false;
     }
-    callbacks[fd] = callback;
+    {
+        std::lock_guard guard(callback_mutex);
+        
+        callbacks.emplace(fd, callback);
+    }
     return true;
   }
+
+  void Epoll::RemoveFd(int fd) {
+    // First lock and remove this fd from the map to stop more callbacks from coming in
+    decltype(callbacks)::node_type node;
+    {
+        std::lock_guard guard(callback_mutex);
+        node = callbacks.extract(fd);
+    }
+    // We already removed this node, or something else happened. Bail.
+    if(!node) {
+        return;
+    }
+    // Tell epoll itself to stop messaging
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
+
+    // Now lock the inner mutex, to wait out any workers that are using this fd
+    std::lock_guard(node.mapped().mutex);
+
+    // We're done, return. It's safe to close this handle.
+  }
+
 
   bool Epoll::ReactivateHandle(int fd) {
     epoll_event event;

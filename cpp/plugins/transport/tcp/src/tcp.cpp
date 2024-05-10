@@ -107,9 +107,9 @@ bool TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage &incomple
     // Download some bytes
     count = socket.RecvInto((char *)buffer.data(), buffer.size());
     if (count < 0) {
-      //   if(errno != EAGAIN && errno != EWOULDBLOCK) {
-      spdlog::info("ReceiveMessage failed due to {} {}", errno, strerror(errno));
-      // }
+        if(errno != EAGAIN && errno != EWOULDBLOCK) {
+            spdlog::error("ReceiveMessage failed due to {} {}", errno, strerror(errno));
+        }
       // todo: this needs to return the error type
       return false;
     }

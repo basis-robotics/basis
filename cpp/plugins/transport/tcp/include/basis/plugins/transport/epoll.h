@@ -1,6 +1,7 @@
 #pragma once
 /**
  * First try at an epoll interface. This is destined to live in a helper library - Unix Domain Socket transports will need the same thing.
+ * It's also possible this will be replaced completely with something libuv based.
  */
 
 #include <fcntl.h>
@@ -42,19 +43,69 @@ struct Epoll {
   /**
    * Adds the fd to the watch interface.
    * Forces the fd to be non-blocking.
+   * Do _not_ pass duplicated file handles into here. See https://idea.popcount.org/2017-03-20-epoll-is-fundamentally-broken-22/
+   * Do _not_ call in the middle of a callback from epoll (keep your callbacks simple!)
+   * Note that it is safe to close() sockets that are registered with epoll, but callbacks may take time to remove themselves.
    */
-  bool AddFd(int fd, std::function<void(int)> callback);
+using CallbackType = std::function<void(int, std::unique_lock<std::mutex>)>;
+  bool AddFd(int fd, CallbackType callback);
+
+  void RemoveFd(int fd);
 
   bool ReactivateHandle(int fd);
 
+  
 private:
   void MainThread();
   // todo https://idea.popcount.org/2017-03-20-epoll-is-fundamentally-broken-22/
+  // https://lwn.net/Articles/520012/
   std::thread epoll_main_thread;
   int epoll_fd = -1;
   std::atomic<bool> stop = false;
   // do we really need multiple callbacks or can we just use one for the whole thing?
-  std::unordered_map<int, std::function<void(int)>> callbacks;
+
+ 
+    /*
+    To close:
+        Lock outer mutex (corresponding to map access)
+            Find in map
+            // TODO: inner mutex usage can be replaced with atomic flag access.
+            Lock inner mutex
+                if !in_use, can close
+                if in_use, set cookie to close on exit, steal fd from closer
+            Unlock inner mutex
+            if !in_use remove from map
+        Unlock outer mutex
+
+        In callback, check if cookie set. If so, call close(), add to to_remove list in map
+
+
+    alternatively:
+        keep reference counted fd
+        when reference count on fd is 0, it knows it is allowed to delete and remove as nothing else holds the lock!
+
+
+    alternatively:
+        remove from watch, stops new events being generated
+        Lock outer mutex (corresponding to map access)
+            Find in map
+            move out of map
+        unlock outer mutex
+    
+        Lock inner mutex
+            close
+        Unlock inner mutex
+
+
+    */
+
+    struct CallbackContext {
+        CallbackType callback;
+        std::mutex mutex;
+    };
+
+  std::mutex callback_mutex;
+  std::unordered_map<int, CallbackContext> callbacks;
 };
 
 }
