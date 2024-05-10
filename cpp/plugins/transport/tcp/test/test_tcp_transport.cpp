@@ -473,40 +473,43 @@ TEST_F(TestTcpTransport, MPSCQueue) {
 }
 TEST_F(TestTcpTransport, Torture) {
 
-    const std::string hello = "Hello, World!";
-
-    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
-    strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
-
     auto poller = std::make_unique<Epoll>();
     core::threading::ThreadPool thread_pool(4);
 
-    SimpleMPSCQueue<std::shared_ptr<core::transport::RawMessage>> output_queue;
+
+    SimpleMPSCQueue<std::pair<std::string, std::shared_ptr<core::transport::RawMessage>>> output_queue;
 
     /**
      * Create callback, storing in the bind
      * 
      * This allows the epoll interface to be completely unaware of what type of work it's being given.
+     *
+     * The metadata here (channel_name) is completely arbitrary. Real code should make up a Context object to hold it all in.
      */
-    auto callback = [&thread_pool, poller = poller.get(), &output_queue](int fd, TcpReceiver* receiver, std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
+    auto callback = [&thread_pool, poller = poller.get(), &output_queue](int fd, std::string channel_name, TcpReceiver* receiver, std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
         spdlog::info("Queuing work for {}", fd);
 
         /**
          * This is called by epoll when new data is available on a socket. We immediately do nothing with it, and instead push the work off to the thread pool.
          * This should be a very fast operation.
          */
-        thread_pool.enqueue([fd, receiver, &poller, &output_queue, incomplete] {
+        thread_pool.enqueue([fd, receiver, channel_name, &poller, &output_queue, incomplete] {
             // It's an error to actually call this with multiple threads.
             // TODO: add debug only checks for this
             spdlog::info("Running thread pool callback on {}", fd);
             if(receiver->ReceiveMessage(*incomplete)) {
                 spdlog::info("Got full message");
-                output_queue.Emplace(incomplete->GetCompletedMessage());
+                auto msg = incomplete->GetCompletedMessage();
+                std::string expected_msg = "Hello, World! ";
+                expected_msg += channel_name;
+                ASSERT_STREQ((char*)msg->GetPayload().data(), expected_msg.c_str());
+                std::pair<std::string, std::shared_ptr<core::transport::RawMessage>> out(channel_name, std::move(msg));
+                output_queue.Emplace(std::move(out));
             }
             else {
-               // if(errno != EAGAIN && errno != EWOULDBLOCK) {
-                    spdlog::info("{}, {}: bytes {} - got error {}", fd, (void*)incomplete.get(), incomplete->GetCurrentProgress(), strerror(errno));
-             //}
+                if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                    spdlog::error("{}, {}: bytes {} - got error {}", fd, (void*)incomplete.get(), incomplete->GetCurrentProgress(), strerror(errno));
+                }
             }
             poller->ReactivateHandle(fd);
             spdlog::info("Rearmed");
@@ -514,41 +517,55 @@ TEST_F(TestTcpTransport, Torture) {
     };
 
     spdlog::info("Stressing");
-    constexpr int LISTENER_COUNT = 10;
-    constexpr int SENDERS_PER_LISTENER = 10;
+    constexpr int SENDER_COUNT = 10;
+    constexpr int RECEIVERS_PER_SENDER = 10;
     constexpr int MESSAGES_PER_SENDER = 100;
 
-    spdlog::info("Creating {} listen sockets", LISTENER_COUNT);
+    spdlog::info("Creating {} listen sockets", SENDER_COUNT);
     std::vector<TcpListenSocket> listen_sockets;
-    for(int i = 0; i < LISTENER_COUNT; i++) {
+    for(int i = 0; i < SENDER_COUNT; i++) {
         listen_sockets.emplace_back(CreateListenSocket(4242 + i));
     }
-        spdlog::set_level(spdlog::level::warn);
+    
+    spdlog::set_level(spdlog::level::warn);
 
+    // TODO: the naming here is missed up
     std::vector<std::unique_ptr<TcpReceiver>> receivers;
-    std::vector<std::unique_ptr<TcpSender>> senders;
+    std::vector<std::vector<std::unique_ptr<TcpSender>>> senders_by_index;
+    std::vector<std::shared_ptr<basis::core::transport::RawMessage>> messages_to_send;
 
-    spdlog::info("Creating {} connections for each listen socket", SENDERS_PER_LISTENER);
-    for(int listener_index = 0; listener_index < LISTENER_COUNT; listener_index++) {
-        spdlog::info("Listener {} port {}", listener_index, 4242 + listener_index);
-        for(int sender_index = 0; sender_index < SENDERS_PER_LISTENER; sender_index++) {
-            auto receiver = SubscribeToPort(4242 + listener_index);
+    spdlog::info("Creating {} connections for each listen socket", RECEIVERS_PER_SENDER);
+    for(int sender_listen_socket_index = 0; sender_listen_socket_index < SENDER_COUNT; sender_listen_socket_index++) {
+        const std::string hello = "Hello, World! " + std::to_string(sender_listen_socket_index);
+        auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
+        strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
+        messages_to_send.emplace_back(std::move(shared_message));
+
+        std::vector<std::unique_ptr<TcpSender>> senders;
+
+        spdlog::info("Listener {} port {}", sender_listen_socket_index, 4242 + sender_listen_socket_index);
+        for(int receiver_index = 0; receiver_index < RECEIVERS_PER_SENDER; receiver_index++) {
+            auto receiver = SubscribeToPort(4242 + sender_listen_socket_index);
             ASSERT_NE(receiver, nullptr);
-            ASSERT_TRUE(poller->AddFd(receiver->GetSocket().GetFd(), std::bind(callback, std::placeholders::_1, receiver.get(), std::make_shared<core::transport::IncompleteRawMessage>())));
+            ASSERT_TRUE(poller->AddFd(receiver->GetSocket().GetFd(), std::bind(callback, std::placeholders::_1, std::to_string(sender_listen_socket_index), receiver.get(), std::make_shared<core::transport::IncompleteRawMessage>())));
 
             receivers.push_back(std::move(receiver));
-            senders.push_back(AcceptOneKnownClient(listen_sockets[listener_index]));
+            senders.push_back(AcceptOneKnownClient(listen_sockets[sender_listen_socket_index]));
         }
+
+        senders_by_index.emplace_back(std::move(senders));
     }
     
 
-    ASSERT_EQ(receivers.size(), SENDERS_PER_LISTENER * LISTENER_COUNT);
-    ASSERT_EQ(senders.size(), SENDERS_PER_LISTENER * LISTENER_COUNT);
+    ASSERT_EQ(receivers.size(), RECEIVERS_PER_SENDER * SENDER_COUNT);
+    ASSERT_EQ(senders_by_index.size(), SENDER_COUNT);
 
     spdlog::warn("Sending {} messages on each sender", MESSAGES_PER_SENDER);
     for(int message_count = 0; message_count < MESSAGES_PER_SENDER; message_count++) {
-        for(auto& sender : senders) {
-            sender->SendMessage(shared_message);
+        for(int sender_index = 0; sender_index < SENDER_COUNT; sender_index++) {
+            for(auto& sender : senders_by_index[sender_index]) {
+                sender->SendMessage(messages_to_send[sender_index]);
+            }
         }
     }
     spdlog::warn("Done sending, waiting now");
@@ -556,10 +573,20 @@ TEST_F(TestTcpTransport, Torture) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     spdlog::warn("Done waiting, queue size is {}", output_queue.Size());
     
-    ASSERT_EQ(output_queue.Size(),MESSAGES_PER_SENDER * SENDERS_PER_LISTENER * LISTENER_COUNT);
+    ASSERT_EQ(output_queue.Size(),MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT);
 
-    for(int i = 0; i < MESSAGES_PER_SENDER * SENDERS_PER_LISTENER * LISTENER_COUNT; i++) {
-        output_queue.Pop(0);
+    std::unordered_map<std::string, size_t> counts;
+
+    for(int i = 0; i < MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT; i++) {
+        auto msg = output_queue.Pop(0);
+        ASSERT_NE(msg, std::nullopt);
+        std::string hello = "Hello, World! " + msg->first;
+        ASSERT_STREQ(hello.c_str(), (char*)msg->second->GetPayload().data());
+        counts[hello]++;
+    }
+
+    for(auto p : counts) {
+        ASSERT_EQ(p.second, MESSAGES_PER_SENDER * SENDER_COUNT);
     }
 
     spdlog::warn("Exiting?");
