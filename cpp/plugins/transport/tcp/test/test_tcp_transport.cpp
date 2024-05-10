@@ -589,11 +589,18 @@ TEST_F(TestTcpTransport, Torture) {
         ASSERT_EQ(p.second, MESSAGES_PER_SENDER * SENDER_COUNT);
     }
 
-    spdlog::warn("Exiting?");
-
-    // TODO: destruction in this order is necessary. We need to turn off alerts on the handles.
+    spdlog::warn("Exiting");
     poller = nullptr;
-    //std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+    // spdlog::warn("Sending {} messages on each sender", MESSAGES_PER_SENDER);
+    // for(int message_count = 0; message_count < MESSAGES_PER_SENDER; message_count++) {
+    //     for(int sender_index = 0; sender_index < SENDER_COUNT; sender_index++) {
+    //         for(auto& sender : senders_by_index[sender_index]) {
+    //             sender->SendMessage(messages_to_send[sender_index]);
+    //         }
+    //     }
+    // }
+
+    // TODO: work out kinks around destruction order. Had previously seen bugs with nullptr crashes on shutdown.
 }
 
 }
