@@ -14,6 +14,8 @@ namespace basis::plugins::transport {
 
 /**
  * Used to send serialized data over TCP.
+ *
+ * Basic building block for sending data over the network.
  * 
  * Currently spawns thread per publisher. This should be performant but will waste memory in stack allocations.
  *
@@ -21,13 +23,19 @@ namespace basis::plugins::transport {
  */
 class TcpSender : public core::transport::TransportSender {
 public:
-    TcpSender(core::networking::TcpSocket&& socket) : socket(std::move(socket)) {
+    /**
+     * Construct a sender, given an already created+valid socket.
+     */
+    TcpSender(core::networking::TcpSocket socket) : socket(std::move(socket)) {
         StartThread();
     }
 
+    /**
+     * Destruct.
+     */
     ~TcpSender() {
-        // TODO: do _not_ manually call Close() here - either switch to nonblocking mode or signal the send thread.
-        // Doing otherwise could lead to race conditions.
+        // Do _not_ manually call Close() here if running asynchronously.
+        // Doing so could lead to race conditions. (TODO: why?)
         // socket.Close();
         Stop(true);
     }
@@ -95,7 +103,8 @@ public:
     /**
      * 
      *
-     * returns unique as it's expected a transport will handle this
+     * returns unique as it's expected a transport will handle this.
+     * @todo why do we need to return unique? We have a unique ptr wrapping a unique ptr - unneccessary.
      */
     std::unique_ptr<const core::transport::RawMessage> ReceiveMessage(int timeout_s);
     
@@ -127,14 +136,14 @@ class TcpPublisher {
 public:
     static std::expected<TcpPublisher, core::networking::Socket::Error> Create(uint16_t port = 0);
 
+    size_t CheckForNewSubscriptions();
 
-    //TcpPublisher(uint16_t port = 0);
-
+    uint16_t GetPort();
 protected:
-    TcpPublisher(TcpListenSocket listen_socket);
+    TcpPublisher(core::networking::TcpListenSocket listen_socket);
 
-    TcpListenSocket listen_socket;
-    std::vector<TcpSender> senders;
+    core::networking::TcpListenSocket listen_socket;
+    std::vector<std::unique_ptr<TcpSender>> senders;
 };
 
 } // namespace basis::plugins::transport

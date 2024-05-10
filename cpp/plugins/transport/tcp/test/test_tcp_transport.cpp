@@ -181,6 +181,25 @@ TEST_F(TestTcpTransport, NoCoordinator) {
 }
 
 /**
+ * Test creating a publisher.
+ */
+TEST_F(TestTcpTransport, TestPublisher) {
+  auto publisher = TcpPublisher::Create();
+  ASSERT_TRUE(publisher.has_value());
+  uint16_t port = publisher->GetPort();
+  ASSERT_NE(port, 0);
+  auto publish_over_port = TcpPublisher::Create(port);
+  spdlog::debug("Successfully created publisher on port {}", port);
+  ASSERT_FALSE(publish_over_port.has_value());
+  int error = publish_over_port.error().second;
+  spdlog::debug("Failed to create another publisher on same port - got [{}: {}]", strerrorname_np(error), strerror(error));
+
+  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
+
+  ASSERT_EQ(publisher->CheckForNewSubscriptions(), 1);
+}
+
+/**
  * Add epoll() into the mix - now we can test multiple sockets.
  */
 TEST_F(TestTcpTransport, Poll) {

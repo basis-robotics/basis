@@ -126,18 +126,32 @@ TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::Incomple
   return ReceiveStatus::DONE;
 }
 
-std::expected<TcpPublisher, Socket::Error> TcpPublisher::Create(uint16_t port) {
+std::expected<TcpPublisher, core::networking::Socket::Error> TcpPublisher::Create(uint16_t port) {
     spdlog::debug("Create TcpListenSocket");
-    auto maybe_listen_socket = TcpListenSocket::Create(port);
+    auto maybe_listen_socket = core::networking::TcpListenSocket::Create(port);
     if(!maybe_listen_socket) {
-        return maybe_listen_socket.error();
+        return std::unexpected(maybe_listen_socket.error());
     }
 
-    return TcpPublisher(maybe_listen_socket.value());
+    return TcpPublisher(std::move(maybe_listen_socket.value()));
 }
 
-TcpPublisher::TcpPublisher(TcpListenSocket listen_socket) : listen_socket(std::move(listen_socket)) {
+TcpPublisher::TcpPublisher(core::networking::TcpListenSocket listen_socket) 
+    : listen_socket(std::move(listen_socket)) {
 
+}
+
+uint16_t TcpPublisher::GetPort() {
+    return listen_socket.GetPort();
+}
+
+size_t TcpPublisher::CheckForNewSubscriptions() {
+    int num = 0;
+    while(auto maybe_sender_socket = listen_socket.Accept(0)) {
+        senders.emplace_back(std::make_unique<TcpSender>(std::move(maybe_sender_socket.value())));
+        num++;
+    }
+    return num;
 }
 
 } // namespace basis::plugins::transport
