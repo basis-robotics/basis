@@ -93,14 +93,14 @@ class TestTcpTransport : public testing::Test {
 public:
   TestTcpTransport() { spdlog::set_level(spdlog::level::debug); }
 
-  TcpListenSocket CreateListenSocket(uint16_t port = 4242) {
+  TcpListenSocket CreateListenSocket(uint16_t port = 0) {
     spdlog::debug("Create TcpListenSocket");
     auto maybe_listen_socket = TcpListenSocket::Create(port);
     EXPECT_TRUE(maybe_listen_socket.has_value()) << port;
-    return {std::move(maybe_listen_socket.value())};
+    return std::move(maybe_listen_socket.value());
   }
 
-  std::unique_ptr<TcpReceiver> SubscribeToPort(uint16_t port = 4242) {
+  std::unique_ptr<TcpReceiver> SubscribeToPort(uint16_t port) {
     spdlog::debug("Construct TcpReceiver");
     auto receiver = std::make_unique<TcpReceiver>("127.0.0.1", port);
     EXPECT_FALSE(receiver->IsConnected());
@@ -131,7 +131,9 @@ public:
  */
 TEST_F(TestTcpTransport, NoCoordinator) {
   TcpListenSocket listen_socket = CreateListenSocket();
-  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+  uint16_t port = listen_socket.GetPort();
+  ASSERT_NE(port, 0);
+  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
   std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
 
   spdlog::debug("Send raw bytes");
@@ -183,7 +185,9 @@ TEST_F(TestTcpTransport, NoCoordinator) {
  */
 TEST_F(TestTcpTransport, Poll) {
   TcpListenSocket listen_socket = CreateListenSocket();
-  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+  uint16_t port = listen_socket.GetPort();
+  ASSERT_NE(port, 0);
+  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
   std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
 
   const std::string hello = "Hello, World!";
@@ -247,7 +251,9 @@ TEST_F(TestTcpTransport, Poll) {
  */
 TEST_F(TestTcpTransport, ThreadPool) {
   TcpListenSocket listen_socket = CreateListenSocket();
-  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+  uint16_t port = listen_socket.GetPort();
+  ASSERT_NE(port, 0);
+  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
   std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
 
   const std::string hello = "Hello, World!";
@@ -299,7 +305,9 @@ TEST_F(TestTcpTransport, ThreadPool) {
  */
 TEST_F(TestTcpTransport, MPSCQueue) {
   TcpListenSocket listen_socket = CreateListenSocket();
-  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
+  uint16_t port = listen_socket.GetPort();
+  ASSERT_NE(port, 0);
+  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
   std::unique_ptr<TcpSender> sender = AcceptOneKnownClient(listen_socket);
 
   const std::string hello = "Hello, World!";
@@ -446,7 +454,7 @@ TEST_F(TestTcpTransport, Torture) {
   spdlog::info("Creating {} listen sockets", SENDER_COUNT);
   std::vector<TcpListenSocket> listen_sockets;
   for (int i = 0; i < SENDER_COUNT; i++) {
-    listen_sockets.emplace_back(CreateListenSocket(4242 + i));
+    listen_sockets.emplace_back(CreateListenSocket());
   }
 
   spdlog::set_level(spdlog::level::warn);
@@ -465,10 +473,10 @@ TEST_F(TestTcpTransport, Torture) {
     messages_to_send.emplace_back(std::move(shared_message));
 
     std::vector<std::unique_ptr<TcpSender>> senders;
-
-    spdlog::info("Listener {} port {}", sender_listen_socket_index, 4242 + sender_listen_socket_index);
+    const uint16_t port = listen_sockets[sender_listen_socket_index].GetPort();
+    spdlog::info("Listener {} port {}", sender_listen_socket_index, port);
     for (int receiver_index = 0; receiver_index < RECEIVERS_PER_SENDER; receiver_index++) {
-      auto receiver = SubscribeToPort(4242 + sender_listen_socket_index);
+      auto receiver = SubscribeToPort(port);
       ASSERT_NE(receiver, nullptr);
       ASSERT_TRUE(poller->AddFd(receiver->GetSocket().GetFd(),
                                 std::bind(callback, std::placeholders::_1, std::placeholders::_2,

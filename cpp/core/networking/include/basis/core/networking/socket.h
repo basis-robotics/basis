@@ -128,6 +128,8 @@ protected:
 public:
     static std::expected<TcpListenSocket, Socket::Error> Create(uint16_t port);
 
+    uint16_t GetPort() const;
+
     // TODO: time integration
     std::expected<TcpSocket, Socket::Error> Accept(int timeout_s = -1);
 

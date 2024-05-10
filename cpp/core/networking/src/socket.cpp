@@ -90,6 +90,18 @@ void TcpSocket::TcpNoDelay() {
   setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
 }
 
+uint16_t TcpListenSocket::GetPort() const {
+  struct sockaddr_in sin;
+  socklen_t len = sizeof(sin);
+  if (getsockname(fd, (struct sockaddr *)&sin, &len) == -1)
+  {
+    return 0;   
+  }
+  else
+  {
+    return ntohs(sin.sin_port);
+  }
+}
 std::expected<TcpListenSocket, Socket::Error> TcpListenSocket::Create(uint16_t port) {
   struct addrinfo hints, *res;
   int sockfd;

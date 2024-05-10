@@ -40,7 +40,7 @@ void TcpSender::StartThread() {
 }
 
 bool TcpSender::Send(const std::byte *data, size_t len) {
-  // TODO: this loop should go on a helper on Socket
+  // TODO: this loop should go on a helper on Socket(?)
   while (len) {
     int sent_size = socket.Send(data, len);
     if (sent_size < 0) {
