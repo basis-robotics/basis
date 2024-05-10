@@ -2,7 +2,7 @@
 
 // TODO: this should probably be pulled out into plugins/?
 // TODO: is this header only??
-
+#include <condition_variable>
 #include <memory>
 #include <string_view>
 #include <typeinfo>
@@ -10,9 +10,7 @@
 #include <basis/core/transport/publisher.h>
 #include <basis/core/transport/subscriber.h>
 
-namespace basis {
-namespace core {
-namespace transport {
+namespace basis::core::transport {
 
 // cast to void pointer, pass to function, uncast
 // there's no way to preserve type safety here as this will potentially cross shared libraries
@@ -154,6 +152,4 @@ private:
 
 };
 
-}
-}
 }
