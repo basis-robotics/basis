@@ -7,7 +7,7 @@
 
 namespace basis::plugins::transport {
     void TcpSender::StartThread() {
-        printf("Starting thread\n");
+        spdlog::info("Starting TcpSender thread\n");
         send_thread = std::thread([this]() {
             while(!stop_thread) {
                 std::vector<std::shared_ptr<const core::transport::RawMessage>> buffer;
@@ -23,15 +23,15 @@ namespace basis::plugins::transport {
                 }
 
                 for(auto& message : buffer) {
-                    spdlog::debug("sending message... '{}'", (char*)(message->GetPacket().data() + sizeof(core::transport::MessageHeader)));
+                    spdlog::trace("sending message... '{}'", (char*)(message->GetPacket().data() + sizeof(core::transport::MessageHeader)));
                     std::span<const std::byte> packet = message->GetPacket();
                     if(!Send(packet.data(), packet.size())) {
-                        spdlog::debug("Stopping send thread due to {}: {}", errno, strerror(errno));
+                        spdlog::trace("Stopping send thread due to {}: {}", errno, strerror(errno));
                         stop_thread = true;
                     }
-                    spdlog::debug("Sent");
+                    spdlog::trace("Sent");
                     if(stop_thread) {
-                        spdlog::debug("stop TcpSender");
+                        spdlog::trace("stop TcpSender");
                         return;
                     }
                 }
@@ -99,6 +99,7 @@ namespace basis::plugins::transport {
     }
     
     bool TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage& incomplete) {
+        spdlog::info("TcpReceiver::ReceiveMessage");
         int count = 0;
         do {
             std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
@@ -106,9 +107,9 @@ namespace basis::plugins::transport {
             // Download some bytes
             count = socket.RecvInto((char*)buffer.data(), buffer.size());
             if(count < 0) {
-                if(errno != EAGAIN && errno != EWOULDBLOCK) {
-                    spdlog::trace("ReceiveMessage failed due to {} {}", errno, strerror(errno));
-                }
+             //   if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                    spdlog::info("ReceiveMessage failed due to {} {}", errno, strerror(errno));
+               // }
                 // todo: this needs to return the error type
                 return false;
             }
@@ -117,7 +118,7 @@ namespace basis::plugins::transport {
                 return false;
             }
             if(count > 0) {
-                spdlog::debug("ReceiveMessage Got {} bytes", count);
+                spdlog::info("ReceiveMessage Got {} bytes", count);
             }
             // todo: handle EAGAIN
         // Continue downloading until we've gotten the whole message

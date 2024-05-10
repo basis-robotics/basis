@@ -8,13 +8,38 @@
 
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/bin_to_hex.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/async.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+
 
 // removeme
 #include <queue>
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <basis/core/threading/thread_pool.h>
+/*
+void init_logger(){
+    
 
+    const std::string filename;
+    int size = 10*1024*1024; // 10M
+    int backcount = 5;       // 5 
+
+    // create console_sink
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink->set_level(spdlog::level::debug);
+
+    // sink's bucket
+    spdlog::sinks_init_list sinks{console_sink};
+
+    // create async logger, and use global threadpool
+    spdlog::init_thread_pool(1024 * 8, 1);
+    auto logger = std::make_shared<spdlog::async_logger>("aslogger", sinks, spdlog::thread_pool());
+    spdlog::set_default_logger(logger);
+
+}
+*/
 
 using namespace basis::core::networking;
 
@@ -70,14 +95,16 @@ struct Epoll {
             // Wait for events, indefinitely - rely on close() to stop us
             // todo: we could send a signal or add an additional socket for epoll to listen to
             // to get faster shutdown
+            spdlog::debug("epoll_wait");
             int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 1000);
             if(nfds < 0) {
                 spdlog::debug("epoll dieing");
                 return;
             }
+            spdlog::debug("epoll_wait nfds {}", nfds);
             for(int n = 0; n < nfds; ++n) {
                 int fd = events[n].data.fd;
-                spdlog::trace("Socket {} ready.", events[n].data.fd);
+                spdlog::info("Socket {} ready.", events[n].data.fd);
                 callbacks.at(fd)(fd);
             }
         }
@@ -116,7 +143,7 @@ struct Epoll {
 
     bool ReactivateHandle(int fd) {
         epoll_event event;
-        event.events = EPOLLIN | EPOLLET | EPOLLONESHOT; // EPOLLEXCLUSIVE shouldn't be needed for single threaded epoll
+        event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
         event.data.fd = fd;
         
         // This is safe across threads
@@ -142,6 +169,8 @@ struct Epoll {
  */
 template<typename T>
 class SimpleMPSCQueue {
+    public:
+    SimpleMPSCQueue() = default;
     /**
      * Adds item to the queue
      */
@@ -151,6 +180,11 @@ class SimpleMPSCQueue {
             queue.emplace(item);
         }
         queue_cv.notify_one();
+    }
+
+    size_t Size() {
+        std::lock_guard lock(queue_mutex);
+        return queue.size();
     }
 
     /**
@@ -184,14 +218,14 @@ public:
 
     TcpListenSocket CreateListenSocket(uint16_t port = 4242) {
         spdlog::debug("Create TcpListenSocket");
-        auto maybe_listen_socket = TcpListenSocket::Create(4242);
-        EXPECT_TRUE(maybe_listen_socket.has_value());
+        auto maybe_listen_socket = TcpListenSocket::Create(port);
+        EXPECT_TRUE(maybe_listen_socket.has_value()) << port;
         return {std::move(maybe_listen_socket.value())};
     }
 
     std::unique_ptr<TcpReceiver> SubscribeToPort(uint16_t port = 4242) {
         spdlog::debug("Construct TcpReceiver");
-        auto receiver = std::make_unique<TcpReceiver>("127.0.0.1", 4242);
+        auto receiver = std::make_unique<TcpReceiver>("127.0.0.1", port);
         EXPECT_FALSE(receiver->IsConnected());
         receiver->Connect();
 
@@ -286,7 +320,7 @@ TEST_F(TestTcpTransport, Poll) {
 
     core::transport::IncompleteRawMessage incomplete;
     auto callback = [&incomplete, &receiver, &poller, &hello](int fd) {
-        spdlog::info("Running poller callback");
+        spdlog::info("Running poller callback on fd {}", fd);
         
         if(receiver->ReceiveMessage(incomplete)) {
             spdlog::info("Got full message");
@@ -386,30 +420,153 @@ TEST_F(TestTcpTransport, MPSCQueue) {
     Epoll poller;
     core::threading::ThreadPool thread_pool(4);
 
-    core::transport::IncompleteRawMessage incomplete;
-    auto callback = [&](int fd) {
+    SimpleMPSCQueue<std::shared_ptr<core::transport::RawMessage>> output_queue;
+
+    /**
+     * Create callback, storing in the bind
+     * 
+     * This allows the epoll interface to be completely unaware of what type of work it's being given.
+     */
+    auto callback = [&](int fd, std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
+        /**
+         * This is called by epoll when new data is available on a socket. We immediately do nothing with it, and instead push the work off to the thread pool.
+         * This should be a very fast operation.
+         */
         thread_pool.enqueue([&] {
-            spdlog::info("Running poller callback");
-            
-            if(receiver->ReceiveMessage(incomplete)) {
+            // It's an error to actually call this with multiple threads.
+            // TODO: add debug only checks for this
+            spdlog::info("Running poller callback on {}", fd);
+            if(receiver->ReceiveMessage(*incomplete)) {
                 spdlog::info("Got full message");
-                auto msg = incomplete.GetCompletedMessage();
-                ASSERT_NE(msg, nullptr);
-                spdlog::info("{}",  spdlog::to_hex(msg->GetPacket()));
-                spdlog::info("{}", (const char*)msg->GetPayload().data());
-                ASSERT_STREQ((const char*)msg->GetPayload().data(), hello.c_str());
+                output_queue.Emplace(incomplete->GetCompletedMessage());
             }
             else {
-                if(errno != EAGAIN && errno != EWOULDBLOCK) {
-                    spdlog::info("Got error {}", strerror(errno));
-                }
+               // if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                    spdlog::info("{}, {}: bytes {} - got error {}", fd, (void*)incomplete.get(), incomplete->GetCurrentProgress(), strerror(errno));
+             //}
             }
-            poller.ReactivateHandle(receiver->GetSocket().GetFd());
+            poller.ReactivateHandle(fd);
+            spdlog::info("Rearmed");
         });
     };
 
-    ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(), callback));
+    ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(), std::bind(callback, std::placeholders::_1, std::make_shared<core::transport::IncompleteRawMessage>())));
+    ASSERT_EQ(output_queue.Pop(0), std::nullopt);
+    spdlog::info("Testing with one message");
+    sender->SendMessage(shared_message);
 
+    ASSERT_NE(output_queue.Pop(10), std::nullopt);
+    ASSERT_EQ(output_queue.Pop(0), std::nullopt);
+    ASSERT_EQ(output_queue.Size(), 0);
+    spdlog::info("Got one message");
+
+    spdlog::info("Testing with 10 messages");
+    for(int i = 0; i < 10; i++) {
+        sender->SendMessage(shared_message);
+    }
+
+    for(int i = 0; i < 10; i++) {
+        ASSERT_NE(output_queue.Pop(1), std::nullopt) << "Failed on message " << i;
+    }
+    ASSERT_EQ(output_queue.Pop(0), std::nullopt);
+
+}
+TEST_F(TestTcpTransport, Torture) {
+
+    const std::string hello = "Hello, World!";
+
+    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
+    strcpy((char*)shared_message->GetMutablePayload().data(), hello.data());
+
+    auto poller = std::make_unique<Epoll>();
+    core::threading::ThreadPool thread_pool(4);
+
+    SimpleMPSCQueue<std::shared_ptr<core::transport::RawMessage>> output_queue;
+
+    /**
+     * Create callback, storing in the bind
+     * 
+     * This allows the epoll interface to be completely unaware of what type of work it's being given.
+     */
+    auto callback = [&thread_pool, poller = poller.get(), &output_queue](int fd, TcpReceiver* receiver, std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
+        spdlog::info("Queuing work for {}", fd);
+
+        /**
+         * This is called by epoll when new data is available on a socket. We immediately do nothing with it, and instead push the work off to the thread pool.
+         * This should be a very fast operation.
+         */
+        thread_pool.enqueue([fd, receiver, &poller, &output_queue, incomplete] {
+            // It's an error to actually call this with multiple threads.
+            // TODO: add debug only checks for this
+            spdlog::info("Running thread pool callback on {}", fd);
+            if(receiver->ReceiveMessage(*incomplete)) {
+                spdlog::info("Got full message");
+                output_queue.Emplace(incomplete->GetCompletedMessage());
+            }
+            else {
+               // if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                    spdlog::info("{}, {}: bytes {} - got error {}", fd, (void*)incomplete.get(), incomplete->GetCurrentProgress(), strerror(errno));
+             //}
+            }
+            poller->ReactivateHandle(fd);
+            spdlog::info("Rearmed");
+        });
+    };
+
+    spdlog::info("Stressing");
+    constexpr int LISTENER_COUNT = 10;
+    constexpr int SENDERS_PER_LISTENER = 10;
+    constexpr int MESSAGES_PER_SENDER = 100;
+
+    spdlog::info("Creating {} listen sockets", LISTENER_COUNT);
+    std::vector<TcpListenSocket> listen_sockets;
+    for(int i = 0; i < LISTENER_COUNT; i++) {
+        listen_sockets.emplace_back(CreateListenSocket(4242 + i));
+    }
+        spdlog::set_level(spdlog::level::warn);
+
+    std::vector<std::unique_ptr<TcpReceiver>> receivers;
+    std::vector<std::unique_ptr<TcpSender>> senders;
+
+    spdlog::info("Creating {} connections for each listen socket", SENDERS_PER_LISTENER);
+    for(int listener_index = 0; listener_index < LISTENER_COUNT; listener_index++) {
+        spdlog::info("Listener {} port {}", listener_index, 4242 + listener_index);
+        for(int sender_index = 0; sender_index < SENDERS_PER_LISTENER; sender_index++) {
+            auto receiver = SubscribeToPort(4242 + listener_index);
+            ASSERT_NE(receiver, nullptr);
+            ASSERT_TRUE(poller->AddFd(receiver->GetSocket().GetFd(), std::bind(callback, std::placeholders::_1, receiver.get(), std::make_shared<core::transport::IncompleteRawMessage>())));
+
+            receivers.push_back(std::move(receiver));
+            senders.push_back(AcceptOneKnownClient(listen_sockets[listener_index]));
+        }
+    }
+    
+
+    ASSERT_EQ(receivers.size(), SENDERS_PER_LISTENER * LISTENER_COUNT);
+    ASSERT_EQ(senders.size(), SENDERS_PER_LISTENER * LISTENER_COUNT);
+
+    spdlog::warn("Sending {} messages on each sender", MESSAGES_PER_SENDER);
+    for(int message_count = 0; message_count < MESSAGES_PER_SENDER; message_count++) {
+        for(auto& sender : senders) {
+            sender->SendMessage(shared_message);
+        }
+    }
+    spdlog::warn("Done sending, waiting now");
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    spdlog::warn("Done waiting, queue size is {}", output_queue.Size());
+    
+    ASSERT_EQ(output_queue.Size(),MESSAGES_PER_SENDER * SENDERS_PER_LISTENER * LISTENER_COUNT);
+
+    for(int i = 0; i < MESSAGES_PER_SENDER * SENDERS_PER_LISTENER * LISTENER_COUNT; i++) {
+        output_queue.Pop(0);
+    }
+
+    spdlog::warn("Exiting?");
+
+    // TODO: destruction in this order is necessary. We need to turn off alerts on the handles.
+    poller = nullptr;
+    //std::unique_ptr<TcpReceiver> receiver = SubscribeToPort();
 }
 
 }

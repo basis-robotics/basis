@@ -150,6 +150,10 @@ public:
         progress_counter = 0;
         return std::move(incomplete_message);
     }
+
+    size_t GetCurrentProgress() {
+        return progress_counter;
+    }
 private:
     union {
         std::byte incomplete_header[sizeof(MessageHeader)] = {};
