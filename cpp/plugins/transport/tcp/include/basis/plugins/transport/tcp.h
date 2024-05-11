@@ -8,7 +8,7 @@
 #include <basis/core/transport/publisher.h>
 #include <basis/core/transport/transport.h>
 #include <basis/core/networking/socket.h>
-
+#include "epoll.h"
 namespace basis::plugins::transport {
 
 
@@ -132,7 +132,7 @@ private:
     uint16_t port;
 };
 
-class TcpPublisher {
+class TcpPublisher : public core::transport::TransportPublisher {
 public:
     static std::expected<TcpPublisher, core::networking::Socket::Error> Create(uint16_t port = 0);
 
@@ -145,5 +145,42 @@ protected:
     core::networking::TcpListenSocket listen_socket;
     std::vector<std::unique_ptr<TcpSender>> senders;
 };
+
+
+
+class TcpSubscriber : public core::transport::TransportSubscriber {
+public: 
+    static std::expected<TcpPublisher, core::networking::Socket::Error> Create(uint16_t port = 0);
+
+protected:
+    TcpSubscriber(Epoll* epoll, core::threading::ThreadPool* work);
+};
+
+class TcpTransport : public core::transport::Transport {
+public:
+    TcpTransport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager) : thread_pool_manager(thread_pool_manager) {
+
+    }
+
+    virtual std::shared_ptr<basis::core::transport::TransportPublisher> Advertise(std::string_view topic) {
+        std::shared_ptr<TcpPublisher> publisher = std::make_shared<TcpPublisher>(*TcpPublisher::Create());
+        publishers.emplace(std::string(topic), publisher);
+        return std::shared_ptr<basis::core::transport::TransportPublisher>(std::move(publisher));
+    };
+
+    // todo subscriptions
+    //virtual std::unique_ptr<TransportSubscriber> Subscribe(std::string_view topic) = 0;
+private:
+    std::unordered_multimap<std::string, std::weak_ptr<TcpPublisher>> publishers;
+
+    /// Thread pools are shared across transports
+    std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager;
+    /// One epoll instance is shared across the whole TcpTransport - it's an implementation detail of tcp, even if we could share with other transports
+    Epoll epoll;
+    /// Worker pools are per-thread group
+    //std::unordered_map<std::string, ThreadPool> worker_pools;
+};
+
+
 
 } // namespace basis::plugins::transport

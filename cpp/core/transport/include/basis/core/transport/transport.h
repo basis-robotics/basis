@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <span>
+#include <basis/core/threading/thread_pool.h>
 
 namespace basis::core::transport {
 
@@ -173,6 +174,7 @@ private:
     virtual bool Send(const std::byte* data, size_t len) = 0;
 
     // TODO: why is this a shared_ptr?
+    // ah, is it because this needs to be shared across multiple senders?
     virtual void SendMessage(std::shared_ptr<RawMessage> message) = 0;
 };
 
@@ -183,14 +185,67 @@ private:
     virtual bool Receive(std::byte* buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
-#if 0
+/**
+ * Simple class to manage thread pools across publishers.
+ * Later this will be used to also manage named thread pools.
+ */
+class ThreadPoolManager {
+public:
+    ThreadPoolManager() = default;
+
+    std::shared_ptr<threading::ThreadPool> GetDefaultThreadPool() {
+        return default_thread_pool;
+    }
+private:
+    std::shared_ptr<threading::ThreadPool> default_thread_pool = std::make_shared<threading::ThreadPool>(4);
+};
+
+class TransportPublisher {
+public:
+    virtual ~TransportPublisher() = default;
+};
+
+class TransportSubscriber {
+public:
+    virtual ~TransportSubscriber() = default;
+};
+
 class Transport {
-    static virtual std::unique_ptr<TransportPublisher*> Advertise(std::string_view topic) = 0;
-    static virtual std::unique_ptr<TransportPublisher*> Subscribe(std::string_view topic) = 0;
-    
-    virtual void Send(const char* data, size_t len) = 0;
-    virtual int RecvInto(char* buffer, size_t buffer_len, int timeout_s) = 0;
-}
-#endif
+public:
+    virtual ~Transport() = default;
+    virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic) = 0;
+    //virtual std::unique_ptr<TransportSubscriber> Subscribe(std::string_view topic) = 0;
+};
+
+
+class Publisher : public PublisherBase {
+public:
+    Publisher(std::vector<std::shared_ptr<TransportPublisher>> transport_publishers) : 
+        transport_publishers(transport_publishers) {
+
+        }
+    std::vector<std::shared_ptr<TransportPublisher>> transport_publishers;
+};
+
+class TransportManager {
+public:
+    virtual std::shared_ptr<Publisher> Advertise(std::string_view topic) {
+        std::vector<std::shared_ptr<TransportPublisher>> tps;
+        for(auto& [transport_name, transport]: transports) {
+            tps.push_back(transport->Advertise(topic));
+        }
+        auto publisher = std::make_shared<Publisher>(std::move(tps));
+        publishers.emplace(std::string(topic), publisher);
+        return publisher;
+    }
+
+    void RegisterTransport(std::string_view transport_name, std::unique_ptr<Transport> transport) {
+        transports.emplace(std::string(transport_name), std::move(transport));
+    }
+protected:
+    std::unordered_map<std::string, std::unique_ptr<Transport>> transports;
+
+    std::unordered_multimap<std::string, std::weak_ptr<Publisher>> publishers;
+};
 
 } // namespace basis::core::transport
