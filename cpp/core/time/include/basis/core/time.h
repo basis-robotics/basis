@@ -69,8 +69,9 @@ public:
         return {.tv_sec=nsecs / NSECS_IN_SECS, .tv_usec=1000*(nsecs % NSECS_IN_SECS)};
     }
 };
-
+#ifndef IGNORE_YEAR_2038
 static_assert(!std::is_same<time_t, int32_t>::value, "This platform is likely to hit the year 2038 problem.");
+#endif
 
 struct Duration : public TimeBase {
     std::pair<int32_t, int32_t> ToRosDuration() {
