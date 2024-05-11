@@ -1,4 +1,12 @@
 #pragma once
+
+#include <cmath>
+#include <ratio>
+#include <cstdint>
+#include <limits>
+#include <sys/time.h>
+#include <utility>
+
 /**
  * Time
  * 
@@ -21,32 +29,96 @@
 namespace basis::core {
 
 /**
+ * Base of all time types. Don't construct this directly.
+ * 
+ * Has nanosecond precision. Doesn't 
+ */
+struct TimeBase {
+protected:
+    TimeBase() {
+
+    }
+
+    TimeBase(int64_t nsecs) : nsecs(nsecs) {
+
+    }
+
+    static int64_t SecondsToNanoseconds(double seconds) {
+        return seconds * NSECS_IN_SECS;
+    }
+
+    /* todo
+    TimeBase(double seconds) {
+
+    }
+    */
+    constexpr static int64_t NSECS_IN_SECS = std::nano::den;
+
+public:
+    int64_t nsecs = std::numeric_limits<int64_t>::min();
+
+    bool IsValid() {
+        return nsecs != std::numeric_limits<int64_t>::min();
+    }
+
+    double ToSeconds() {
+        return (nsecs / NSECS_IN_SECS) + double(nsecs % NSECS_IN_SECS) / NSECS_IN_SECS;
+    }
+
+    timeval ToTimeval() {
+        return {.tv_sec=nsecs / NSECS_IN_SECS, .tv_usec=1000*(nsecs % NSECS_IN_SECS)};
+    }
+};
+
+static_assert(!std::is_same<time_t, int32_t>::value, "This platform is likely to hit the year 2038 problem.");
+
+struct Duration : public TimeBase {
+    std::pair<int32_t, int32_t> ToRosDuration() {
+        return {nsecs / NSECS_IN_SECS, nsecs % NSECS_IN_SECS};
+    }
+
+protected:
+    using TimeBase::TimeBase;
+};
+
+struct TimePoint : public TimeBase {
+    std::pair<uint32_t, uint32_t> ToRosTime() {
+        return {nsecs / NSECS_IN_SECS, nsecs % NSECS_IN_SECS};
+    }
+protected:
+    using TimeBase::TimeBase;
+};
+
+struct RealTimeDuration : public Duration {
+    static RealTimeDuration FromSeconds(double seconds) {
+        return {TimeBase::SecondsToNanoseconds(seconds)};
+    }
+protected:
+    using Duration::Duration;
+};
+
+
+/**
  * Monotonic time - used as the basis for all robot time operations.
  */
-struct MonotonicTime {
-    uint64_t nsec = 0;
+struct MonotonicTime : public TimePoint {
+    static MonotonicTime FromSeconds(double seconds) {
+        return {TimeBase::SecondsToNanoseconds(seconds)};
+    }
+protected:
+    using TimePoint::TimePoint;
+
 #if 0
-    static Time FromSecsNsecs(uint32_t secs, uint32_t nsecs) {
-
-    }
-
-    static std::pair<uint32_t, uint32_t> ToSecsNsecs() {
-
-    }
-
-    static Time FromFloatSeconds(double seconds) {
-
-    }
 
     static double ToUnixWallTime() {
 
     }
 #endif
+
 };
+
 #if 0
-struct RealtimeOffset {
-    uint64_t nsec = 0;
-};
+
 
 /**
  *  WallTime - this class should be used when it's desired to store an actual real time.
@@ -56,12 +128,5 @@ struct WallTime {
     uint64_t monotonic_epoch;
 };
 
-/**
- * ElapsedTime - used to calculate realtime stats for use in performance monitoring. Will _not_ be effected by simulated time.
- * 
- */
-struct ElapsedTime {
-
-};
 #endif
 }
