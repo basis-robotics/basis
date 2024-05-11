@@ -251,7 +251,7 @@ TEST_F(TestTcpTransport, Poll) {
   ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(), callback));
 
   std::span<const std::byte> packet = shared_message->GetPacket();
-  for (int i = 0; i < packet.size(); i++) {
+  for (size_t i = 0; i < packet.size(); i++) {
     // todo: learn how to iterate on spans
     spdlog::trace("Sending byte {}: {}", i, *(packet.data() + i));
     Send(*sender, packet.data() + i, 1);
