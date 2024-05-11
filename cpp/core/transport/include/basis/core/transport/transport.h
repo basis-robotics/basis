@@ -165,6 +165,9 @@ private:
 };
 
 class TransportSender {
+public:
+    virtual ~TransportSender() = default;
+private:
     // todo: this needs error handling
     // TODO: do all transports actually need to declare this?
     virtual bool Send(const std::byte* data, size_t len) = 0;
@@ -174,6 +177,9 @@ class TransportSender {
 };
 
 class TransportReceiver {
+public:
+    virtual ~TransportReceiver() = default;
+private:
     virtual bool Receive(std::byte* buffer, size_t buffer_len, int timeout_s) = 0;
 };
 

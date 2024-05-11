@@ -38,7 +38,6 @@ int Socket::RecvInto(char *buffer, size_t buffer_len, int timeout_s) {
 }
 
 std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
-  int resuolt;
   struct timeval tv;
   fd_set rfds;
   FD_ZERO(&rfds);
@@ -49,8 +48,8 @@ std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
 
   int select_results = select(fd + 1, &rfds, (fd_set *)0, (fd_set *)0, &tv);
   if (select_results == 0) {
-    // TODO: this isn't right
-    return Error{ErrorSource::TIMEOUT, errno};
+    // TODO: double check errno values in timeout
+    return Error{ErrorSource::TIMEOUT, 0};
   } else if (select_results == -1) {
     return Error{ErrorSource::SELECT, errno};
   }
@@ -154,7 +153,7 @@ std::expected<TcpSocket, Socket::Error> TcpListenSocket::Accept(int timeout_s) {
   if (client_fd == -1) {
     return std::unexpected(Socket::Error{ErrorSource::ACCEPT, errno});
   }
-  return std::move(TcpSocket(client_fd));
+  return client_fd;
 }
 
 } // namespace networking

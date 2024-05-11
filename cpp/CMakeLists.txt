@@ -5,11 +5,11 @@ enable_testing()
 # TODO: support lower C++ versions by shimming new libraries with lite/abseil
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+add_compile_options(-Werror -Wall)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Workaround for std::expected not available in clang
   add_compile_options(
-    -stdlib=libstdc++ -D__cpp_concepts=202002 -Wno-builtin-macro-redefined
+    -D__cpp_concepts=202002 -Wno-builtin-macro-redefined
   )
 endif()
 

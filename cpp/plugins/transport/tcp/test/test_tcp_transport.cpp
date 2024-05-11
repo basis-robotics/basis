@@ -117,7 +117,7 @@ public:
     EXPECT_TRUE(maybe_sender_socket.has_value());
     auto sender = std::make_unique<TcpSender>(std::move(maybe_sender_socket.value()));
     EXPECT_TRUE(sender->IsConnected());
-    return std::move(sender);
+    return sender;
   }
 
   /**
