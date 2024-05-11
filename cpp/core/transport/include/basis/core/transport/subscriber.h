@@ -1,36 +1,21 @@
+#pragma once
+#include <basis/core/time.h>
+#include <basis/core/transport/message_event.h>
 #include <functional>
 #include <memory>
-#include <basis/core/time.h>
 namespace basis {
 namespace core {
 namespace transport {
-   
+
 /**
  * @brief SubscriberBase - used to type erase Subscriber
- * 
+ *
  */
 class SubscriberBase {
 public:
-    virtual ~SubscriberBase() = default;
-
+  virtual ~SubscriberBase() = default;
 };
-
-struct TopicInfo {
-    // TODO: a bunch of allocations here
-    std::string topic;
-    std::string type;
-    std::string publisher_unit;
-    std::string publisher_host;
-};
-
-template<typename T_MSG> 
-struct MessageEvent {
-    MonotonicTime time;
-    TopicInfo topic_info;
-    
-    std::shared_ptr<const T_MSG> message;
-};
-
+#if 0
 /**
  * @brief SubscriberBaseT
  * 
@@ -49,6 +34,7 @@ public:
     std::function<void(MessageEvent<T_MSG> message)> callback;
 };
 
-}
-}
-}
+#endif
+} // namespace transport
+} // namespace core
+} // namespace basis

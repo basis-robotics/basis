@@ -1,13 +1,13 @@
 #pragma once
 /**
- * First try at an epoll interface. This is destined to live in a helper library - Unix Domain Socket transports will need the same thing.
- * It's also possible this will be replaced completely with something libuv based.
+ * First try at an epoll interface. This is destined to live in a helper library - Unix Domain Socket transports will
+ * need the same thing. It's also possible this will be replaced completely with something libuv based.
  */
 
-#include <fcntl.h>
-#include <sys/epoll.h>
 #include <cassert>
+#include <fcntl.h>
 #include <spdlog/spdlog.h>
+#include <sys/epoll.h>
 
 namespace basis::plugins::transport {
 
@@ -43,18 +43,18 @@ struct Epoll {
   /**
    * Adds the fd to the watch interface.
    * Forces the fd to be non-blocking.
-   * Do _not_ pass duplicated file handles into here. See https://idea.popcount.org/2017-03-20-epoll-is-fundamentally-broken-22/
-   * Do _not_ call in the middle of a callback from epoll (keep your callbacks simple!)
-   * Note that it is safe to close() sockets that are registered with epoll, but callbacks may take time to remove themselves.
+   * Do _not_ pass duplicated file handles into here. See
+   * https://idea.popcount.org/2017-03-20-epoll-is-fundamentally-broken-22/ Do _not_ call in the middle of a callback
+   * from epoll (keep your callbacks simple!) Note that it is safe to close() sockets that are registered with epoll,
+   * but callbacks may take time to remove themselves.
    */
-using CallbackType = std::function<void(int, std::unique_lock<std::mutex>)>;
+  using CallbackType = std::function<void(int, std::unique_lock<std::mutex>)>;
   bool AddFd(int fd, CallbackType callback);
 
   void RemoveFd(int fd);
 
   bool ReactivateHandle(int fd);
 
-  
 private:
   void MainThread();
   // todo https://idea.popcount.org/2017-03-20-epoll-is-fundamentally-broken-22/
@@ -63,13 +63,13 @@ private:
   int epoll_fd = -1;
   std::atomic<bool> stop = false;
 
-    struct CallbackContext {
-        CallbackType callback;
-        std::mutex mutex;
-    };
+  struct CallbackContext {
+    CallbackType callback;
+    std::mutex mutex;
+  };
 
   std::mutex callbacks_mutex;
   std::unordered_map<int, CallbackContext> callbacks;
 };
 
-}
+} // namespace basis::plugins::transport

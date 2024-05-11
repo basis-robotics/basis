@@ -107,11 +107,11 @@ TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::Incomple
     // Download some bytes
     count = socket.RecvInto((char *)buffer.data(), buffer.size());
     if (count < 0) {
-        if(errno != EAGAIN && errno != EWOULDBLOCK) {
-            spdlog::error("ReceiveMessage failed due to {} {}", errno, strerror(errno));
-            return ReceiveStatus::ERROR;
-        }
-        return ReceiveStatus::DOWNLOADING;
+      if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        spdlog::error("ReceiveMessage failed due to {} {}", errno, strerror(errno));
+        return ReceiveStatus::ERROR;
+      }
+      return ReceiveStatus::DOWNLOADING;
     }
     if (count == 0) {
       return ReceiveStatus::DISCONNECTED;
@@ -127,31 +127,26 @@ TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::Incomple
 }
 
 std::expected<TcpPublisher, core::networking::Socket::Error> TcpPublisher::Create(uint16_t port) {
-    spdlog::debug("Create TcpListenSocket");
-    auto maybe_listen_socket = core::networking::TcpListenSocket::Create(port);
-    if(!maybe_listen_socket) {
-        return std::unexpected(maybe_listen_socket.error());
-    }
+  spdlog::debug("Create TcpListenSocket");
+  auto maybe_listen_socket = core::networking::TcpListenSocket::Create(port);
+  if (!maybe_listen_socket) {
+    return std::unexpected(maybe_listen_socket.error());
+  }
 
-    return TcpPublisher(std::move(maybe_listen_socket.value()));
+  return TcpPublisher(std::move(maybe_listen_socket.value()));
 }
 
-TcpPublisher::TcpPublisher(core::networking::TcpListenSocket listen_socket) 
-    : listen_socket(std::move(listen_socket)) {
+TcpPublisher::TcpPublisher(core::networking::TcpListenSocket listen_socket) : listen_socket(std::move(listen_socket)) {}
 
-}
-
-uint16_t TcpPublisher::GetPort() {
-    return listen_socket.GetPort();
-}
+uint16_t TcpPublisher::GetPort() { return listen_socket.GetPort(); }
 
 size_t TcpPublisher::CheckForNewSubscriptions() {
-    int num = 0;
-    while(auto maybe_sender_socket = listen_socket.Accept(0)) {
-        senders.emplace_back(std::make_unique<TcpSender>(std::move(maybe_sender_socket.value())));
-        num++;
-    }
-    return num;
+  int num = 0;
+  while (auto maybe_sender_socket = listen_socket.Accept(0)) {
+    senders.emplace_back(std::make_unique<TcpSender>(std::move(maybe_sender_socket.value())));
+    num++;
+  }
+  return num;
 }
 
 } // namespace basis::plugins::transport

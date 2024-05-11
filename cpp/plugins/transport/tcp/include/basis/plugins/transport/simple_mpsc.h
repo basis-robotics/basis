@@ -10,8 +10,7 @@ namespace basis::plugins::transport {
  * Used as a placeholder for now.
  * In theory, safe for MPMC as well - needs testing.
  */
-template <typename T>
-class SimpleMPSCQueue {
+template <typename T> class SimpleMPSCQueue {
 public:
   SimpleMPSCQueue() = default;
   /**
@@ -50,7 +49,6 @@ public:
   std::mutex queue_mutex;
   std::condition_variable queue_cv;
   std::queue<T> queue;
-
 };
 
-}
+} // namespace basis::plugins::transport

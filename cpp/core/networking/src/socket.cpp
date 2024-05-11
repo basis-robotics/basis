@@ -92,12 +92,9 @@ void TcpSocket::TcpNoDelay() {
 uint16_t TcpListenSocket::GetPort() const {
   struct sockaddr_in sin;
   socklen_t len = sizeof(sin);
-  if (getsockname(fd, (struct sockaddr *)&sin, &len) == -1)
-  {
-    return 0;   
-  }
-  else
-  {
+  if (getsockname(fd, (struct sockaddr *)&sin, &len) == -1) {
+    return 0;
+  } else {
     return ntohs(sin.sin_port);
   }
 }

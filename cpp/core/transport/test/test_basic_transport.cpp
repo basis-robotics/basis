@@ -46,3 +46,18 @@ TEST(Inproc, PubSubWait) {
   subscriber->ConsumeMessages();
   GTEST_ASSERT_EQ(num_recv, 10);
 }
+
+struct TestStruct {
+  uint32_t foo = 3;
+  float bar = 8.5;
+  std::string baz = "baz";
+};
+
+TEST(TransportManager, Basic) {
+  auto thread_pool = std::make_shared<ThreadPoolManager>();
+  TransportManager transport_manager;
+
+  //  transport_manager.RegisterTransport("inproc", std::make_unique<InprocTransport>(thread_pool));
+
+  //  auto publisher = transport_manager.Advertise<TestStruct>("test_topic");
+}

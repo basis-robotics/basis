@@ -147,7 +147,8 @@ TEST_F(TestTcpTransport, TestPublisher) {
   spdlog::debug("Successfully created publisher on port {}", port);
   ASSERT_FALSE(publish_over_port.has_value());
   int error = publish_over_port.error().second;
-  spdlog::debug("Failed to create another publisher on same port - got [{}: {}]", strerrorname_np(error), strerror(error));
+  spdlog::debug("Failed to create another publisher on same port - got [{}: {}]", strerrorname_np(error),
+                strerror(error));
 
   std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
 
@@ -515,9 +516,9 @@ TEST_F(TestTcpTransport, Torture) {
   // spdlog::set_level(spdlog::level::debug);
   spdlog::warn("Removing fds");
   // On my system this completes in 2-10ms if there are many many messages in flight - usually much less
-  
+
   // Enable this to test disconnect behavior
-  //senders_by_index.clear();
+  // senders_by_index.clear();
   for (auto &r : receivers) {
     poller->RemoveFd(r->GetSocket().GetFd());
   }
