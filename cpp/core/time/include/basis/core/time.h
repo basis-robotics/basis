@@ -70,6 +70,7 @@ public:
     }
 };
 #ifndef IGNORE_YEAR_2038
+// I'd like to think this software will be alive in some form in 14 years.
 static_assert(!std::is_same<time_t, int32_t>::value, "This platform is likely to hit the year 2038 problem.");
 #endif
 
