@@ -1,10 +1,11 @@
 #pragma once
 
 #include <basis/core/threading/thread_pool.h>
-#include <basis/core/transport/publisher.h>
 #include <memory>
 #include <span>
 
+#include "message_type_info.h"
+#include "publisher.h"
 namespace basis::core::transport {
 
 struct MessageHeader {
@@ -191,22 +192,6 @@ private:
   std::shared_ptr<threading::ThreadPool> default_thread_pool = std::make_shared<threading::ThreadPool>(4);
 };
 
-struct MessageTypeInfo {
-    std::string serializer;
-    std::string id;
-    size_t type_size = 0; // Required for raw types, to help ensure safety
-};
-
-/**
- * Construct the type information from the class. This needs some work around APIs to safely handle pointers, refs, etc.
- * This might still be allowed, but the API needs explored.
- */
-template<typename T>
-MessageTypeInfo DeduceMessageTypeFromClass() {
-    static_assert(!std::is_pointer<T>::value);
-    return MessageTypeInfo("raw",  typeid(typename std::decay<T>::type).name(), sizeof(T));
-};
-
 class TransportSubscriber {
 public:
   virtual ~TransportSubscriber() = default;
@@ -217,7 +202,7 @@ public:
   Transport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
       : thread_pool_manager(thread_pool_manager) {}
   virtual ~Transport() = default;
-  virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic) = 0;
+  virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) = 0;
   // virtual std::unique_ptr<TransportSubscriber> Subscribe(std::string_view topic) = 0;
 
 protected:
@@ -228,7 +213,7 @@ protected:
 class TransportManager {
 public:
 
-  template <typename T> std::shared_ptr<Publisher<T>> Advertise(std::string_view topic, MessageTypeInfo message_type = DeduceMessageTypeFromClass<T>()) {
+  template <typename T> std::shared_ptr<Publisher<T>> Advertise(std::string_view topic, MessageTypeInfo message_type = DeduceMessageTypeInfo<T>()) {
     std::vector<std::shared_ptr<TransportPublisher>> tps;
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Advertise(topic, message_type));

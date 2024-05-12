@@ -1,4 +1,8 @@
 #pragma once
+
+#include <string_view>
+#include <memory>
+
 namespace basis {
 namespace core {
 namespace transport {
@@ -16,8 +20,6 @@ public:
 class TransportPublisher {
 public:
   virtual ~TransportPublisher() = default;
-
-  virtual std::shared_ptr<basis::core::transport::TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) = 0;
 
 };
 
