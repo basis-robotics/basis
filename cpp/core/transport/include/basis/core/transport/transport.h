@@ -228,10 +228,10 @@ protected:
 class TransportManager {
 public:
 
-  template <typename T> std::shared_ptr<Publisher<T>> Advertise(std::string_view topic, [[maybe_unused]] MessageTypeInfo message_type = DeduceMessageTypeFromClass<T>()) {
+  template <typename T> std::shared_ptr<Publisher<T>> Advertise(std::string_view topic, MessageTypeInfo message_type = DeduceMessageTypeFromClass<T>()) {
     std::vector<std::shared_ptr<TransportPublisher>> tps;
     for (auto &[transport_name, transport] : transports) {
-      tps.push_back(transport->Advertise(topic));
+      tps.push_back(transport->Advertise(topic, message_type));
     }
     auto publisher = std::make_shared<Publisher<T>>(std::move(tps));
     publishers.emplace(std::string(topic), publisher);

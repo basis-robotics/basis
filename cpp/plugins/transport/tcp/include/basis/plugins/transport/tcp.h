@@ -147,7 +147,7 @@ public:
   TcpTransport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
       : core::transport::Transport(thread_pool_manager) {}
 
-  virtual std::shared_ptr<basis::core::transport::TransportPublisher> Advertise(std::string_view topic) {
+  virtual std::shared_ptr<basis::core::transport::TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) {
     std::shared_ptr<TcpPublisher> publisher = std::make_shared<TcpPublisher>(*TcpPublisher::Create());
     publishers.emplace(std::string(topic), publisher);
     return std::shared_ptr<basis::core::transport::TransportPublisher>(std::move(publisher));
