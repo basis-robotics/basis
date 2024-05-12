@@ -155,11 +155,35 @@ TEST_F(TestTcpTransport, TestPublisher) {
   ASSERT_EQ(publisher->CheckForNewSubscriptions(), 1);
 }
 
+/**
+ * Test creationg a transport
+ */
 TEST_F(TestTcpTransport, TestTransport) {
   auto thread_pool_manager = std::make_shared<core::transport::ThreadPoolManager>();
   TcpTransport transport(thread_pool_manager);
   std::shared_ptr<core::transport::TransportPublisher> publisher = transport.Advertise("test");
   ASSERT_NE(publisher, nullptr);
+}
+
+struct TestStruct {
+  uint32_t foo = 3;
+  float bar = 8.5;
+  std::string baz = "baz";
+};
+
+/**
+ * Test full pipeline with transport manager
+ */
+TEST_F(TestTcpTransport, TestWithManager) {
+  auto thread_pool_manager = std::make_shared<core::transport::ThreadPoolManager>();
+  core::transport::TransportManager transport_manager;
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+
+  auto test_publisher = transport_manager.Advertise<TestStruct>("test_struct");
+  ASSERT_NE(test_publisher, nullptr);
+
+  //auto string_publisher = transport_manager.Advertise("test_string");
+  //ASSERT_NE(publisher, nullptr);
 }
 
 /**
@@ -218,7 +242,7 @@ TEST_F(TestTcpTransport, Poll) {
     // todo: learn how to iterate on spans
     spdlog::trace("Sending byte {}: {}", i, *(packet.data() + i));
     Send(*sender, packet.data() + i, 1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   sender->SendMessage(shared_message);
@@ -310,7 +334,6 @@ TEST_F(TestTcpTransport, MPSCQueue) {
    */
   std::string channel_name = "test";
   auto callback = [&](int fd, std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
-    spdlog::info("outer");
     /**
      * This is called by epoll when new data is available on a socket. We immediately do nothing with it, and instead
      * push the work off to the thread pool. This should be a very fast operation.
@@ -318,17 +341,17 @@ TEST_F(TestTcpTransport, MPSCQueue) {
     thread_pool.enqueue([&] {
       // It's an error to actually call this with multiple threads.
       // TODO: add debug only checks for this
-      spdlog::info("Running poller callback on {}", fd);
+      spdlog::debug("Running poller callback on {}", fd);
 
       switch (receiver->ReceiveMessage(*incomplete)) {
 
       case TcpReceiver::ReceiveStatus::DONE: {
-        spdlog::info("Got full message");
+        spdlog::debug("Got full message");
         output_queue.Emplace(incomplete->GetCompletedMessage());
         break;
       }
       case TcpReceiver::ReceiveStatus::DOWNLOADING: {
-        spdlog::info("Downloading...");
+        spdlog::debug("Downloading...");
         break;
       }
       case TcpReceiver::ReceiveStatus::ERROR: {
@@ -341,7 +364,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
       }
       };
       poller.ReactivateHandle(fd);
-      spdlog::info("Rearmed");
+      spdlog::debug("Rearmed");
     });
   };
 
@@ -362,7 +385,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
     sender->SendMessage(shared_message);
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   for (int i = 0; i < 10; i++) {
     ASSERT_NE(output_queue.Pop(1), std::nullopt) << "Failed on message " << i;

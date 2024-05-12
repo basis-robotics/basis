@@ -134,12 +134,6 @@ private:
 #if 0
     // maybe
 
-    struct MessageTypeInfo {
-        std::string serializer;
-        std::string id;
-        size_t type_size = 0; // Required for raw types, to help ensure safety
-    };
-
     // in this case, serialzier would be set to "raw" and id would be set to the type name
     std::shared_ptr<InprocPublisher<T_MSG>> AdvertiseRaw(std::string_view topic, MessageTypeInfo type_info) {
 
