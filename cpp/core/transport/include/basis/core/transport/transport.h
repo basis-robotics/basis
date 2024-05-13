@@ -212,7 +212,7 @@ public:
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Advertise(topic, message_type));
     }
-    auto publisher = std::make_shared<Publisher<T>>(std::move(tps), inproc_publisher);
+    auto publisher = std::make_shared<Publisher<T>>(topic, message_type, std::move(tps), inproc_publisher);
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }

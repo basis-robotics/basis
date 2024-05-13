@@ -168,7 +168,7 @@ TEST_F(TestTcpTransport, TestTransport) {
 struct TestStruct {
   uint32_t foo = 3;
   float bar = 8.5;
-  std::string baz = "baz";
+  char baz[4] = "baz";
 };
 
 /**
@@ -182,6 +182,11 @@ TEST_F(TestTcpTransport, TestWithManager) {
   auto test_publisher = transport_manager.Advertise<TestStruct>("test_struct");
   ASSERT_NE(test_publisher, nullptr);
 
+  for(const std::string& info : test_publisher->GetPublisherInfo()) {
+    spdlog::info("publisher at {}", info);
+  }
+
+  test_publisher->Publish(std::make_shared<const TestStruct>());
   //auto string_publisher = transport_manager.Advertise("test_string");
   //ASSERT_NE(publisher, nullptr);
 }

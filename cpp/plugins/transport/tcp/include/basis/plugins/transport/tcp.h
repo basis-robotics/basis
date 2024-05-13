@@ -127,6 +127,10 @@ public:
 
   uint16_t GetPort();
 
+    virtual std::string GetPublisherInfo() {
+        return std::to_string(GetPort());
+    }
+
 protected:
   TcpPublisher(core::networking::TcpListenSocket listen_socket);
 

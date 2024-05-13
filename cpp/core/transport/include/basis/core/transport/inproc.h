@@ -30,12 +30,14 @@ template <typename T_MSG> struct InprocConnectorInterface {
   virtual void Publish(const std::string &topic, std::shared_ptr<const T_MSG> msg) = 0;
 };
 
+// TODO: this can manage its own subscribers, right?
 template <typename T_MSG> class InprocPublisher {
 public:
   InprocPublisher(std::string_view topic, InprocConnectorInterface<T_MSG> *coordinator)
       : topic(topic), coordinator(coordinator) {}
 
-  void Publish(const T_MSG &msg) { coordinator->Publish(this->topic, std::make_shared<const T_MSG>(msg)); }
+  //void Publish(const T_MSG &msg) { coordinator->Publish(this->topic, std::make_shared<const T_MSG>(msg)); }
+  void Publish(std::shared_ptr<const T_MSG> msg) { coordinator->Publish(this->topic, std::move(msg)); }
 
 private:
   std::string topic;
@@ -147,6 +149,7 @@ class InprocTransport  {
 public:
     template<typename T>
     std::shared_ptr<InprocPublisher<T>> Advertise(std::string_view topic) {
+        // TODO: this static somewhat breaks the nice patterns around being explicit about how objects are initialized
         static InprocConnector<T> connector;
         
         return connector.Advertise(topic);
