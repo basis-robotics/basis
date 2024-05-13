@@ -1,11 +1,12 @@
 #pragma once
 
-#include <basis/core/threading/thread_pool.h>
 #include <memory>
 #include <span>
 
 #include "message_type_info.h"
 #include "publisher.h"
+#include "thread_pool_manager.h"
+#include "inproc.h"
 namespace basis::core::transport {
 
 struct MessageHeader {
@@ -178,20 +179,6 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
-/**
- * Simple class to manage thread pools across publishers.
- * Later this will be used to also manage named thread pools.
- */
-class ThreadPoolManager {
-public:
-  ThreadPoolManager() = default;
-
-  std::shared_ptr<threading::ThreadPool> GetDefaultThreadPool() { return default_thread_pool; }
-
-private:
-  std::shared_ptr<threading::ThreadPool> default_thread_pool = std::make_shared<threading::ThreadPool>(4);
-};
-
 class TransportSubscriber {
 public:
   virtual ~TransportSubscriber() = default;
@@ -212,13 +199,20 @@ protected:
 
 class TransportManager {
 public:
+    TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {
 
+    }
+// todo: deducing a raw type should be an error unless requested
   template <typename T> std::shared_ptr<Publisher<T>> Advertise(std::string_view topic, MessageTypeInfo message_type = DeduceMessageTypeInfo<T>()) {
+    std::shared_ptr<InprocPublisher<T>> inproc_publisher;
+    if(inproc) {
+        inproc_publisher = inproc->Advertise<T>(topic);
+    }
     std::vector<std::shared_ptr<TransportPublisher>> tps;
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Advertise(topic, message_type));
     }
-    auto publisher = std::make_shared<Publisher<T>>(std::move(tps));
+    auto publisher = std::make_shared<Publisher<T>>(std::move(tps), inproc_publisher);
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }
@@ -232,6 +226,8 @@ public:
   }
 
 protected:
+  std::unique_ptr<InprocTransport> inproc;
+
   std::unordered_map<std::string, std::unique_ptr<Transport>> transports;
 
   std::unordered_multimap<std::string, std::weak_ptr<PublisherBase>> publishers;

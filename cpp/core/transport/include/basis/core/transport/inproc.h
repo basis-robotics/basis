@@ -3,12 +3,13 @@
 // TODO: this should probably be pulled out into plugins/?
 // TODO: is this header only??
 #include <basis/core/transport/message_event.h>
-#include <basis/core/transport/transport.h>
 #include <condition_variable>
 #include <memory>
 #include <string_view>
 #include <typeinfo>
+#include <functional>
 #include <unordered_map>
+
 
 namespace basis::core::transport {
 
@@ -25,20 +26,20 @@ but bad things will happen if the implementation changes and you don't recompile
 
 */
 
-template <typename T_MSG> struct InprocCoordinatorInterface {
+template <typename T_MSG> struct InprocConnectorInterface {
   virtual void Publish(const std::string &topic, std::shared_ptr<const T_MSG> msg) = 0;
 };
 
 template <typename T_MSG> class InprocPublisher {
 public:
-  InprocPublisher(std::string_view topic, InprocCoordinatorInterface<T_MSG> *coordinator)
+  InprocPublisher(std::string_view topic, InprocConnectorInterface<T_MSG> *coordinator)
       : topic(topic), coordinator(coordinator) {}
 
   void Publish(const T_MSG &msg) { coordinator->Publish(this->topic, std::make_shared<const T_MSG>(msg)); }
 
 private:
   std::string topic;
-  InprocCoordinatorInterface<T_MSG> *coordinator;
+  InprocConnectorInterface<T_MSG> *coordinator;
 };
 
 template <typename T_MSG> class InprocSubscriber {
@@ -80,11 +81,12 @@ public:
 };
 
 // TODO: pass coordinator in, notify on destruction?
-template <typename T_MSG> class InprocCoordinator : public InprocCoordinatorInterface<T_MSG> {
+template <typename T_MSG> class InprocConnector : public InprocConnectorInterface<T_MSG> {
 public:
   // TODO: handle owning the last reference to a publisher/subscriber
   // TODO: ensure if we have one publisher we don't have another of a different type but the same name
   // TODO: ensure type safety for pub/sub
+  // TODO: thread safety
 
   std::shared_ptr<InprocPublisher<T_MSG>> Advertise(std::string_view topic) {
     auto publisher = std::make_shared<InprocPublisher<T_MSG>>(topic, this);
@@ -140,14 +142,15 @@ private:
     std::unordered_map<std::string, MessageTypeInfo> topic_types;
 #endif
 };
-/*
-class InprocTransport : public Transport {
-public:
-    using Transport::Transport;
-    virtual std::shared_ptr<TransportPublisher> Advertise([[maybe_unused]] std::string_view topic) override {
-        return nullptr;
-    }
 
-};*/
+class InprocTransport  {
+public:
+    template<typename T>
+    std::shared_ptr<InprocPublisher<T>> Advertise(std::string_view topic) {
+        static InprocConnector<T> connector;
+        
+        return connector.Advertise(topic);
+    }
+};
 
 } // namespace basis::core::transport
