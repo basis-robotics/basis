@@ -12,7 +12,7 @@ void TcpSender::StartThread() {
       std::vector<std::shared_ptr<const core::transport::MessagePacket>> buffer;
       {
         std::unique_lock lock(send_mutex);
-        if (buffer.empty()) {
+        if (!stop_thread && buffer.empty()) {
           send_cv.wait(lock, [this] { return stop_thread || !send_buffer.empty(); });
         }
         buffer = std::move(send_buffer);
@@ -140,22 +140,47 @@ TcpPublisher::TcpPublisher(core::networking::TcpListenSocket listen_socket) : li
 
 uint16_t TcpPublisher::GetPort() { return listen_socket.GetPort(); }
 
-  void TcpPublisher::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
-    std::lock_guard lock(senders_mutex);
-        for(auto& sender : senders) {
-            sender->SendMessage(message);
-        }
-    }
+void TcpPublisher::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
+  std::lock_guard lock(senders_mutex);
+  for (auto &sender : senders) {
+    sender->SendMessage(message);
+  }
+}
 
 size_t TcpPublisher::CheckForNewSubscriptions() {
   int num = 0;
-  
+
   while (auto maybe_sender_socket = listen_socket.Accept(0)) {
     std::lock_guard lock(senders_mutex);
     senders.emplace_back(std::make_unique<TcpSender>(std::move(maybe_sender_socket.value())));
     num++;
   }
   return num;
+}
+
+TcpSubscriber::TcpSubscriber(Epoll *epoll, core::threading::ThreadPool *worker_pool)
+    : epoll(epoll), worker_pool(worker_pool) {}
+
+void TcpSubscriber::Connect(std::string_view address, uint16_t port) {
+  std::pair<std::string, uint16_t> key(address, port);
+  if (receivers.count(key) != 0) {
+    return;
+  }
+
+  auto receiver = TcpReceiver(address, port);
+  if (receiver.Connect()) {
+    receivers.emplace(std::move(key), std::move(receiver));
+  }
+}
+
+std::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
+TcpSubscriber::Create(Epoll *epoll, core::threading::ThreadPool *worker_pool,
+                      std::vector<std::pair<std::string_view, uint16_t>> addresses) {
+  auto subscriber = std::shared_ptr<TcpSubscriber>(new TcpSubscriber(epoll, worker_pool));
+  for (auto &[address, port] : addresses) {
+    subscriber->Connect(address, port);
+  }
+  return subscriber;
 }
 
 } // namespace basis::plugins::transport

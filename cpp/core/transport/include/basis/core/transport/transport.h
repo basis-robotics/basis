@@ -3,13 +3,13 @@
 #include <memory>
 #include <span>
 
+#include "inproc.h"
 #include "message_packet.h"
 #include "message_type_info.h"
 #include "publisher.h"
+#include "subscriber.h"
 #include "thread_pool_manager.h"
-#include "inproc.h"
 namespace basis::core::transport {
-
 
 /**
  * Helper for holding incomplete messages.
@@ -99,24 +99,19 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
-class TransportSubscriber {
-public:
-  virtual ~TransportSubscriber() = default;
-};
-
 class Transport {
 public:
   Transport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
       : thread_pool_manager(thread_pool_manager) {}
   virtual ~Transport() = default;
   virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) = 0;
-  // virtual std::unique_ptr<TransportSubscriber> Subscribe(std::string_view topic) = 0;
+  virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, MessageTypeInfo type_info) = 0;
 
-    /**
-     * Implementations should call this function at a regular rate.
-     * @todo: do we want to keep this or enforce each transport taking care of its own update calls?
-     */
-    virtual void Update() {}
+  /**
+   * Implementations should call this function at a regular rate.
+   * @todo: do we want to keep this or enforce each transport taking care of its own update calls?
+   */
+  virtual void Update() {}
 
 protected:
   /// Thread pools are shared across transports
@@ -125,14 +120,14 @@ protected:
 
 class TransportManager {
 public:
-    TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {
-
-    }
-// todo: deducing a raw type should be an error unless requested
-  template <typename T> std::shared_ptr<Publisher<T>> Advertise(std::string_view topic, MessageTypeInfo message_type = DeduceMessageTypeInfo<T>()) {
+  TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
+  // todo: deducing a raw type should be an error unless requested
+  template <typename T>
+  std::shared_ptr<Publisher<T>> Advertise(std::string_view topic,
+                                          MessageTypeInfo message_type = DeduceMessageTypeInfo<T>()) {
     std::shared_ptr<InprocPublisher<T>> inproc_publisher;
-    if(inproc) {
-        inproc_publisher = inproc->Advertise<T>(topic);
+    if (inproc) {
+      inproc_publisher = inproc->Advertise<T>(topic);
     }
     std::vector<std::shared_ptr<TransportPublisher>> tps;
     for (auto &[transport_name, transport] : transports) {
@@ -142,6 +137,27 @@ public:
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }
+
+  template <typename T>
+  std::shared_ptr<Subscriber<T>> Subscribe(std::string_view topic,
+                                           MessageTypeInfo message_type = DeduceMessageTypeInfo<T>()) {
+    std::shared_ptr<InprocSubscriber<T>> inproc_subscriber;
+
+    if (inproc) {
+      inproc_subscriber = inproc->Advertise<T>(topic);
+    }
+
+    std::vector<std::shared_ptr<TransportSubscriber>> tps;
+
+    for (auto &[transport_name, transport] : transports) {
+      tps.push_back(transport->Subscribe(topic, message_type));
+    }
+
+    auto subscriber = std::make_shared<Subscriber<T>>(topic, message_type, std::move(tps), inproc_subscriber);
+    subscribers.emplace(std::string(topic), subscriber);
+    return subscriber;
+  }
+
   /**
    *
    * @todo error handling, fail if there's already one of the same name
@@ -151,11 +167,11 @@ public:
     transports.emplace(std::string(transport_name), std::move(transport));
   }
 
-void Update() {
-    for(auto& [_, transport] : transports) {
-        transport->Update();
+  void Update() {
+    for (auto &[_, transport] : transports) {
+      transport->Update();
     }
-}
+  }
 
 protected:
   std::unique_ptr<InprocTransport> inproc;
@@ -163,6 +179,8 @@ protected:
   std::unordered_map<std::string, std::unique_ptr<Transport>> transports;
 
   std::unordered_multimap<std::string, std::weak_ptr<PublisherBase>> publishers;
+
+  std::vector<std::weak_ptr<SubscriberBase>> subscribers;
 };
 
 } // namespace basis::core::transport

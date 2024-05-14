@@ -139,6 +139,7 @@ TEST_F(TestTcpTransport, NoCoordinator) {
  * Test creating a publisher.
  */
 TEST_F(TestTcpTransport, TestPublisher) {
+  // todo: saw this hung once
   auto maybe_publisher = TcpPublisher::Create();
   ASSERT_TRUE(maybe_publisher.has_value());
   auto publisher = std::move(*maybe_publisher);

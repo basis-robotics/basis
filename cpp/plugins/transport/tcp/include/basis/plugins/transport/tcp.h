@@ -46,8 +46,10 @@ public:
   virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
 
   void Stop(bool wait = false) {
+    {
+    std::lock_guard lock(send_mutex);
     stop_thread = true;
-
+    }
     send_cv.notify_one();
     if (wait) {
       if (send_thread.joinable()) {
@@ -121,24 +123,23 @@ private:
 
 class TcpPublisher : public core::transport::TransportPublisher {
 public:
-// returns a managed pointer due to mutex member
+  // returns a managed pointer due to mutex member
   static std::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> Create(uint16_t port = 0);
 
-// TODO: this should probably just be Update() and also check for dead subscriptions
+  // TODO: this should probably just be Update() and also check for dead subscriptions
   size_t CheckForNewSubscriptions();
 
   uint16_t GetPort();
 
-    virtual std::string GetPublisherInfo() override {
-        return std::to_string(GetPort());
-    }
+  virtual std::string GetPublisherInfo() override { return std::to_string(GetPort()); }
 
-    virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
+  virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
 
-    virtual size_t GetSubscriberCount() override {
-        std::lock_guard lock(senders_mutex);
-        return senders.size();
-    }
+  virtual size_t GetSubscriberCount() override {
+    std::lock_guard lock(senders_mutex);
+    return senders.size();
+  }
+
 protected:
   TcpPublisher(core::networking::TcpListenSocket listen_socket);
 
@@ -147,55 +148,87 @@ protected:
   std::vector<std::unique_ptr<TcpSender>> senders;
 };
 
-class TcpSubscriber : public core::transport::TransportSubscriber {
-public:
-  static std::expected<TcpPublisher, core::networking::Socket::Error> Create(uint16_t port = 0);
-
-protected:
-  TcpSubscriber(Epoll *epoll, core::threading::ThreadPool *work);
+struct AddressPortHash {
+  size_t operator()(std::pair<std::string, uint16_t> p) const noexcept {
+    return std::hash<std::string>{}(p.first) ^ std::hash<uint16_t>{}(p.second);
+  }
 };
 
+class TcpSubscriber : public core::transport::TransportSubscriber {
+public:
+  // todo: error condition
+  static std::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
+  Create(Epoll *epoll, core::threading::ThreadPool *worker_pool,
+         std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
+
+  // todo: error handling
+  void Connect(std::string_view address, uint16_t port);
+
+protected:
+  TcpSubscriber(Epoll *epoll, core::threading::ThreadPool *worker_pool);
+  Epoll *epoll;
+  core::threading::ThreadPool *worker_pool;
+  std::unordered_map<std::pair<std::string, uint16_t>, TcpReceiver, AddressPortHash> receivers = {};
+};
+
+// todo: need to catch out of order subscribe/publishes
 class TcpTransport : public core::transport::Transport {
 public:
   TcpTransport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
       : core::transport::Transport(thread_pool_manager) {}
 
-  virtual std::shared_ptr<basis::core::transport::TransportPublisher> Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
+  virtual std::shared_ptr<basis::core::transport::TransportPublisher>
+  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
     std::shared_ptr<TcpPublisher> publisher = *TcpPublisher::Create();
     {
-        std::lock_guard lock(publishers_mutex);
-        publishers.emplace(std::string(topic), publisher);
+      std::lock_guard lock(publishers_mutex);
+      publishers.emplace(std::string(topic), publisher);
     }
     return std::shared_ptr<basis::core::transport::TransportPublisher>(std::move(publisher));
   };
 
+  virtual std::shared_ptr<basis::core::transport::TransportSubscriber>
+  Subscribe(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
+    // TODO: specify thread pool name
+    // TODO: do we even need to store the thread pool manager or should it be passed in every time?
+    std::shared_ptr<TcpSubscriber> subscriber =
+        *TcpSubscriber::Create(&epoll, thread_pool_manager->GetDefaultThreadPool().get());
+    {
+      std::lock_guard lock(subscribers_mutex);
+      subscribers.emplace(std::string(topic), subscriber);
+    }
+    return std::shared_ptr<basis::core::transport::TransportSubscriber>(std::move(subscriber));
+  }
   void Update() {
-        decltype(publishers)::iterator it;
-        {
-            std::lock_guard lock(publishers_mutex);
-            it = publishers.begin();
+    decltype(publishers)::iterator it;
+    {
+      std::lock_guard lock(publishers_mutex);
+      it = publishers.begin();
+    }
+    while (it != publishers.end()) {
+      {
+        auto pub = it->second.lock();
+        if (!pub) {
+          std::lock_guard lock(publishers_mutex);
+          it = publishers.erase(it);
+        } else {
+          pub->CheckForNewSubscriptions();
+          std::lock_guard lock(publishers_mutex);
+          it++;
         }
-        while(it != publishers.end()) {
-        {
-            auto pub = it->second.lock();
-            if(!pub) {
-                std::lock_guard lock(publishers_mutex);
-                it = publishers.erase(it);
-            }
-            else {
-                pub->CheckForNewSubscriptions();
-                std::lock_guard lock(publishers_mutex);
-                it++;
-            }
-        }
+      }
     }
   }
 
   // todo subscriptions
   // virtual std::unique_ptr<TransportSubscriber> Subscribe(std::string_view topic) = 0;
 private:
-    std::mutex publishers_mutex;
+  std::mutex publishers_mutex;
   std::unordered_multimap<std::string, std::weak_ptr<TcpPublisher>> publishers;
+
+  std::mutex subscribers_mutex;
+  std::unordered_multimap<std::string, std::weak_ptr<TcpSubscriber>> subscribers;
+
   /// One epoll instance is shared across the whole TcpTransport - it's an implementation detail of tcp, even if we
   /// could share with other transports
   Epoll epoll;

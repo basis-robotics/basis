@@ -49,7 +49,8 @@ public:
   /**
    * Construct given a header. Typically used when receiving data.
    */
-  MessagePacket(MessageHeader header) : storage(std::make_unique<std::byte[]>(header.data_size + sizeof(MessageHeader))) {
+  MessagePacket(MessageHeader header)
+      : storage(std::make_unique<std::byte[]>(header.data_size + sizeof(MessageHeader))) {
     *(MessageHeader *)storage.get() = header;
   }
 #if 0
@@ -91,4 +92,4 @@ private:
   std::unique_ptr<std::byte[]> storage;
 };
 
-}
+} // namespace basis::core::transport
