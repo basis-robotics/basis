@@ -102,7 +102,7 @@ TEST_F(TestTcpTransport, NoCoordinator) {
   memset(buffer, 0, sizeof(buffer));
 
   spdlog::debug("Construct and send proper message packet");
-  auto shared_message = std::make_shared<basis::core::transport::RawMessage>(
+  auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
       basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
   strcpy((char *)shared_message->GetMutablePayload().data(), hello.data());
   sender->SendMessage(shared_message);
@@ -139,8 +139,9 @@ TEST_F(TestTcpTransport, NoCoordinator) {
  * Test creating a publisher.
  */
 TEST_F(TestTcpTransport, TestPublisher) {
-  auto publisher = TcpPublisher::Create();
-  ASSERT_TRUE(publisher.has_value());
+  auto maybe_publisher = TcpPublisher::Create();
+  ASSERT_TRUE(maybe_publisher.has_value());
+  auto publisher = std::move(*maybe_publisher);
   uint16_t port = publisher->GetPort();
   ASSERT_NE(port, 0);
   auto publish_over_port = TcpPublisher::Create(port);
@@ -153,10 +154,12 @@ TEST_F(TestTcpTransport, TestPublisher) {
   std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
 
   ASSERT_EQ(publisher->CheckForNewSubscriptions(), 1);
+
+
 }
 
 /**
- * Test creationg a transport
+ * Test creating a transport
  */
 TEST_F(TestTcpTransport, TestTransport) {
   auto thread_pool_manager = std::make_shared<core::transport::ThreadPoolManager>();
@@ -182,13 +185,33 @@ TEST_F(TestTcpTransport, TestWithManager) {
   auto test_publisher = transport_manager.Advertise<TestStruct>("test_struct");
   ASSERT_NE(test_publisher, nullptr);
 
+  uint16_t port = 0;
   for(const std::string& info : test_publisher->GetPublisherInfo()) {
     spdlog::info("publisher at {}", info);
+    port = stoi(info);    
   }
+  ASSERT_NE(port, 0);
 
-  test_publisher->Publish(std::make_shared<const TestStruct>());
+  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
+
+  transport_manager.Update();
+
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+  auto send_msg = std::make_shared<const TestStruct>();
+  test_publisher->Publish(send_msg);
   //auto string_publisher = transport_manager.Advertise("test_string");
   //ASSERT_NE(publisher, nullptr);
+
+
+  auto recv_msg = receiver->ReceiveMessage(1.0);
+  // Ensure we have a message
+  ASSERT_NE(recv_msg, nullptr);
+  // Ensure we didn't accidentally invoke the inproc transport
+  ASSERT_NE((TestStruct*)recv_msg->GetPayload().data(), send_msg.get());
+
+  // Ensure we got what we sent
+  ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
+  ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
 }
 
 /**
@@ -203,12 +226,12 @@ TEST_F(TestTcpTransport, Poll) {
 
   const std::string hello = "Hello, World!";
 
-  auto shared_message = std::make_shared<basis::core::transport::RawMessage>(
+  auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
       basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
   strcpy((char *)shared_message->GetMutablePayload().data(), hello.data());
   Epoll poller;
 
-  core::transport::IncompleteRawMessage incomplete;
+  core::transport::IncompleteMessagePacket incomplete;
   auto callback = [&incomplete, &receiver, &poller, &hello](int fd, std::unique_lock<std::mutex>) {
     const std::string channel_name = "test";
     spdlog::info("Running poller callback on fd {}", fd);
@@ -269,14 +292,14 @@ TEST_F(TestTcpTransport, ThreadPool) {
 
   const std::string hello = "Hello, World!";
 
-  auto shared_message = std::make_shared<basis::core::transport::RawMessage>(
+  auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
       basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
   strcpy((char *)shared_message->GetMutablePayload().data(), hello.data());
 
   Epoll poller;
   core::threading::ThreadPool thread_pool(4);
   const std::string channel_name = "test";
-  core::transport::IncompleteRawMessage incomplete;
+  core::transport::IncompleteMessagePacket incomplete;
   auto callback = [&](int fd, std::unique_lock<std::mutex> lock) {
     thread_pool.enqueue([&, lock = std::move(lock)] {
       spdlog::info("Running poller callback");
@@ -323,14 +346,14 @@ TEST_F(TestTcpTransport, MPSCQueue) {
 
   const std::string hello = "Hello, World!";
 
-  auto shared_message = std::make_shared<basis::core::transport::RawMessage>(
+  auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
       basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
   strcpy((char *)shared_message->GetMutablePayload().data(), hello.data());
 
   Epoll poller;
   core::threading::ThreadPool thread_pool(4);
 
-  SimpleMPSCQueue<std::shared_ptr<core::transport::RawMessage>> output_queue;
+  SimpleMPSCQueue<std::shared_ptr<core::transport::MessagePacket>> output_queue;
 
   /**
    * Create callback, storing in the bind
@@ -338,7 +361,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
    * This allows the epoll interface to be completely unaware of what type of work it's being given.
    */
   std::string channel_name = "test";
-  auto callback = [&](int fd, std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
+  auto callback = [&](int fd, std::shared_ptr<core::transport::IncompleteMessagePacket> incomplete) {
     /**
      * This is called by epoll when new data is available on a socket. We immediately do nothing with it, and instead
      * push the work off to the thread pool. This should be a very fast operation.
@@ -375,7 +398,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
 
   ASSERT_TRUE(poller.AddFd(
       receiver->GetSocket().GetFd(),
-      std::bind(callback, std::placeholders::_1, std::make_shared<core::transport::IncompleteRawMessage>())));
+      std::bind(callback, std::placeholders::_1, std::make_shared<core::transport::IncompleteMessagePacket>())));
   ASSERT_EQ(output_queue.Pop(0), std::nullopt);
   spdlog::info("Testing with one message");
   sender->SendMessage(shared_message);
@@ -402,7 +425,7 @@ TEST_F(TestTcpTransport, Torture) {
   auto poller = std::make_unique<Epoll>();
   core::threading::ThreadPool thread_pool(4);
 
-  SimpleMPSCQueue<std::pair<std::string, std::shared_ptr<core::transport::RawMessage>>> output_queue;
+  SimpleMPSCQueue<std::pair<std::string, std::shared_ptr<core::transport::MessagePacket>>> output_queue;
 
   /**
    * Create callback, storing in the bind
@@ -414,7 +437,7 @@ TEST_F(TestTcpTransport, Torture) {
    */
   auto callback = [&thread_pool, poller = poller.get(), &output_queue](
                       int fd, std::unique_lock<std::mutex> lock, std::string channel_name, TcpReceiver *receiver,
-                      std::shared_ptr<core::transport::IncompleteRawMessage> incomplete) {
+                      std::shared_ptr<core::transport::IncompleteMessagePacket> incomplete) {
     spdlog::info("Queuing work for {}", fd);
 
     /**
@@ -433,7 +456,7 @@ TEST_F(TestTcpTransport, Torture) {
         std::string expected_msg = "Hello, World! ";
         expected_msg += channel_name;
         ASSERT_STREQ((char *)msg->GetPayload().data(), expected_msg.c_str());
-        std::pair<std::string, std::shared_ptr<core::transport::RawMessage>> out(channel_name, std::move(msg));
+        std::pair<std::string, std::shared_ptr<core::transport::MessagePacket>> out(channel_name, std::move(msg));
         output_queue.Emplace(std::move(out));
 
         // TODO: peek
@@ -472,12 +495,12 @@ TEST_F(TestTcpTransport, Torture) {
   // TODO: the naming here is missed up
   std::vector<std::unique_ptr<TcpReceiver>> receivers;
   std::vector<std::vector<std::unique_ptr<TcpSender>>> senders_by_index;
-  std::vector<std::shared_ptr<basis::core::transport::RawMessage>> messages_to_send;
+  std::vector<std::shared_ptr<basis::core::transport::MessagePacket>> messages_to_send;
 
   spdlog::info("Creating {} connections for each listen socket", RECEIVERS_PER_SENDER);
   for (int sender_listen_socket_index = 0; sender_listen_socket_index < SENDER_COUNT; sender_listen_socket_index++) {
     const std::string hello = "Hello, World! " + std::to_string(sender_listen_socket_index);
-    auto shared_message = std::make_shared<basis::core::transport::RawMessage>(
+    auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
         basis::core::transport::MessageHeader::DataType::MESSAGE, hello.size() + 1);
     strcpy((char *)shared_message->GetMutablePayload().data(), hello.data());
     messages_to_send.emplace_back(std::move(shared_message));
@@ -491,7 +514,7 @@ TEST_F(TestTcpTransport, Torture) {
       ASSERT_TRUE(poller->AddFd(receiver->GetSocket().GetFd(),
                                 std::bind(callback, std::placeholders::_1, std::placeholders::_2,
                                           std::to_string(sender_listen_socket_index), receiver.get(),
-                                          std::make_shared<core::transport::IncompleteRawMessage>())));
+                                          std::make_shared<core::transport::IncompleteMessagePacket>())));
 
       receivers.push_back(std::move(receiver));
       senders.push_back(AcceptOneKnownClient(listen_sockets[sender_listen_socket_index]));

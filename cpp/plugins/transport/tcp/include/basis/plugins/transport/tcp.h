@@ -43,7 +43,7 @@ public:
   }
 
   // TODO: do we want to be able to send high priority packets?
-  virtual void SendMessage(std::shared_ptr<core::transport::RawMessage> message) override;
+  virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
 
   void Stop(bool wait = false) {
     stop_thread = true;
@@ -68,7 +68,7 @@ private:
   std::thread send_thread;
   std::condition_variable send_cv;
   std::mutex send_mutex;
-  std::vector<std::shared_ptr<const core::transport::RawMessage>> send_buffer;
+  std::vector<std::shared_ptr<const core::transport::MessagePacket>> send_buffer;
   std::atomic<bool> stop_thread = false;
 };
 
@@ -99,11 +99,11 @@ public:
    * returns unique as it's expected a transport will handle this.
    * @todo why do we need to return unique? We have a unique ptr wrapping a unique ptr - unneccessary.
    */
-  std::unique_ptr<const core::transport::RawMessage> ReceiveMessage(int timeout_s);
+  std::unique_ptr<const core::transport::MessagePacket> ReceiveMessage(int timeout_s);
 
   // todo: standardized class for handling these
   enum class ReceiveStatus { DOWNLOADING, DONE, ERROR, DISCONNECTED };
-  ReceiveStatus ReceiveMessage(core::transport::IncompleteRawMessage &message);
+  ReceiveStatus ReceiveMessage(core::transport::IncompleteMessagePacket &message);
 
   /**
    * @todo error handling
@@ -121,20 +121,29 @@ private:
 
 class TcpPublisher : public core::transport::TransportPublisher {
 public:
-  static std::expected<TcpPublisher, core::networking::Socket::Error> Create(uint16_t port = 0);
+// returns a managed pointer due to mutex member
+  static std::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> Create(uint16_t port = 0);
 
+// TODO: this should probably just be Update() and also check for dead subscriptions
   size_t CheckForNewSubscriptions();
 
   uint16_t GetPort();
 
-    virtual std::string GetPublisherInfo() {
+    virtual std::string GetPublisherInfo() override {
         return std::to_string(GetPort());
     }
 
+    virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
+
+    virtual size_t GetSubscriberCount() override {
+        std::lock_guard lock(senders_mutex);
+        return senders.size();
+    }
 protected:
   TcpPublisher(core::networking::TcpListenSocket listen_socket);
 
   core::networking::TcpListenSocket listen_socket;
+  std::mutex senders_mutex;
   std::vector<std::unique_ptr<TcpSender>> senders;
 };
 
@@ -152,14 +161,40 @@ public:
       : core::transport::Transport(thread_pool_manager) {}
 
   virtual std::shared_ptr<basis::core::transport::TransportPublisher> Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
-    std::shared_ptr<TcpPublisher> publisher = std::make_shared<TcpPublisher>(*TcpPublisher::Create());
-    publishers.emplace(std::string(topic), publisher);
+    std::shared_ptr<TcpPublisher> publisher = *TcpPublisher::Create();
+    {
+        std::lock_guard lock(publishers_mutex);
+        publishers.emplace(std::string(topic), publisher);
+    }
     return std::shared_ptr<basis::core::transport::TransportPublisher>(std::move(publisher));
   };
+
+  void Update() {
+        decltype(publishers)::iterator it;
+        {
+            std::lock_guard lock(publishers_mutex);
+            it = publishers.begin();
+        }
+        while(it != publishers.end()) {
+        {
+            auto pub = it->second.lock();
+            if(!pub) {
+                std::lock_guard lock(publishers_mutex);
+                it = publishers.erase(it);
+            }
+            else {
+                pub->CheckForNewSubscriptions();
+                std::lock_guard lock(publishers_mutex);
+                it++;
+            }
+        }
+    }
+  }
 
   // todo subscriptions
   // virtual std::unique_ptr<TransportSubscriber> Subscribe(std::string_view topic) = 0;
 private:
+    std::mutex publishers_mutex;
   std::unordered_multimap<std::string, std::weak_ptr<TcpPublisher>> publishers;
   /// One epoll instance is shared across the whole TcpTransport - it's an implementation detail of tcp, even if we
   /// could share with other transports

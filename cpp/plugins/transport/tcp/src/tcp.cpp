@@ -9,7 +9,7 @@ void TcpSender::StartThread() {
   spdlog::info("Starting TcpSender thread\n");
   send_thread = std::thread([this]() {
     while (!stop_thread) {
-      std::vector<std::shared_ptr<const core::transport::RawMessage>> buffer;
+      std::vector<std::shared_ptr<const core::transport::MessagePacket>> buffer;
       {
         std::unique_lock lock(send_mutex);
         if (buffer.empty()) {
@@ -53,7 +53,7 @@ bool TcpSender::Send(const std::byte *data, size_t len) {
   return true;
 }
 
-void TcpSender::SendMessage(std::shared_ptr<core::transport::RawMessage> message) {
+void TcpSender::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
   std::lock_guard lock(send_mutex);
   send_buffer.emplace_back(std::move(message));
   send_cv.notify_one();
@@ -78,7 +78,7 @@ bool TcpReceiver::Receive(std::byte *buffer, size_t buffer_len, int timeout_s) {
   return true;
 }
 
-std::unique_ptr<const core::transport::RawMessage> TcpReceiver::ReceiveMessage(int timeout_s) {
+std::unique_ptr<const core::transport::MessagePacket> TcpReceiver::ReceiveMessage(int timeout_s) {
   core::transport::MessageHeader header;
   if (!Receive((std::byte *)&header, sizeof(header), timeout_s)) {
     spdlog::error("ReceiveMessage failed to get header due to {} {}", errno, strerror(errno));
@@ -86,7 +86,7 @@ std::unique_ptr<const core::transport::RawMessage> TcpReceiver::ReceiveMessage(i
     return {};
   }
 
-  auto message = std::make_unique<core::transport::RawMessage>(header);
+  auto message = std::make_unique<core::transport::MessagePacket>(header);
   std::span<std::byte> payload(message->GetMutablePayload());
   if (!Receive(payload.data(), payload.size(), timeout_s)) {
     spdlog::error("ReceiveMessage failed to get payload due to {} {}", errno, strerror(errno));
@@ -98,7 +98,7 @@ std::unique_ptr<const core::transport::RawMessage> TcpReceiver::ReceiveMessage(i
   return message;
 }
 
-TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::IncompleteRawMessage &incomplete) {
+TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::IncompleteMessagePacket &incomplete) {
   spdlog::info("TcpReceiver::ReceiveMessage");
   int count = 0;
   do {
@@ -126,23 +126,32 @@ TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::Incomple
   return ReceiveStatus::DONE;
 }
 
-std::expected<TcpPublisher, core::networking::Socket::Error> TcpPublisher::Create(uint16_t port) {
+std::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> TcpPublisher::Create(uint16_t port) {
   spdlog::debug("Create TcpListenSocket");
   auto maybe_listen_socket = core::networking::TcpListenSocket::Create(port);
   if (!maybe_listen_socket) {
     return std::unexpected(maybe_listen_socket.error());
   }
 
-  return TcpPublisher(std::move(maybe_listen_socket.value()));
+  return std::shared_ptr<TcpPublisher>(new TcpPublisher(std::move(maybe_listen_socket.value())));
 }
 
 TcpPublisher::TcpPublisher(core::networking::TcpListenSocket listen_socket) : listen_socket(std::move(listen_socket)) {}
 
 uint16_t TcpPublisher::GetPort() { return listen_socket.GetPort(); }
 
+  void TcpPublisher::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
+    std::lock_guard lock(senders_mutex);
+        for(auto& sender : senders) {
+            sender->SendMessage(message);
+        }
+    }
+
 size_t TcpPublisher::CheckForNewSubscriptions() {
   int num = 0;
+  
   while (auto maybe_sender_socket = listen_socket.Accept(0)) {
+    std::lock_guard lock(senders_mutex);
     senders.emplace_back(std::make_unique<TcpSender>(std::move(maybe_sender_socket.value())));
     num++;
   }
