@@ -36,13 +36,8 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/cpp/build" >> "$GITHUB_OUTPUT"
-    - name: Install dependencies
-      uses: awalsh128/cache-apt-pkgs-action@latest
-      with:
-        packages: clang-18
-        version: 1.0
-    - name: Check compiler
-      run:  clang++ --version
+    - name: Upgrade compiler
+      run:  bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" && clang++ --version
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
