@@ -4,9 +4,14 @@ This is an incomplete list.
 
 Initial hitlist (1-2 months?):
 - Inproc Transport
+    - working
 - TCP Transport
+    - semi working - will
 - Protobuf Serializer
 - Coordinator
+    - TCP Coordinator
+        - Allow addition of publisher/subscriber after the fact in any order
+- Ownership/Destructor cleanup
 - logging
     - spdlog ftw
     - need to make logging helper file for setting up log dirs, etc, wrapping spdlog?

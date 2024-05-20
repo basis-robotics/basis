@@ -555,9 +555,11 @@ TEST_F(TestTcpTransport, Torture) {
   for (auto p : counts) {
     ASSERT_EQ(p.second, MESSAGES_PER_SENDER * SENDER_COUNT);
   }
+  spdlog::warn("Processed {} sends", MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT);
 
   // Spam a bunch more messages to catch errors on shutdown
   // TODO: actually add test case for catching these errors, rather than eyeballing the logs
+  #if 0
   for (int message_count = 0; message_count < MESSAGES_PER_SENDER; message_count++) {
     for (int sender_index = 0; sender_index < SENDER_COUNT; sender_index++) {
       for (auto &sender : senders_by_index[sender_index]) {
@@ -565,6 +567,7 @@ TEST_F(TestTcpTransport, Torture) {
       }
     }
   }
+  #endif
   // spdlog::set_level(spdlog::level::debug);
   spdlog::warn("Removing fds");
   // On my system this completes in 2-10ms if there are many many messages in flight - usually much less

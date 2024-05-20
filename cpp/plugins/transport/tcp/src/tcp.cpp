@@ -168,9 +168,14 @@ void TcpSubscriber::Connect(std::string_view address, uint16_t port) {
   }
 
   auto receiver = TcpReceiver(address, port);
-  if (receiver.Connect()) {
-    receivers.emplace(std::move(key), std::move(receiver));
+  if (!receiver.Connect()) {
+    return;
   }
+
+  //TODO now hook up to epoll!
+  //but first split this file up please
+  receivers.emplace(std::move(key), std::move(receiver));
+  
 }
 
 std::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
