@@ -39,7 +39,7 @@ jobs:
     - name: Install dependencies
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: clang
+        packages: clang-18
         version: 1.0
     - name: Check compiler
       run:  clang++ --version
