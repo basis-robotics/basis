@@ -4,12 +4,11 @@
 // TODO: is this header only??
 #include <basis/core/transport/message_event.h>
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <string_view>
 #include <typeinfo>
-#include <functional>
 #include <unordered_map>
-
 
 namespace basis::core::transport {
 
@@ -36,7 +35,7 @@ public:
   InprocPublisher(std::string_view topic, InprocConnectorInterface<T_MSG> *coordinator)
       : topic(topic), coordinator(coordinator) {}
 
-  //void Publish(const T_MSG &msg) { coordinator->Publish(this->topic, std::make_shared<const T_MSG>(msg)); }
+  // void Publish(const T_MSG &msg) { coordinator->Publish(this->topic, std::make_shared<const T_MSG>(msg)); }
   void Publish(std::shared_ptr<const T_MSG> msg) { coordinator->Publish(this->topic, std::move(msg)); }
 
 private:
@@ -145,15 +144,14 @@ private:
 #endif
 };
 
-class InprocTransport  {
+class InprocTransport {
 public:
-    template<typename T>
-    std::shared_ptr<InprocPublisher<T>> Advertise(std::string_view topic) {
-        // TODO: this static somewhat breaks the nice patterns around being explicit about how objects are initialized
-        static InprocConnector<T> connector;
-        
-        return connector.Advertise(topic);
-    }
+  template <typename T> std::shared_ptr<InprocPublisher<T>> Advertise(std::string_view topic) {
+    // TODO: this static somewhat breaks the nice patterns around being explicit about how objects are initialized
+    static InprocConnector<T> connector;
+
+    return connector.Advertise(topic);
+  }
 };
 
 } // namespace basis::core::transport
