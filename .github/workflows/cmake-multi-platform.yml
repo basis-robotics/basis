@@ -36,6 +36,11 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/cpp/build" >> "$GITHUB_OUTPUT"
+    - name: Install dependencies
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: clang
+        version: 1.0
     - name: Check compiler
       run:  clang++ --version
     - name: Configure CMake
