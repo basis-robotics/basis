@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <optional>
 #include <queue>
 
 namespace basis::plugins::transport {
