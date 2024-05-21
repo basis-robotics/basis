@@ -121,11 +121,11 @@ public:
   };
 
   virtual std::shared_ptr<basis::core::transport::TransportSubscriber>
-  Subscribe(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
+  Subscribe(core::transport::OutputQueue* output_queue, std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
     // TODO: specify thread pool name
-    // TODO: do we even need to store the thread pool manager or should it be passed in every time?
+    // TODO: pass in the thread pool every time
     std::shared_ptr<TcpSubscriber> subscriber =
-        *TcpSubscriber::Create(&epoll, thread_pool_manager->GetDefaultThreadPool().get());
+        *TcpSubscriber::Create(topic, &epoll, thread_pool_manager->GetDefaultThreadPool().get(), output_queue);
     {
       std::lock_guard lock(subscribers_mutex);
       subscribers.emplace(std::string(topic), subscriber);
@@ -165,6 +165,8 @@ private:
 
   std::mutex subscribers_mutex;
   std::unordered_multimap<std::string, std::weak_ptr<TcpSubscriber>> subscribers;
+
+// TODO: store list of known publishers?
 
   /// One epoll instance is shared across the whole TcpTransport - it's an implementation detail of tcp, even if we
   /// could share with other transports

@@ -34,9 +34,10 @@ public:
 
   const std::string topic;
   const MessageTypeInfo type_info;
-  std::shared_ptr<InprocSubscriber<T_MSG>> inproc;
   // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
   std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers;
+  std::shared_ptr<InprocSubscriber<T_MSG>> inproc;
+
 };
 
 } // namespace transport

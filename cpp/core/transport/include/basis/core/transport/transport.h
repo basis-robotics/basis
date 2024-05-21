@@ -9,6 +9,9 @@
 #include "publisher.h"
 #include "subscriber.h"
 #include "thread_pool_manager.h"
+
+#include "simple_mpsc.h"
+
 namespace basis::core::transport {
 
 /**
@@ -73,6 +76,7 @@ private:
 
   size_t progress_counter = 0;
 };
+
 /**
  * Helper class
  * @todo move to another file, it's implementation detail.
@@ -99,13 +103,16 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
+
+using OutputQueue = SimpleMPSCQueue<std::pair<std::string, std::shared_ptr<MessagePacket>>>;
+
 class Transport {
 public:
   Transport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
       : thread_pool_manager(thread_pool_manager) {}
   virtual ~Transport() = default;
   virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) = 0;
-  virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, MessageTypeInfo type_info) = 0;
+  virtual std::shared_ptr<TransportSubscriber> Subscribe(OutputQueue* output_queue, std::string_view topic, MessageTypeInfo type_info) = 0;
 
   /**
    * Implementations should call this function at a regular rate.
@@ -139,22 +146,25 @@ public:
   }
 
   template <typename T>
-  std::shared_ptr<Subscriber<T>> Subscribe(std::string_view topic,
+  std::shared_ptr<Subscriber<T>> Subscribe(core::transport::OutputQueue* output_queue, std::string_view topic,
                                            MessageTypeInfo message_type = DeduceMessageTypeInfo<T>()) {
     std::shared_ptr<InprocSubscriber<T>> inproc_subscriber;
 
     if (inproc) {
-      inproc_subscriber = inproc->Advertise<T>(topic);
+    #if 0
+      inproc_subscriber = inproc->Subscribe<T>(topic, [](MessageEvent<T_MSG>){});
+        // TODO
+    #endif
     }
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
 
     for (auto &[transport_name, transport] : transports) {
-      tps.push_back(transport->Subscribe(topic, message_type));
+      tps.push_back(transport->Subscribe(output_queue, topic, message_type));
     }
 
     auto subscriber = std::make_shared<Subscriber<T>>(topic, message_type, std::move(tps), inproc_subscriber);
-    subscribers.emplace(std::string(topic), subscriber);
+    subscribers.push_back(subscriber);
     return subscriber;
   }
 
@@ -180,6 +190,7 @@ protected:
 
   std::unordered_multimap<std::string, std::weak_ptr<PublisherBase>> publishers;
 
+  // TODO: these need to be by topic name, also
   std::vector<std::weak_ptr<SubscriberBase>> subscribers;
 };
 

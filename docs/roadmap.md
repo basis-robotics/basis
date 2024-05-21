@@ -5,8 +5,9 @@ This is an incomplete list.
 Initial hitlist (1-2 months?):
 - Inproc Transport
     - working
+    - subscriber needs hooked up to transport
 - TCP Transport
-    - semi working - will
+    - semi working
 - Protobuf Serializer
 - Coordinator
     - TCP Coordinator

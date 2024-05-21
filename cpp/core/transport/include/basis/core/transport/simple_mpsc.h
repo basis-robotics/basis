@@ -4,7 +4,7 @@
 #include <optional>
 #include <queue>
 
-namespace basis::plugins::transport {
+namespace basis::core::transport {
 
 /**
  * Simple thread safe Multi-producer Single Consumer Queue
