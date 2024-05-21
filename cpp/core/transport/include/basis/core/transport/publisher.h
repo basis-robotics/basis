@@ -58,7 +58,7 @@ public:
       inproc->Publish(msg);
     }
 
-    // TODO: early out if no transports in any publisher
+    // TODO: early out if no transports in any publisher, to avoid serialization
 
     // Serialize
     // temporary raw only serialization

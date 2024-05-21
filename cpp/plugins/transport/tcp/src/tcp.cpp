@@ -158,34 +158,4 @@ size_t TcpPublisher::CheckForNewSubscriptions() {
   return num;
 }
 
-TcpSubscriber::TcpSubscriber(Epoll *epoll, core::threading::ThreadPool *worker_pool)
-    : epoll(epoll), worker_pool(worker_pool) {}
-
-void TcpSubscriber::Connect(std::string_view address, uint16_t port) {
-  std::pair<std::string, uint16_t> key(address, port);
-  if (receivers.count(key) != 0) {
-    return;
-  }
-
-  auto receiver = TcpReceiver(address, port);
-  if (!receiver.Connect()) {
-    return;
-  }
-
-  //TODO now hook up to epoll!
-  //but first split this file up please
-  receivers.emplace(std::move(key), std::move(receiver));
-  
-}
-
-std::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
-TcpSubscriber::Create(Epoll *epoll, core::threading::ThreadPool *worker_pool,
-                      std::vector<std::pair<std::string_view, uint16_t>> addresses) {
-  auto subscriber = std::shared_ptr<TcpSubscriber>(new TcpSubscriber(epoll, worker_pool));
-  for (auto &[address, port] : addresses) {
-    subscriber->Connect(address, port);
-  }
-  return subscriber;
-}
-
 } // namespace basis::plugins::transport

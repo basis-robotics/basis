@@ -1,6 +1,6 @@
 project(basis_plugins_transport_tcp)
 
-add_library(basis_plugins_transport_tcp SHARED src/tcp.cpp src/epoll.cpp)
+add_library(basis_plugins_transport_tcp SHARED src/tcp.cpp src/tcp_subscriber.cpp src/epoll.cpp)
 target_link_libraries(basis_plugins_transport_tcp basis::core::time basis::core::transport basis::core::networking basis::core::threading)
 target_include_directories(basis_plugins_transport_tcp PUBLIC include)
 

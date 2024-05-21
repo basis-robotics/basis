@@ -1,6 +1,9 @@
 #pragma once
 #include <basis/core/time.h>
 #include <basis/core/transport/message_event.h>
+#include <basis/core/transport/message_type_info.h>
+#include <basis/core/transport/inproc.h>
+
 #include <functional>
 #include <memory>
 namespace basis {
