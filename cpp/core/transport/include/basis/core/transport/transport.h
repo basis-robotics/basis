@@ -102,7 +102,6 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
-
 // TODO: use MessageEvent
 // TODO: don't store the packet directly, store a weak reference to the transport subscriber
 struct OutputQueueEvent {
@@ -118,7 +117,8 @@ public:
       : thread_pool_manager(thread_pool_manager) {}
   virtual ~Transport() = default;
   virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) = 0;
-  virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, TypeErasedSubscriberCallback callback, OutputQueue* output_queue,  MessageTypeInfo type_info) = 0;
+  virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, TypeErasedSubscriberCallback callback,
+                                                         OutputQueue *output_queue, MessageTypeInfo type_info) = 0;
 
   /**
    * Implementations should call this function at a regular rate.
@@ -152,23 +152,24 @@ public:
   }
 
   template <typename T_MSG>
-  std::shared_ptr<Subscriber<T_MSG>> Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback, core::transport::OutputQueue* output_queue = nullptr,
-                                           MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+  std::shared_ptr<Subscriber<T_MSG>> Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
+                                               core::transport::OutputQueue *output_queue = nullptr,
+                                               MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
     [[maybe_unused]] TypeErasedSubscriberCallback outer_callback = [callback](std::shared_ptr<MessagePacket> packet) {
       // todo: deserialize
       // todo: for raw sends we can just move the data rather than copying
 
-      std::shared_ptr<const T_MSG> message{new T_MSG(*(T_MSG*)packet->GetPayload().data())};
+      std::shared_ptr<const T_MSG> message{new T_MSG(*(T_MSG *)packet->GetPayload().data())};
       callback(std::move(message));
     };
 
     if (inproc) {
-    #if 0
+#if 0
       inproc_subscriber = inproc->Subscribe<T>(topic, [](MessageEvent<T_MSG>){});
         // TODO
-    #endif
+#endif
     }
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
