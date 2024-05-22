@@ -50,8 +50,8 @@ public:
 
   void Stop(bool wait = false) {
     {
-    std::lock_guard lock(send_mutex);
-    stop_thread = true;
+      std::lock_guard lock(send_mutex);
+      stop_thread = true;
     }
     send_cv.notify_one();
     if (wait) {
@@ -121,19 +121,20 @@ public:
   };
 
   virtual std::shared_ptr<basis::core::transport::TransportSubscriber>
-  Subscribe( std::string_view topic, core::transport::TypeErasedSubscriberCallback callback, core::transport::OutputQueue* output_queue,[[maybe_unused]] core::transport::MessageTypeInfo type_info) {
+  Subscribe(std::string_view topic, core::transport::TypeErasedSubscriberCallback callback,
+            core::transport::OutputQueue *output_queue, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
     // TODO: specify thread pool name
     // TODO: pass in the thread pool every time
     // TODO: error handling
-    std::shared_ptr<TcpSubscriber> subscriber =
-        *TcpSubscriber::Create(topic, std::move(callback), &epoll, thread_pool_manager->GetDefaultThreadPool().get(), output_queue);
+    std::shared_ptr<TcpSubscriber> subscriber = *TcpSubscriber::Create(
+        topic, std::move(callback), &epoll, thread_pool_manager->GetDefaultThreadPool().get(), output_queue);
     {
       std::lock_guard lock(subscribers_mutex);
       subscribers.emplace(std::string(topic), subscriber);
     }
     return std::shared_ptr<basis::core::transport::TransportSubscriber>(std::move(subscriber));
   }
-  
+
   void Update() {
     decltype(publishers)::iterator it;
     {
@@ -167,7 +168,7 @@ private:
   std::mutex subscribers_mutex;
   std::unordered_multimap<std::string, std::weak_ptr<TcpSubscriber>> subscribers;
 
-// TODO: store list of known publishers?
+  // TODO: store list of known publishers?
 
   /// One epoll instance is shared across the whole TcpTransport - it's an implementation detail of tcp, even if we
   /// could share with other transports

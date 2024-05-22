@@ -11,7 +11,8 @@ class ThreadPoolManager {
 public:
   ThreadPoolManager() = default;
 
-// TODO: do we actually need to share ownership of the pool or can we pass out raw pointers and enforce destruction order?
+  // TODO: do we actually need to share ownership of the pool or can we pass out raw pointers and enforce destruction
+  // order?
   std::shared_ptr<threading::ThreadPool> GetDefaultThreadPool() { return default_thread_pool; }
 
 private:

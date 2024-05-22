@@ -52,4 +52,4 @@ public:
   std::queue<T> queue;
 };
 
-} // namespace basis::plugins::transport
+} // namespace basis::core::transport

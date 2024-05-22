@@ -154,8 +154,6 @@ TEST_F(TestTcpTransport, TestPublisher) {
   std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
 
   ASSERT_EQ(publisher->CheckForNewSubscriptions(), 1);
-
-
 }
 
 /**
@@ -164,7 +162,8 @@ TEST_F(TestTcpTransport, TestPublisher) {
 TEST_F(TestTcpTransport, TestTransport) {
   auto thread_pool_manager = std::make_shared<core::transport::ThreadPoolManager>();
   TcpTransport transport(thread_pool_manager);
-  std::shared_ptr<core::transport::TransportPublisher> publisher = transport.Advertise("test", basis::core::transport::DeduceMessageTypeInfo<int>());
+  std::shared_ptr<core::transport::TransportPublisher> publisher =
+      transport.Advertise("test", basis::core::transport::DeduceMessageTypeInfo<int>());
   ASSERT_NE(publisher, nullptr);
 }
 
@@ -186,52 +185,51 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_NE(test_publisher, nullptr);
 
   uint16_t port = 0;
-  for(const std::string& info : test_publisher->GetPublisherInfo()) {
+  for (const std::string &info : test_publisher->GetPublisherInfo()) {
     spdlog::info("publisher at {}", info);
-    port = stoi(info);    
+    port = stoi(info);
   }
   ASSERT_NE(port, 0);
 
-    std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
+  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
 
-    transport_manager.Update();
+  transport_manager.Update();
 
-    ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
-    auto send_msg = std::make_shared<const TestStruct>();
-    test_publisher->Publish(send_msg);
-    //auto string_publisher = transport_manager.Advertise("test_string");
-    //ASSERT_NE(publisher, nullptr);
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+  auto send_msg = std::make_shared<const TestStruct>();
+  test_publisher->Publish(send_msg);
+  // auto string_publisher = transport_manager.Advertise("test_string");
+  // ASSERT_NE(publisher, nullptr);
 
+  auto recv_msg = receiver->ReceiveMessage(1.0);
+  // Ensure we have a message
+  ASSERT_NE(recv_msg, nullptr);
+  // Ensure we didn't accidentally invoke the inproc transport
+  ASSERT_NE((TestStruct *)recv_msg->GetPayload().data(), send_msg.get());
 
-    auto recv_msg = receiver->ReceiveMessage(1.0);
-    // Ensure we have a message
-    ASSERT_NE(recv_msg, nullptr);
-    // Ensure we didn't accidentally invoke the inproc transport
-    ASSERT_NE((TestStruct*)recv_msg->GetPayload().data(), send_msg.get());
-
-    // Ensure we got what we sent
-    ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
-    ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
-  
+  // Ensure we got what we sent
+  ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
+  ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
 
   core::transport::OutputQueue output_queue;
-  
-  std::atomic<int> callback_times {0};
+
+  std::atomic<int> callback_times{0};
   core::transport::SubscriberCallback<TestStruct> callback = [&](std::shared_ptr<const TestStruct> t) {
     spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
     callback_times++;
   };
 
-  std::shared_ptr<core::transport::Subscriber<TestStruct>> queue_subscriber = transport_manager.Subscribe<TestStruct>("test_struct", callback, &output_queue);
-  std::shared_ptr<core::transport::Subscriber<TestStruct>> immediate_subscriber = transport_manager.Subscribe<TestStruct>("test_struct", callback);
+  std::shared_ptr<core::transport::Subscriber<TestStruct>> queue_subscriber =
+      transport_manager.Subscribe<TestStruct>("test_struct", callback, &output_queue);
+  std::shared_ptr<core::transport::Subscriber<TestStruct>> immediate_subscriber =
+      transport_manager.Subscribe<TestStruct>("test_struct", callback);
 
   std::array subscribers = {queue_subscriber, immediate_subscriber};
-  for(auto& subscriber : subscribers) {
-    TcpSubscriber* tcp_subscriber = dynamic_cast<TcpSubscriber*>(subscriber->transport_subscribers[0].get());
+  for (auto &subscriber : subscribers) {
+    TcpSubscriber *tcp_subscriber = dynamic_cast<TcpSubscriber *>(subscriber->transport_subscribers[0].get());
     ASSERT_NE(tcp_subscriber, nullptr);
     tcp_subscriber->Connect("127.0.0.1", port);
   }
-  
 
   transport_manager.Update();
   ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
@@ -245,8 +243,6 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_NE(event, std::nullopt);
   event->callback(std::move(event->packet));
   ASSERT_EQ(callback_times, 2);
-
-
 }
 
 /**
@@ -491,11 +487,9 @@ TEST_F(TestTcpTransport, Torture) {
         std::string expected_msg = "Hello, World! ";
         expected_msg += channel_name;
         ASSERT_STREQ((char *)msg->GetPayload().data(), expected_msg.c_str());
-        core::transport::OutputQueueEvent event = {
-          .topic_name = channel_name,
-          .packet = std::move(msg),
-          .callback = core::transport::TypeErasedSubscriberCallback()
-        };
+        core::transport::OutputQueueEvent event = {.topic_name = channel_name,
+                                                   .packet = std::move(msg),
+                                                   .callback = core::transport::TypeErasedSubscriberCallback()};
         output_queue.Emplace(std::move(event));
 
         // TODO: peek
@@ -595,9 +589,9 @@ TEST_F(TestTcpTransport, Torture) {
   }
   spdlog::warn("Processed {} sends", MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT);
 
-  // Spam a bunch more messages to catch errors on shutdown
-  // TODO: actually add test case for catching these errors, rather than eyeballing the logs
-  #if 0
+// Spam a bunch more messages to catch errors on shutdown
+// TODO: actually add test case for catching these errors, rather than eyeballing the logs
+#if 0
   for (int message_count = 0; message_count < MESSAGES_PER_SENDER; message_count++) {
     for (int sender_index = 0; sender_index < SENDER_COUNT; sender_index++) {
       for (auto &sender : senders_by_index[sender_index]) {
@@ -605,7 +599,7 @@ TEST_F(TestTcpTransport, Torture) {
       }
     }
   }
-  #endif
+#endif
   // spdlog::set_level(spdlog::level::debug);
   spdlog::warn("Removing fds");
   // On my system this completes in 2-10ms if there are many many messages in flight - usually much less

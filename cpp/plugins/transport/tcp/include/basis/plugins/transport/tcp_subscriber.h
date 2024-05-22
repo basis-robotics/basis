@@ -1,15 +1,13 @@
 #pragma once
 
 #include <cstdint>
-#include <unordered_map>
 #include <string_view>
+#include <unordered_map>
 
-
+#include "epoll.h"
 #include <basis/core/networking/socket.h>
 #include <basis/core/transport/subscriber.h>
 #include <basis/core/transport/transport.h>
-#include "epoll.h"
-
 
 namespace basis::plugins::transport {
 
@@ -18,7 +16,6 @@ struct AddressPortHash {
     return std::hash<std::string>{}(p.first) ^ std::hash<uint16_t>{}(p.second);
   }
 };
-
 
 /**
  * Used to receive serialized data over TCP.
@@ -67,23 +64,23 @@ private:
   uint16_t port;
 };
 
-
 class TcpSubscriber : public core::transport::TransportSubscriber {
 public:
   // todo: error condition
   static std::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
-  Create(std::string_view topic_name,core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll, core::threading::ThreadPool *worker_pool, 
-  core::transport::OutputQueue* output_queue = nullptr,
+  Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
+         core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue = nullptr,
          std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
 
   // todo: error handling
   void Connect(std::string_view address, uint16_t port);
 
 protected:
-  TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback,Epoll *epoll,  core::threading::ThreadPool *worker_pool, core::transport::OutputQueue* output_queue);
+  TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
+                core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue);
 
   std::string topic_name;
-    core::transport::TypeErasedSubscriberCallback callback;
+  core::transport::TypeErasedSubscriberCallback callback;
 
   Epoll *epoll;
   core::threading::ThreadPool *worker_pool;
@@ -91,4 +88,4 @@ protected:
   std::unordered_map<std::pair<std::string, uint16_t>, TcpReceiver, AddressPortHash> receivers = {};
 };
 
-}
+} // namespace basis::plugins::transport
