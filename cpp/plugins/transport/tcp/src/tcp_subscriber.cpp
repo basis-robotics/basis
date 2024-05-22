@@ -46,11 +46,13 @@ void TcpSubscriber::Connect(std::string_view address, uint16_t port) {
 
       case TcpReceiver::ReceiveStatus::DONE: {
         if(output_queue) {
-          std::pair<std::string, std::shared_ptr<core::transport::MessagePacket>> out(topic_name, incomplete->GetCompletedMessage());
-
-          output_queue->Emplace(std::move(out));
+          output_queue->Emplace({topic_name, incomplete->GetCompletedMessage(), callback});
         }
         else {
+          // TODO: this still isn't quite correct - we need to define three policies
+          // 1. Put into work queue, rely on queue to be processed
+          // 2. Put into local queue, rely on someone servicing the subscriber
+          // 3. Call immediately
           this->callback(incomplete->GetCompletedMessage());
         }
       }

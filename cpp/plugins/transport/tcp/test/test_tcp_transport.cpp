@@ -238,10 +238,13 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   test_publisher->Publish(send_msg);
 
+  // todo: handy dandy condition variable wrapper to not have to wait here
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
   ASSERT_EQ(callback_times, 1);
-
-  ASSERT_NE(output_queue.Pop(10), std::nullopt);
+  auto event = output_queue.Pop(10);
+  ASSERT_NE(event, std::nullopt);
+  event->callback(std::move(event->packet));
+  ASSERT_EQ(callback_times, 2);
 
 
 }
@@ -488,8 +491,12 @@ TEST_F(TestTcpTransport, Torture) {
         std::string expected_msg = "Hello, World! ";
         expected_msg += channel_name;
         ASSERT_STREQ((char *)msg->GetPayload().data(), expected_msg.c_str());
-        std::pair<std::string, std::shared_ptr<core::transport::MessagePacket>> out(channel_name, std::move(msg));
-        output_queue.Emplace(std::move(out));
+        core::transport::OutputQueueEvent event = {
+          .topic_name = channel_name,
+          .packet = std::move(msg),
+          .callback = core::transport::TypeErasedSubscriberCallback()
+        };
+        output_queue.Emplace(std::move(event));
 
         // TODO: peek
         break;
@@ -576,10 +583,10 @@ TEST_F(TestTcpTransport, Torture) {
   std::unordered_map<std::string, size_t> counts;
 
   for (int i = 0; i < MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT; i++) {
-    auto msg = output_queue.Pop(0);
-    ASSERT_NE(msg, std::nullopt);
-    std::string hello = "Hello, World! " + msg->first;
-    ASSERT_STREQ(hello.c_str(), (char *)msg->second->GetPayload().data());
+    auto event = output_queue.Pop(0);
+    ASSERT_NE(event, std::nullopt);
+    std::string hello = "Hello, World! " + event->topic_name;
+    ASSERT_STREQ(hello.c_str(), (char *)event->packet->GetPayload().data());
     counts[hello]++;
   }
 

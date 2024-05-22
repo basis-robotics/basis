@@ -102,7 +102,15 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
-using OutputQueue = SimpleMPSCQueue<std::pair<std::string, TypeErasedSubscriberCallback>>;
+
+// TODO: use MessageEvent
+// TODO: don't store the packet directly, store a weak reference to the transport subscriber
+struct OutputQueueEvent {
+  std::string topic_name;
+  std::unique_ptr<MessagePacket> packet;
+  TypeErasedSubscriberCallback callback;
+};
+using OutputQueue = SimpleMPSCQueue<OutputQueueEvent>;
 
 class Transport {
 public:
