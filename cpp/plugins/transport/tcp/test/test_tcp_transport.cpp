@@ -216,7 +216,11 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   core::transport::OutputQueue output_queue;
   
-  auto subscriber = transport_manager.Subscribe<TestStruct>(&output_queue, "test_struct");
+  core::transport::SubscriberCallback<TestStruct> callback = [](std::shared_ptr<const TestStruct> t) {
+    spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
+  };
+
+  auto subscriber = transport_manager.Subscribe<TestStruct>("test_struct", callback, &output_queue);
 
   TcpSubscriber* tcp_subscriber = dynamic_cast<TcpSubscriber*>(subscriber->transport_subscribers[0].get());
   ASSERT_NE(tcp_subscriber, nullptr);
@@ -225,9 +229,9 @@ TEST_F(TestTcpTransport, TestWithManager) {
   transport_manager.Update();
   ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
 
-    test_publisher->Publish(send_msg);
+  test_publisher->Publish(send_msg);
 
-      ASSERT_NE(output_queue.Pop(10), std::nullopt);
+  ASSERT_NE(output_queue.Pop(10), std::nullopt);
 
 
 }
