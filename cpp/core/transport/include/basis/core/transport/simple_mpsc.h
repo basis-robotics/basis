@@ -4,7 +4,7 @@
 #include <optional>
 #include <queue>
 
-namespace basis::plugins::transport {
+namespace basis::core::transport {
 
 /**
  * Simple thread safe Multi-producer Single Consumer Queue
@@ -20,7 +20,7 @@ public:
   void Emplace(T &&item) {
     {
       std::lock_guard lock(queue_mutex);
-      queue.emplace(item);
+      queue.emplace(std::move(item));
     }
     queue_cv.notify_one();
   }

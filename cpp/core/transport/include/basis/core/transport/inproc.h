@@ -145,13 +145,24 @@ private:
 };
 
 class InprocTransport {
+
+private:
+    template<typename T> 
+    InprocConnector<T>* GetConnector() {
+            // TODO: this static somewhat breaks the nice patterns around being explicit about how objects are initialized
+            // TODO: test with shared objects
+            static InprocConnector<T> connector;
+        return &connector;
+    }
 public:
   template <typename T> std::shared_ptr<InprocPublisher<T>> Advertise(std::string_view topic) {
-    // TODO: this static somewhat breaks the nice patterns around being explicit about how objects are initialized
-    static InprocConnector<T> connector;
-
-    return connector.Advertise(topic);
+    return GetConnector<T>()->Advertise(topic);
   }
+#if 0
+    template <typename T> std::shared_ptr<InprocSubscriber<T>> Subscribe(std::string_view topic, std::function<void(MessageEvent<T> message)> callback) {
+    return GetConnector<T>()->Subscribe(topic, callback);
+  }
+#endif
 };
 
 } // namespace basis::core::transport

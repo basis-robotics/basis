@@ -10,6 +10,7 @@
 #include <basis/core/transport/transport.h>
 #include "epoll.h"
 
+
 namespace basis::plugins::transport {
 
 struct AddressPortHash {
@@ -71,16 +72,22 @@ class TcpSubscriber : public core::transport::TransportSubscriber {
 public:
   // todo: error condition
   static std::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
-  Create(Epoll *epoll, core::threading::ThreadPool *worker_pool,
+  Create(std::string_view topic_name,core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll, core::threading::ThreadPool *worker_pool, 
+  core::transport::OutputQueue* output_queue = nullptr,
          std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
 
   // todo: error handling
   void Connect(std::string_view address, uint16_t port);
 
 protected:
-  TcpSubscriber(Epoll *epoll, core::threading::ThreadPool *worker_pool);
+  TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback,Epoll *epoll,  core::threading::ThreadPool *worker_pool, core::transport::OutputQueue* output_queue);
+
+  std::string topic_name;
+    core::transport::TypeErasedSubscriberCallback callback;
+
   Epoll *epoll;
   core::threading::ThreadPool *worker_pool;
+  core::transport::OutputQueue *output_queue;
   std::unordered_map<std::pair<std::string, uint16_t>, TcpReceiver, AddressPortHash> receivers = {};
 };
 

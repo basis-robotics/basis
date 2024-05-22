@@ -4,11 +4,13 @@
 #include <span>
 
 #include "inproc.h"
-#include "message_packet.h"
 #include "message_type_info.h"
 #include "publisher.h"
 #include "subscriber.h"
 #include "thread_pool_manager.h"
+
+#include "simple_mpsc.h"
+
 namespace basis::core::transport {
 
 /**
@@ -73,6 +75,7 @@ private:
 
   size_t progress_counter = 0;
 };
+
 /**
  * Helper class
  * @todo move to another file, it's implementation detail.
@@ -99,13 +102,23 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
+
+// TODO: use MessageEvent
+// TODO: don't store the packet directly, store a weak reference to the transport subscriber
+struct OutputQueueEvent {
+  std::string topic_name;
+  std::unique_ptr<MessagePacket> packet;
+  TypeErasedSubscriberCallback callback;
+};
+using OutputQueue = SimpleMPSCQueue<OutputQueueEvent>;
+
 class Transport {
 public:
   Transport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
       : thread_pool_manager(thread_pool_manager) {}
   virtual ~Transport() = default;
   virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) = 0;
-  virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, MessageTypeInfo type_info) = 0;
+  virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, TypeErasedSubscriberCallback callback, OutputQueue* output_queue,  MessageTypeInfo type_info) = 0;
 
   /**
    * Implementations should call this function at a regular rate.
@@ -138,23 +151,34 @@ public:
     return publisher;
   }
 
-  template <typename T>
-  std::shared_ptr<Subscriber<T>> Subscribe(std::string_view topic,
-                                           MessageTypeInfo message_type = DeduceMessageTypeInfo<T>()) {
-    std::shared_ptr<InprocSubscriber<T>> inproc_subscriber;
+  template <typename T_MSG>
+  std::shared_ptr<Subscriber<T_MSG>> Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback, core::transport::OutputQueue* output_queue = nullptr,
+                                           MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+    std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
+
+    [[maybe_unused]] TypeErasedSubscriberCallback outer_callback = [callback](std::shared_ptr<MessagePacket> packet) {
+      // todo: deserialize
+      // todo: for raw sends we can just move the data rather than copying
+
+      std::shared_ptr<const T_MSG> message{new T_MSG(*(T_MSG*)packet->GetPayload().data())};
+      callback(std::move(message));
+    };
 
     if (inproc) {
-      inproc_subscriber = inproc->Advertise<T>(topic);
+    #if 0
+      inproc_subscriber = inproc->Subscribe<T>(topic, [](MessageEvent<T_MSG>){});
+        // TODO
+    #endif
     }
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
 
     for (auto &[transport_name, transport] : transports) {
-      tps.push_back(transport->Subscribe(topic, message_type));
+      tps.push_back(transport->Subscribe(topic, outer_callback, output_queue, message_type));
     }
 
-    auto subscriber = std::make_shared<Subscriber<T>>(topic, message_type, std::move(tps), inproc_subscriber);
-    subscribers.emplace(std::string(topic), subscriber);
+    auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
+    subscribers.push_back(subscriber);
     return subscriber;
   }
 
@@ -180,6 +204,7 @@ protected:
 
   std::unordered_multimap<std::string, std::weak_ptr<PublisherBase>> publishers;
 
+  // TODO: these need to be by topic name, also
   std::vector<std::weak_ptr<SubscriberBase>> subscribers;
 };
 

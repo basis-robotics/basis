@@ -4,7 +4,6 @@
 
 #include "spdlog/cfg/env.h"
 #include <basis/plugins/transport/epoll.h>
-#include <basis/plugins/transport/simple_mpsc.h>
 
 #include <basis/plugins/transport/tcp.h>
 #include <gtest/gtest.h>
@@ -193,26 +192,61 @@ TEST_F(TestTcpTransport, TestWithManager) {
   }
   ASSERT_NE(port, 0);
 
-  std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
+    std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
+
+    transport_manager.Update();
+
+    ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+    auto send_msg = std::make_shared<const TestStruct>();
+    test_publisher->Publish(send_msg);
+    //auto string_publisher = transport_manager.Advertise("test_string");
+    //ASSERT_NE(publisher, nullptr);
+
+
+    auto recv_msg = receiver->ReceiveMessage(1.0);
+    // Ensure we have a message
+    ASSERT_NE(recv_msg, nullptr);
+    // Ensure we didn't accidentally invoke the inproc transport
+    ASSERT_NE((TestStruct*)recv_msg->GetPayload().data(), send_msg.get());
+
+    // Ensure we got what we sent
+    ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
+    ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
+  
+
+  core::transport::OutputQueue output_queue;
+  
+  std::atomic<int> callback_times {0};
+  core::transport::SubscriberCallback<TestStruct> callback = [&](std::shared_ptr<const TestStruct> t) {
+    spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
+    callback_times++;
+  };
+
+  std::shared_ptr<core::transport::Subscriber<TestStruct>> queue_subscriber = transport_manager.Subscribe<TestStruct>("test_struct", callback, &output_queue);
+  std::shared_ptr<core::transport::Subscriber<TestStruct>> immediate_subscriber = transport_manager.Subscribe<TestStruct>("test_struct", callback);
+
+  std::array subscribers = {queue_subscriber, immediate_subscriber};
+  for(auto& subscriber : subscribers) {
+    TcpSubscriber* tcp_subscriber = dynamic_cast<TcpSubscriber*>(subscriber->transport_subscribers[0].get());
+    ASSERT_NE(tcp_subscriber, nullptr);
+    tcp_subscriber->Connect("127.0.0.1", port);
+  }
+  
 
   transport_manager.Update();
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
 
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
-  auto send_msg = std::make_shared<const TestStruct>();
   test_publisher->Publish(send_msg);
-  //auto string_publisher = transport_manager.Advertise("test_string");
-  //ASSERT_NE(publisher, nullptr);
+
+  // todo: handy dandy condition variable wrapper to not have to wait here
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_EQ(callback_times, 1);
+  auto event = output_queue.Pop(10);
+  ASSERT_NE(event, std::nullopt);
+  event->callback(std::move(event->packet));
+  ASSERT_EQ(callback_times, 2);
 
 
-  auto recv_msg = receiver->ReceiveMessage(1.0);
-  // Ensure we have a message
-  ASSERT_NE(recv_msg, nullptr);
-  // Ensure we didn't accidentally invoke the inproc transport
-  ASSERT_NE((TestStruct*)recv_msg->GetPayload().data(), send_msg.get());
-
-  // Ensure we got what we sent
-  ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
-  ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
 }
 
 /**
@@ -354,7 +388,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
   Epoll poller;
   core::threading::ThreadPool thread_pool(4);
 
-  SimpleMPSCQueue<std::shared_ptr<core::transport::MessagePacket>> output_queue;
+  core::transport::SimpleMPSCQueue<std::shared_ptr<core::transport::MessagePacket>> output_queue;
 
   /**
    * Create callback, storing in the bind
@@ -426,7 +460,7 @@ TEST_F(TestTcpTransport, Torture) {
   auto poller = std::make_unique<Epoll>();
   core::threading::ThreadPool thread_pool(4);
 
-  SimpleMPSCQueue<std::pair<std::string, std::shared_ptr<core::transport::MessagePacket>>> output_queue;
+  core::transport::OutputQueue output_queue;
 
   /**
    * Create callback, storing in the bind
@@ -457,8 +491,12 @@ TEST_F(TestTcpTransport, Torture) {
         std::string expected_msg = "Hello, World! ";
         expected_msg += channel_name;
         ASSERT_STREQ((char *)msg->GetPayload().data(), expected_msg.c_str());
-        std::pair<std::string, std::shared_ptr<core::transport::MessagePacket>> out(channel_name, std::move(msg));
-        output_queue.Emplace(std::move(out));
+        core::transport::OutputQueueEvent event = {
+          .topic_name = channel_name,
+          .packet = std::move(msg),
+          .callback = core::transport::TypeErasedSubscriberCallback()
+        };
+        output_queue.Emplace(std::move(event));
 
         // TODO: peek
         break;
@@ -545,10 +583,10 @@ TEST_F(TestTcpTransport, Torture) {
   std::unordered_map<std::string, size_t> counts;
 
   for (int i = 0; i < MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT; i++) {
-    auto msg = output_queue.Pop(0);
-    ASSERT_NE(msg, std::nullopt);
-    std::string hello = "Hello, World! " + msg->first;
-    ASSERT_STREQ(hello.c_str(), (char *)msg->second->GetPayload().data());
+    auto event = output_queue.Pop(0);
+    ASSERT_NE(event, std::nullopt);
+    std::string hello = "Hello, World! " + event->topic_name;
+    ASSERT_STREQ(hello.c_str(), (char *)event->packet->GetPayload().data());
     counts[hello]++;
   }
 
