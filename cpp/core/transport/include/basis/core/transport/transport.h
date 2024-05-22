@@ -102,7 +102,7 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
-using OutputQueue = SimpleMPSCQueue<std::pair<std::string, std::shared_ptr<MessagePacket>>>;
+using OutputQueue = SimpleMPSCQueue<std::pair<std::string, TypeErasedSubscriberCallback>>;
 
 class Transport {
 public:
