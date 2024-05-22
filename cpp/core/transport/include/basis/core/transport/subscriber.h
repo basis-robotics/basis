@@ -1,14 +1,22 @@
 #pragma once
-#include <basis/core/time.h>
-#include <basis/core/transport/message_event.h>
-#include <basis/core/transport/message_type_info.h>
-#include <basis/core/transport/inproc.h>
 
 #include <functional>
 #include <memory>
+#include <basis/core/time.h>
+#include "message_event.h"
+#include "message_type_info.h"
+#include "inproc.h"
+#include "message_packet.h"
+
+
 namespace basis {
 namespace core {
 namespace transport {
+
+template<typename T_MSG>
+using SubscriberCallback = std::function<void(std::shared_ptr<const T_MSG>)>;
+// TODO: this can almost certainly be a unique ptr
+using TypeErasedSubscriberCallback = std::function<void(std::shared_ptr<MessagePacket>)>;
 
 class TransportSubscriber {
 public:

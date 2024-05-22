@@ -216,20 +216,30 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   core::transport::OutputQueue output_queue;
   
-  core::transport::SubscriberCallback<TestStruct> callback = [](std::shared_ptr<const TestStruct> t) {
+  std::atomic<int> callback_times {0};
+  core::transport::SubscriberCallback<TestStruct> callback = [&](std::shared_ptr<const TestStruct> t) {
     spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
+    callback_times++;
   };
 
-  auto subscriber = transport_manager.Subscribe<TestStruct>("test_struct", callback, &output_queue);
+  std::shared_ptr<core::transport::Subscriber<TestStruct>> queue_subscriber = transport_manager.Subscribe<TestStruct>("test_struct", callback, &output_queue);
+  std::shared_ptr<core::transport::Subscriber<TestStruct>> immediate_subscriber = transport_manager.Subscribe<TestStruct>("test_struct", callback);
 
-  TcpSubscriber* tcp_subscriber = dynamic_cast<TcpSubscriber*>(subscriber->transport_subscribers[0].get());
-  ASSERT_NE(tcp_subscriber, nullptr);
-  tcp_subscriber->Connect("127.0.0.1", port);
+  std::array subscribers = {queue_subscriber, immediate_subscriber};
+  for(auto& subscriber : subscribers) {
+    TcpSubscriber* tcp_subscriber = dynamic_cast<TcpSubscriber*>(subscriber->transport_subscribers[0].get());
+    ASSERT_NE(tcp_subscriber, nullptr);
+    tcp_subscriber->Connect("127.0.0.1", port);
+  }
+  
 
   transport_manager.Update();
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
 
   test_publisher->Publish(send_msg);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_EQ(callback_times, 1);
 
   ASSERT_NE(output_queue.Pop(10), std::nullopt);
 

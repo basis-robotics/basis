@@ -4,7 +4,6 @@
 #include <span>
 
 #include "inproc.h"
-#include "message_packet.h"
 #include "message_type_info.h"
 #include "publisher.h"
 #include "subscriber.h"
@@ -103,10 +102,6 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 };
 
-template<typename T_MSG>
-using SubscriberCallback = std::function<void(std::shared_ptr<const T_MSG>)>;
-// TODO: this can almost certainly be a unique ptr
-using TypeErasedSubscriberCallback = std::function<void(std::shared_ptr<MessagePacket>)>;
 using OutputQueue = SimpleMPSCQueue<std::pair<std::string, std::shared_ptr<MessagePacket>>>;
 
 class Transport {
@@ -115,7 +110,7 @@ public:
       : thread_pool_manager(thread_pool_manager) {}
   virtual ~Transport() = default;
   virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) = 0;
-  virtual std::shared_ptr<TransportSubscriber> Subscribe(OutputQueue* output_queue, std::string_view topic, MessageTypeInfo type_info) = 0;
+  virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, TypeErasedSubscriberCallback callback, OutputQueue* output_queue,  MessageTypeInfo type_info) = 0;
 
   /**
    * Implementations should call this function at a regular rate.
@@ -153,7 +148,7 @@ public:
                                            MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
-    [[maybe_unused]] TypeErasedSubscriberCallback inner_callback = [callback](std::shared_ptr<MessagePacket> packet) {
+    [[maybe_unused]] TypeErasedSubscriberCallback outer_callback = [callback](std::shared_ptr<MessagePacket> packet) {
       // todo: deserialize
       // todo: for raw sends we can just move the data rather than copying
 
@@ -171,7 +166,7 @@ public:
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
 
     for (auto &[transport_name, transport] : transports) {
-      tps.push_back(transport->Subscribe(output_queue, topic, message_type));
+      tps.push_back(transport->Subscribe(topic, outer_callback, output_queue, message_type));
     }
 
     auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
