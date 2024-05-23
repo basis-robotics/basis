@@ -1,0 +1,6 @@
+project(basis_plugins_serialization_protobuf)
+include(FindProtobuf)
+find_package(Protobuf REQUIRED)
+
+add_library(basis_plugins_serialization_protobuf test.cpp)
+target_link_libraries(basis_plugins_serialization_protobuf basis_proto)
