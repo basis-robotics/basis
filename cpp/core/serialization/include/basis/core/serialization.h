@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <span>
 
 // useful https://vdna.be/site/index.php/2016/05/google-protobuf-at-run-time-deserialization-example-in-c/
