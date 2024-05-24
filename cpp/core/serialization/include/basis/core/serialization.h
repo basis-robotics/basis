@@ -44,11 +44,9 @@ template <typename T_MSG, typename Enable = void> struct SerializationHandler {
                 "Handler for this type not found - please make sure you've included the proper serialization plugin");
 };
 
-// DELETEME
-
 template <typename T_MSG> using SerializeGetSizeCallback = std::function<size_t(const T_MSG &)>;
 
-template <typename T_MSG> using SerializeWriteSpanCallback = std::function<bool(const T_MSG &, std::span<std::byte> &)>;
+template <typename T_MSG> using SerializeWriteSpanCallback = std::function<bool(const T_MSG &, std::span<std::byte>)>;
 
 template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
 static size_t GetSerializedSize(const T_MSG &message) {
@@ -69,6 +67,9 @@ static std::pair<std::unique_ptr<std::byte[]>, size_t> SerializeToBytes(const T_
   }
   return {nullptr, 0};
 }
+
+template <typename T_MSG> using DeserializeCallback = std::function<std::unique_ptr<T_MSG>(const T_MSG &, std::span<std::byte>)>;
+
 
 // TODO: this forces a heap allocation of the message, there may be a desire for stack allocated messages
 template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
