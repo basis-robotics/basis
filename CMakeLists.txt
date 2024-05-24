@@ -4,4 +4,4 @@ enable_testing()
 
 
 add_subdirectory(cpp)
-# add_subdirectory(proto)
+add_subdirectory(proto)
