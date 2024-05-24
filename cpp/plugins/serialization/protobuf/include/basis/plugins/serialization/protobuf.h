@@ -18,7 +18,8 @@ public:
     return message.ByteSizeLong();
   }
 
-  template <typename T_MSG> static std::unique_ptr<T_MSG> DeserializeFromBytes(std::span<const std::byte> bytes) {
+  template <typename T_MSG>
+  static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
 
     auto parsed_message = std::make_unique<T_MSG>();
     if (!parsed_message->ParseFromArray(bytes.data(), bytes.size())) {

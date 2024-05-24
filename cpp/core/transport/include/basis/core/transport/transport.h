@@ -3,6 +3,8 @@
 #include <memory>
 #include <span>
 
+#include <spdlog/spdlog.h>
+
 #include "inproc.h"
 #include "message_type_info.h"
 #include "publisher.h"
@@ -159,17 +161,18 @@ public:
     return publisher;
   }
 
-  template <typename T_MSG>
+  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   std::shared_ptr<Subscriber<T_MSG>> Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
                                                core::transport::OutputQueue *output_queue = nullptr,
                                                MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
-    [[maybe_unused]] TypeErasedSubscriberCallback outer_callback = [callback](std::shared_ptr<MessagePacket> packet) {
-      // todo: deserialize
-      // todo: for raw sends we can just move the data rather than copying
-
-      std::shared_ptr<const T_MSG> message{new T_MSG(*(T_MSG *)packet->GetPayload().data())};
+    [[maybe_unused]] TypeErasedSubscriberCallback outer_callback = [topic, callback](std::shared_ptr<MessagePacket> packet) {
+      std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
+      if(!message) {
+        spdlog::error("Unable to deserialize message on topic {}", topic);
+        return;
+      }
       callback(std::move(message));
     };
 
@@ -185,6 +188,8 @@ public:
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Subscribe(topic, outer_callback, output_queue, message_type));
     }
+
+
 
     auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
     subscribers.push_back(subscriber);

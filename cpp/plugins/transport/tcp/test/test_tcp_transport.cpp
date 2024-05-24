@@ -221,9 +221,9 @@ TEST_F(TestTcpTransport, TestWithManager) {
   };
 
   std::shared_ptr<core::transport::Subscriber<TestStruct>> queue_subscriber =
-      transport_manager.Subscribe<TestStruct>("test_struct", callback, &output_queue);
+      transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback, &output_queue);
   std::shared_ptr<core::transport::Subscriber<TestStruct>> immediate_subscriber =
-      transport_manager.Subscribe<TestStruct>("test_struct", callback);
+      transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
 
   std::array subscribers = {queue_subscriber, immediate_subscriber};
   for (auto &subscriber : subscribers) {

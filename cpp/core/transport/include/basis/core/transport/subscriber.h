@@ -35,7 +35,7 @@ public:
   Subscriber([[maybe_unused]] std::string_view topic, MessageTypeInfo type_info,
              std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers,
              std::shared_ptr<InprocSubscriber<T_MSG>> inproc)
-      : topic(topic), type_info(type_info), transport_subscribers(std::move(transport_subscribers)),
+      : topic(std::move(topic)), type_info(type_info), transport_subscribers(std::move(transport_subscribers)),
         inproc(std::move(inproc)) {}
 
   const std::string topic;

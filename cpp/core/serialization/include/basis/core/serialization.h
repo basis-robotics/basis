@@ -33,9 +33,10 @@ public:
     return {std::move(buffer), sizeof(T_MSG)};
   }
 
-  template <typename T_MSG> static std::unique_ptr<T_MSG> DeserializeFromBytes(std::span<const std::byte> bytes) {
-    // Note: this may need a check for alignment - might need to use memcpy instead
-    return std::make_unique<T_MSG>((T_MSG *)bytes);
+  template <typename T_MSG> 
+  static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
+    // TODO: this may need a check for alignment - might need to use memcpy instead
+    return std::make_unique<T_MSG>(*reinterpret_cast<const T_MSG *>(bytes.data()));
   }
 };
 } // namespace core::serialization
@@ -68,13 +69,12 @@ static std::pair<std::unique_ptr<std::byte[]>, size_t> SerializeToBytes(const T_
   return {nullptr, 0};
 }
 
-template <typename T_MSG> using DeserializeCallback = std::function<std::unique_ptr<T_MSG>(const T_MSG &, std::span<std::byte>)>;
-
+template <typename T_MSG> using DeserializeCallback = std::function<std::unique_ptr<T_MSG>(std::span<const std::byte>)>;
 
 // TODO: this forces a heap allocation of the message, there may be a desire for stack allocated messages
 template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-static std::unique_ptr<T_MSG> DeserializeFromBytes(std::span<const std::byte> bytes) {
-  return T_Serializer::template DeserializeFromBytes<T_MSG>(bytes);
+static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
+  return T_Serializer::template DeserializeFromSpan<T_MSG>(bytes);
 }
 
 } // namespace basis
