@@ -48,6 +48,8 @@ private:
    * Converts the region of memory pointed to by `bytes` into a message.
    *
    * @returns a complete message on success or nullptr on failure
+   *
+   * @todo this forces a heap allocation of the message, there may be a desire for stack allocated messages
    */
     template <typename T_MSG> static std::unique_ptr<T_MSG>
     DeserializeFromSpan(std::span<const std::byte> bytes) {
@@ -60,8 +62,9 @@ private:
 
 /**
  * Serializer that simply uses the message passed in as a raw byte buffer.
- * Understandably, this won't work with any heap allocated structures.
- * It's recommended to not use this with 
+ * Understandably, this won't work with any heap allocated structures, nor with anything to a pointer to other memory.
+ *
+ * @todo ensure structure is pod
  */
 class RawSerializer : public Serializer {
 public:
@@ -71,7 +74,8 @@ public:
     if (span.size() < sizeof(message)) {
       return false;
     }
-    // new (span.data()) T_MSG(message);
+
+    // Should not use placement new here, due to alignment
     memcpy(span.data(), &message, sizeof(message));
 
     return true;
@@ -82,26 +86,36 @@ public:
     return std::make_unique<T_MSG>(*reinterpret_cast<const T_MSG *>(bytes.data()));
   }
 };
+
 } // namespace core::serialization
+
+/**
+ * Helper to query the Serializer used for a message.
+ * Will never assume RawSerializer.
+ *
+ * @example 
+ *   typename T_Serializer = SerializationHandler<T_MSG>::type;
+ *   std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
+ */
 template <typename T_MSG, typename Enable = void> struct SerializationHandler {
+  using type = core::serialization::Serializer;
+
   static_assert(false,
-                "Handler for this type not found - please make sure you've included the proper serialization plugin");
+                "Serialization handler for this type not found - please make sure you've included the proper serialization plugin");
 };
 
+/**
+ * Helpers to standardize callbacks used by the transport layer for serialization.
+ */
 template <typename T_MSG> using SerializeGetSizeCallback = std::function<size_t(const T_MSG &)>;
-
 template <typename T_MSG> using SerializeWriteSpanCallback = std::function<bool(const T_MSG &, std::span<std::byte>)>;
 
-template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-static size_t GetSerializedSize(const T_MSG &message) {
-  return T_Serializer::GetSerializedSize(message);
-}
-
-template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> span) {
-  return T_Serializer::SerializeToSpan(message, span);
-}
-
+/**
+ * Helper to serialize a message to bytes.
+ *
+ * @returns {message_pointer, size} on success 
+ * @returns {nullptr, 0} on failure
+ */
 template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
 static std::pair<std::unique_ptr<std::byte[]>, size_t> SerializeToBytes(const T_MSG &message) {
   const size_t size = T_Serializer::GetSerializedSize(message);
@@ -112,9 +126,15 @@ static std::pair<std::unique_ptr<std::byte[]>, size_t> SerializeToBytes(const T_
   return {nullptr, 0};
 }
 
+
+/**
+ * Helper to standardize callback used by the transport layer for deserialization.
+ */
 template <typename T_MSG> using DeserializeCallback = std::function<std::unique_ptr<T_MSG>(std::span<const std::byte>)>;
 
-// TODO: this forces a heap allocation of the message, there may be a desire for stack allocated messages
+/**
+ * Helper to deserialize a message from a region of memory.
+ */
 template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
 static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
   return T_Serializer::template DeserializeFromSpan<T_MSG>(bytes);
