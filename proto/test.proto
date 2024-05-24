@@ -2,7 +2,7 @@ syntax= "proto3";
 
 message TestExampleMessage {
   string name = 1;
-  optional int32 id = 2;
+  int32 id = 2;
   string email = 3;
 }
 
