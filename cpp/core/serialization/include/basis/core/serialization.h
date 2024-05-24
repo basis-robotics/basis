@@ -1,17 +1,68 @@
 #pragma once
+/**
+ * @file serialization.h
+ * 
+ * Contains the serialization interface used by the transport layer.
+ */
 
+#include <cassert>
 #include <functional>
 #include <span>
 
-// useful https://vdna.be/site/index.php/2016/05/google-protobuf-at-run-time-deserialization-example-in-c/
 namespace basis {
 namespace core::serialization {
+/**
+ * Base interface, used by all serializers. Will later contain ToJSON and other utilities.
+ *
+ * @todo ToJSON
+ * @todo ToDebugString
+ * @todo Capabilities per message type - such as ability to be transported over network at all
+ */
 class Serializer {
-
+private:
+  Serializer() = default;
 public:
   virtual ~Serializer() = default;
+private:
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+  /**
+   * Returns the size in bytes required for a message to be serialized to disk or as a network packet.
+   */
+  template <typename T_MSG> 
+  static size_t GetSerializedSize(const T_MSG &message) {
+    static_assert(false, "Please implement this template function");
+  }
+
+  /**
+   * Writes `message` to the region of memory pointed to by `bytes`.
+   *
+   * @returns true on success, false on failure.
+   */
+  template <typename T_MSG> 
+  static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> bytes) {
+    static_assert(false, "Please implement this template function");
+  }
+
+  /**
+   * Converts the region of memory pointed to by `bytes` into a message.
+   *
+   * @returns a complete message on success or nullptr on failure
+   */
+    template <typename T_MSG> static std::unique_ptr<T_MSG>
+    DeserializeFromSpan(std::span<const std::byte> bytes) {
+          static_assert(false, "Please implement this template function");
+    }
+#pragma clang diagnostic pop
+
 };
 
+
+/**
+ * Serializer that simply uses the message passed in as a raw byte buffer.
+ * Understandably, this won't work with any heap allocated structures.
+ * It's recommended to not use this with 
+ */
 class RawSerializer : public Serializer {
 public:
   template <typename T_MSG> static size_t GetSerializedSize(const T_MSG &message) { return sizeof(message); }
@@ -24,14 +75,6 @@ public:
     memcpy(span.data(), &message, sizeof(message));
 
     return true;
-  }
-
-  template <typename T_MSG>
-  static std::pair<std::unique_ptr<std::byte[]>, size_t> SerializeToBytes(const T_MSG &message) {
-    // TODO: figure out a good assertion here to avoid raw serializing unsafe types
-    auto buffer = std::make_unique<std::byte[]>(sizeof(T_MSG));
-    new (buffer.get()) T_MSG(message);
-    return {std::move(buffer), sizeof(T_MSG)};
   }
 
   template <typename T_MSG> static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {

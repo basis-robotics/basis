@@ -3,6 +3,10 @@
 
 #include <basis/core/serialization.h>
 
+
+// Useful for later 
+// https://vdna.be/site/index.php/2016/05/google-protobuf-at-run-time-deserialization-example-in-c/
+
 namespace basis {
 namespace plugins::serialization {
 class ProtobufSerializer : public core::serialization::Serializer {
