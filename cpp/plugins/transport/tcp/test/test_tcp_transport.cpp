@@ -16,11 +16,10 @@
 
 #include <queue>
 
-#include <basis/plugins/serialization/protobuf.h>
 #include "test.pb.h"
+#include <basis/plugins/serialization/protobuf.h>
 
 #include <google/protobuf/util/message_differencer.h>
-
 
 /*
 void init_logger(){
@@ -227,7 +226,8 @@ TEST_F(TestTcpTransport, TestWithManager) {
   };
 
   std::shared_ptr<core::transport::Subscriber<TestRawStruct>> queue_subscriber =
-      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback, &output_queue);
+      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
+                                                                                            &output_queue);
   std::shared_ptr<core::transport::Subscriber<TestRawStruct>> immediate_subscriber =
       transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
 
@@ -257,8 +257,7 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
   core::transport::TransportManager transport_manager;
   transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
 
-  auto test_publisher =
-      transport_manager.Advertise<TestProtoStruct>("test_proto");
+  auto test_publisher = transport_manager.Advertise<TestProtoStruct>("test_proto");
   ASSERT_NE(test_publisher, nullptr);
 
   uint16_t port = 0;
@@ -269,7 +268,7 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
   ASSERT_NE(port, 0);
 
   auto send_msg = std::make_shared<TestProtoStruct>();
-  
+
   send_msg->set_foo(3);
   send_msg->set_bar(8.5);
   send_msg->set_baz("baz");
@@ -286,19 +285,16 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
   TcpSubscriber *tcp_subscriber = dynamic_cast<TcpSubscriber *>(subscriber->transport_subscribers[0].get());
   ASSERT_NE(tcp_subscriber, nullptr);
   tcp_subscriber->Connect("127.0.0.1", port);
-  
 
   transport_manager.Update();
 
   ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
 
-
   test_publisher->Publish(send_msg);
-  
+
   // TODO: handy dandy condition variable wrapper to not have to wait here
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
   ASSERT_EQ(callback_times, 1);
-
 
   // TODO: send garbage data, ensure that we correctly don't get a callback
 }

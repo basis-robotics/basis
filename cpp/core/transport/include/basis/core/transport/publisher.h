@@ -75,7 +75,7 @@ public:
     auto packet = std::make_shared<MessagePacket>(MessageHeader::DataType::MESSAGE, payload_size);
     // Serialize directly to the packet
     std::span<std::byte> payload = packet->GetMutablePayload();
-    if(!write_message_to_span_cb(*msg, payload)) {
+    if (!write_message_to_span_cb(*msg, payload)) {
       spdlog::error("Unable to serialize message on topic {}", topic);
       return;
     }

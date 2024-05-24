@@ -29,6 +29,7 @@ TEST(TestProto, TestSerializer) {
   auto [bytes, size] = basis::SerializeToBytes(message);
   ASSERT_NE(bytes, nullptr);
 
-  std::unique_ptr<TestExampleMessage> parsed_message = basis::DeserializeFromSpan<TestExampleMessage>({bytes.get(), size});
+  std::unique_ptr<TestExampleMessage> parsed_message =
+      basis::DeserializeFromSpan<TestExampleMessage>({bytes.get(), size});
   ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(message, *parsed_message));
 }

@@ -17,8 +17,7 @@ public:
     return message.ByteSizeLong();
   }
 
-  template <typename T_MSG>
-  static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
+  template <typename T_MSG> static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
     // TODO: https://protobuf.dev/reference/cpp/arenas/
     // this either requires shared_ptr return from this _or_ an explicit MessageWithArena type
     auto parsed_message = std::make_unique<T_MSG>();

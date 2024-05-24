@@ -167,9 +167,10 @@ public:
                                                MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
-    [[maybe_unused]] TypeErasedSubscriberCallback outer_callback = [topic, callback](std::shared_ptr<MessagePacket> packet) {
+    [[maybe_unused]] TypeErasedSubscriberCallback outer_callback = [topic,
+                                                                    callback](std::shared_ptr<MessagePacket> packet) {
       std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
-      if(!message) {
+      if (!message) {
         spdlog::error("Unable to deserialize message on topic {}", topic);
         return;
       }
@@ -188,8 +189,6 @@ public:
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Subscribe(topic, outer_callback, output_queue, message_type));
     }
-
-
 
     auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
     subscribers.push_back(subscriber);
