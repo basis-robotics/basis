@@ -137,9 +137,9 @@ class TransportManager {
 public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
   // todo: deducing a raw type should be an error unless requested
-  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type >
+  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   std::shared_ptr<Publisher<T_MSG>> Advertise(std::string_view topic,
-                                          MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+                                              MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     if (inproc) {
@@ -152,8 +152,9 @@ public:
 
     SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;
     SerializeWriteSpanCallback<T_MSG> write_span_cb = T_Serializer::template SerializeToSpan<T_MSG>;
-    
-    auto publisher = std::make_shared<Publisher<T_MSG>>(topic, message_type, std::move(tps), inproc_publisher, std::move(get_size_cb), std::move(write_span_cb));
+
+    auto publisher = std::make_shared<Publisher<T_MSG>>(topic, message_type, std::move(tps), inproc_publisher,
+                                                        std::move(get_size_cb), std::move(write_span_cb));
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }

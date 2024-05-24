@@ -181,7 +181,8 @@ TEST_F(TestTcpTransport, TestWithManager) {
   core::transport::TransportManager transport_manager;
   transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
 
-  auto test_publisher = transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("test_struct");
+  auto test_publisher =
+      transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("test_struct");
   ASSERT_NE(test_publisher, nullptr);
 
   uint16_t port = 0;
