@@ -58,8 +58,6 @@ public:
   }
 
   virtual void Publish(std::shared_ptr<const T_MSG> msg) {
-    assert(type_info.serializer == "raw");
-
     if (inproc) {
       inproc->Publish(msg);
     }
