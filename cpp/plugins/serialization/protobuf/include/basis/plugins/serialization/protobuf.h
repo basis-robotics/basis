@@ -9,7 +9,6 @@ class ProtobufSerializer : public core::serialization::Serializer {
 public:
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> span) {
-
     return message.SerializeToArray(span.data(), span.size());
   }
 
@@ -20,8 +19,10 @@ public:
 
   template <typename T_MSG>
   static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
-
+    // TODO: https://protobuf.dev/reference/cpp/arenas/
+    // this either requires shared_ptr return from this _or_ an explicit MessageWithArena type
     auto parsed_message = std::make_unique<T_MSG>();
+
     if (!parsed_message->ParseFromArray(bytes.data(), bytes.size())) {
       return nullptr;
     }

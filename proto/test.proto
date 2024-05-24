@@ -1,7 +1,13 @@
 syntax= "proto3";
 
-message TestMessage {
+message TestExampleMessage {
   string name = 1;
   optional int32 id = 2;
   string email = 3;
 }
+
+message TestProtoStruct {
+  uint32 foo = 1;
+  float bar = 2;
+  string baz = 3;
+};
