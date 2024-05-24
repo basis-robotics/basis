@@ -1,11 +1,13 @@
 #pragma once
+#include <cassert>
+#include <memory>
+#include <string_view>
 
 #include "inproc.h"
 #include "message_packet.h"
 #include "message_type_info.h"
-#include <cassert>
-#include <memory>
-#include <string_view>
+
+#include <basis/core/serialization.h>
 namespace basis::core::transport {
 /**
  * @brief PublisherBase - used to type erase Publisher
@@ -32,8 +34,11 @@ template <typename T_MSG> class Publisher : public PublisherBase {
 public:
   Publisher(std::string_view topic, MessageTypeInfo type_info,
             std::vector<std::shared_ptr<TransportPublisher>> transport_publishers,
-            std::shared_ptr<InprocPublisher<T_MSG>> inproc)
-      : topic(topic), type_info(type_info), inproc(inproc), transport_publishers(transport_publishers) {}
+            std::shared_ptr<InprocPublisher<T_MSG>> inproc,
+            SerializeGetSizeCallback<T_MSG> get_message_size_cb,
+            SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb)
+
+      : topic(topic), type_info(type_info), inproc(inproc), transport_publishers(std::move(transport_publishers)), get_message_size_cb(std::move(get_message_size_cb)), write_message_to_span_cb(std::move(write_message_to_span_cb)) {}
 
   std::vector<std::string> GetPublisherInfo() {
     std::vector<std::string> out;
@@ -58,15 +63,20 @@ public:
       inproc->Publish(msg);
     }
 
-    // TODO: early out if no transports in any publisher, to avoid serialization
+    // TODO: early out if there are no transport subscribers, to avoid serialization
+
 
     // Serialize
-    // temporary raw only serialization
-    auto packet = std::make_shared<MessagePacket>(MessageHeader::DataType::MESSAGE, sizeof(T_MSG));
-    std::span<std::byte> payload = packet->GetMutablePayload();
-    memcpy(payload.data(), msg.get(), sizeof(T_MSG));
 
-    // Send
+    // Request size of payload from serializer  
+    const size_t payload_size = get_message_size_cb(*msg);
+    // Create a packet of the proper size
+    auto packet = std::make_shared<MessagePacket>(MessageHeader::DataType::MESSAGE, payload_size);
+    // Serialize directly to the packet
+    std::span<std::byte> payload = packet->GetMutablePayload();
+    write_message_to_span_cb(*msg, payload);
+
+    // Send the data
     for (auto &pub : transport_publishers) {
       pub->SendMessage(packet);
     }
@@ -77,6 +87,8 @@ public:
   std::shared_ptr<InprocPublisher<T_MSG>> inproc;
   // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
   std::vector<std::shared_ptr<TransportPublisher>> transport_publishers;
+                 SerializeGetSizeCallback<T_MSG> get_message_size_cb;
+    SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb;
 };
 
 } // namespace basis::core::transport

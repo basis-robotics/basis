@@ -11,6 +11,8 @@
 
 #include "simple_mpsc.h"
 
+#include <basis/core/serialization.h>
+
 namespace basis::core::transport {
 
 /**
@@ -135,18 +137,23 @@ class TransportManager {
 public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
   // todo: deducing a raw type should be an error unless requested
-  template <typename T>
-  std::shared_ptr<Publisher<T>> Advertise(std::string_view topic,
-                                          MessageTypeInfo message_type = DeduceMessageTypeInfo<T>()) {
-    std::shared_ptr<InprocPublisher<T>> inproc_publisher;
+  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type >
+  std::shared_ptr<Publisher<T_MSG>> Advertise(std::string_view topic,
+                                          MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+
+    std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     if (inproc) {
-      inproc_publisher = inproc->Advertise<T>(topic);
+      inproc_publisher = inproc->Advertise<T_MSG>(topic);
     }
     std::vector<std::shared_ptr<TransportPublisher>> tps;
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Advertise(topic, message_type));
     }
-    auto publisher = std::make_shared<Publisher<T>>(topic, message_type, std::move(tps), inproc_publisher);
+
+    SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;
+    SerializeWriteSpanCallback<T_MSG> write_span_cb = T_Serializer::template SerializeToSpan<T_MSG>;
+    
+    auto publisher = std::make_shared<Publisher<T_MSG>>(topic, message_type, std::move(tps), inproc_publisher, std::move(get_size_cb), std::move(write_span_cb));
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }
