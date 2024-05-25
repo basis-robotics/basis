@@ -39,7 +39,7 @@ Alternatively, go try out the docker container in `docker/`.
 
 ### Build
 
-`basis` (for now) requires a C++23 compatible compiler and standard library (due to use of `expected`). It's expected that future support will go down to C++17 or lower.
+`basis` (for now) requires a C++20 compatible compiler and standard library (due to use of `expected`). It's expected that future support will go down to C++17 or lower.
 
 ```
 cd cpp/
