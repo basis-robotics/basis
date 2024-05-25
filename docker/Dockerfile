@@ -1,7 +1,7 @@
 # Note: all versions will need pinned here
 
 # focal as this is the last version that ROS1 supports
-FROM ubuntu:focal as basis
+FROM ubuntu:focal as basis-env
 
 RUN rm -f /etc/apt/apt.conf.d/docker-clean
 # Basic dependencies
@@ -59,7 +59,7 @@ USER basis
 WORKDIR /basis
 
 # Basis image with ROS dependencies added in
-FROM basis as basis-ros
+FROM basis-env as basis-env-ros
 
 USER root
 
