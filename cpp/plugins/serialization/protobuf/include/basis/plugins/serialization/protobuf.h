@@ -1,14 +1,24 @@
 #pragma once
+/**
+ * @file protobuf.h
+ * 
+ * A serialization plugin used to (de)serialize `protobuf::Message`
+ * Depends on `libprotobuf-dev` (though in the short term, `-lite` may be compatible) and protobuf-compiler for compiling any message definitions.
+ *
+ * @todo Useful for later for deserialization without having compile time awareness of a message:
+ *   https://vdna.be/site/index.php/2016/05/google-protobuf-at-run-time-deserialization-example-in-c/
+ */
+
 #include <google/protobuf/message.h>
 
 #include <basis/core/serialization.h>
 
 
-// Useful for later 
-// https://vdna.be/site/index.php/2016/05/google-protobuf-at-run-time-deserialization-example-in-c/
-
 namespace basis {
 namespace plugins::serialization {
+/**
+ * Main class, implementing the Serializer interface.
+ */
 class ProtobufSerializer : public core::serialization::Serializer {
 public:
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
@@ -34,6 +44,10 @@ public:
   }
 };
 } // namespace plugins::serialization
+
+/**
+ * Helper to enable protobuf serializer by default for all `protobuf::Message`.
+ */
 template <typename T_MSG>
 struct SerializationHandler<T_MSG, std::enable_if_t<std::is_base_of_v<google::protobuf::Message, T_MSG>>> {
   using type = plugins::serialization::ProtobufSerializer;
