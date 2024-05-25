@@ -14,5 +14,3 @@ protobuf_generate(
  TARGET basis_proto 
   PROTOC_OUT_DIR "${GENERATED_DIR}"
  )
-
-message("foobar=${foobar}")

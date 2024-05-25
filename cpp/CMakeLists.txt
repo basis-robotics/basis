@@ -1,5 +1,5 @@
 # TODO: support lower C++ versions by shimming new libraries with lite/abseil
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -23,6 +23,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 target_compile_options(spdlog PUBLIC -fPIC)
+
+FetchContent_Declare(
+  expected-lite
+  URL https://github.com/martinmoene/expected-lite/archive/refs/tags/v0.6.3.zip
+)
+FetchContent_MakeAvailable(expected-lite)
 
 # Enable warnings after we've included dependencies
 add_compile_options(-Wall -Wextra -Wpedantic -Werror)

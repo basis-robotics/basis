@@ -2,7 +2,7 @@
 
 namespace basis::plugins::transport {
 
-std::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
+nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
 TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
                       core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue,
                       std::vector<std::pair<std::string_view, uint16_t>> addresses) {

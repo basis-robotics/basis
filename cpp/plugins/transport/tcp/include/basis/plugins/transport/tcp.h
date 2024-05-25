@@ -80,7 +80,7 @@ private:
 class TcpPublisher : public core::transport::TransportPublisher {
 public:
   // returns a managed pointer due to mutex member
-  static std::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> Create(uint16_t port = 0);
+  static nonstd::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> Create(uint16_t port = 0);
 
   // TODO: this should probably just be Update() and also check for dead subscriptions
   size_t CheckForNewSubscriptions();

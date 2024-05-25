@@ -126,11 +126,11 @@ TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::Incomple
   return ReceiveStatus::DONE;
 }
 
-std::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> TcpPublisher::Create(uint16_t port) {
+nonstd::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> TcpPublisher::Create(uint16_t port) {
   spdlog::debug("Create TcpListenSocket");
   auto maybe_listen_socket = core::networking::TcpListenSocket::Create(port);
   if (!maybe_listen_socket) {
-    return std::unexpected(maybe_listen_socket.error());
+    return nonstd::make_unexpected(maybe_listen_socket.error());
   }
 
   return std::shared_ptr<TcpPublisher>(new TcpPublisher(std::move(maybe_listen_socket.value())));
