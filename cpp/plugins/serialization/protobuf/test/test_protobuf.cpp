@@ -5,6 +5,9 @@
 
 #include <basis/plugins/serialization/protobuf.h>
 
+/**
+ * Test basic protobuf integration - just ensure that we've linked the library properly
+ */
 TEST(TestProto, Basic) {
   TestExampleMessage message;
   message.set_email("test@example.com");
@@ -19,6 +22,9 @@ TEST(TestProto, Basic) {
   ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(message, parsed_message));
 }
 
+/**
+ * Test the serializer interface itself.
+ */
 TEST(TestProto, TestSerializer) {
   static_assert(std::is_same_v<basis::SerializationHandler<TestExampleMessage>::type,
                                basis::plugins::serialization::ProtobufSerializer>);
@@ -33,3 +39,7 @@ TEST(TestProto, TestSerializer) {
       basis::DeserializeFromSpan<TestExampleMessage>({bytes.get(), size});
   ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(message, *parsed_message));
 }
+
+/**
+ * @todo test failure cases
+ */
