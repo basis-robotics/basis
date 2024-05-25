@@ -18,6 +18,8 @@ RUN sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1A127079A92F09
 # Clang
 RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh clang clang-format)" 
 
+ENV CC clang-18
+ENV CXX clang++-18
 
 RUN apt update && apt install ninja-build libstdc++-10-dev  ccache cmake libprotobuf-dev protobuf-compiler  make --no-install-recommends -y
 
