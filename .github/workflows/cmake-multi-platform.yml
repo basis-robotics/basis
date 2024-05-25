@@ -18,7 +18,6 @@ jobs:
     # TODO: gha actions cache --cache-to type=gha[,parameters...] --cache-from type=gha[,parameters...]
     - name: Build image
       run: ${{ github.workspace }}/docker/build-env.sh
-    - name: Run
   build-test:
     runs-on: ubuntu-latest
     container:
@@ -26,7 +25,8 @@ jobs:
       volumes:
         - ${{ github.workspace }}:/basis
     steps:
-      - run: ls /basis
+      - name: Test command
+        run: ls /basis
     # - name: Upgrade compiler
     #   run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" && clang++-18 --version
     # - name: Install deps
