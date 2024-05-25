@@ -1,13 +1,7 @@
-cmake_minimum_required(VERSION 3.28)
-project(basis)
-enable_testing()
-
 # TODO: support lower C++ versions by shimming new libraries with lite/abseil
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Workaround for std::expected not available in clang
@@ -30,6 +24,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spdlog)
 target_compile_options(spdlog PUBLIC -fPIC)
 
+# Enable warnings after we've included dependencies
+add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+
 add_subdirectory(core)
 
+add_subdirectory(plugins/serialization/protobuf)
 add_subdirectory(plugins/transport/tcp)

@@ -13,6 +13,8 @@ struct MessageTypeInfo {
 /**
  * Construct the type information from the class. This needs some work around APIs to safely handle pointers, refs, etc.
  * This might still be allowed, but the API needs explored.
+ *
+ * TODO: move to a helper in serialization
  */
 template <typename T> MessageTypeInfo DeduceMessageTypeInfo() {
   static_assert(!std::is_pointer<T>::value);
