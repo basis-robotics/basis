@@ -34,6 +34,15 @@ jobs:
         target: basis-env
         tags: latest
         labels: basis/basis-env
+    - name: Build and push Docker image
+      id: push
+      uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        push: true
+        target: basis-env-ros
+        tags: ghcr.io/basis/basis-env-ros:latest
 
   build-test:
     runs-on: ubuntu-latest
