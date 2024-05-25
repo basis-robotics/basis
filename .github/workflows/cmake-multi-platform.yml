@@ -26,7 +26,7 @@ jobs:
       volumes:
         - ${{ github.workspace }}:/basis
     steps:
-      run: ls basis
+      run: ls /basis
     # - name: Upgrade compiler
     #   run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" && clang++-18 --version
     # - name: Install deps
