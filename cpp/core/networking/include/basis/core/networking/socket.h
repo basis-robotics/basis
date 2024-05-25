@@ -1,6 +1,6 @@
 #pragma once
 
-#include <expected>
+#include <nonstd/expected.hpp>
 #include <tuple>
 
 #include <optional>
@@ -108,7 +108,7 @@ public:
 
   void TcpNoDelay();
 
-  static std::expected<TcpSocket, Socket::Error> Connect(std::string_view host, uint16_t port);
+  static nonstd::expected<TcpSocket, Socket::Error> Connect(std::string_view host, uint16_t port);
 };
 
 class TcpListenSocket : public Socket {
@@ -116,12 +116,12 @@ protected:
   TcpListenSocket(int fd) : Socket(fd) {}
 
 public:
-  static std::expected<TcpListenSocket, Socket::Error> Create(uint16_t port);
+  static nonstd::expected<TcpListenSocket, Socket::Error> Create(uint16_t port);
 
   uint16_t GetPort() const;
 
   // TODO: time integration
-  std::expected<TcpSocket, Socket::Error> Accept(int timeout_s = -1);
+  nonstd::expected<TcpSocket, Socket::Error> Accept(int timeout_s = -1);
 
 private:
   static constexpr int max_backlog_connections = 20;

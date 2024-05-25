@@ -57,7 +57,7 @@ std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
   return {};
 }
 
-std::expected<TcpSocket, Socket::Error> TcpSocket::Connect(std::string_view address, uint16_t port) {
+nonstd::expected<TcpSocket, Socket::Error> TcpSocket::Connect(std::string_view address, uint16_t port) {
   struct addrinfo hints, *res;
   int sockfd;
 
@@ -67,17 +67,17 @@ std::expected<TcpSocket, Socket::Error> TcpSocket::Connect(std::string_view addr
 
   int ret = getaddrinfo(std::string{address}.c_str(), std::to_string(port).c_str(), &hints, &res);
   if (ret != 0) {
-    return std::unexpected(Socket::Error{Socket::ErrorSource::GETADDRINFO, ret});
+    return nonstd::make_unexpected(Socket::Error{Socket::ErrorSource::GETADDRINFO, ret});
   }
 
   sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
   if (sockfd == -1) {
-    return std::unexpected(Socket::Error{Socket::ErrorSource::SOCKET, errno});
+    return nonstd::make_unexpected(Socket::Error{Socket::ErrorSource::SOCKET, errno});
   }
 
   ret = connect(sockfd, res->ai_addr, res->ai_addrlen);
   if (ret == -1) {
-    return std::unexpected(Socket::Error{Socket::ErrorSource::CONNECT, errno});
+    return nonstd::make_unexpected(Socket::Error{Socket::ErrorSource::CONNECT, errno});
   }
 
   return TcpSocket(sockfd);
@@ -98,7 +98,7 @@ uint16_t TcpListenSocket::GetPort() const {
     return ntohs(sin.sin_port);
   }
 }
-std::expected<TcpListenSocket, Socket::Error> TcpListenSocket::Create(uint16_t port) {
+nonstd::expected<TcpListenSocket, Socket::Error> TcpListenSocket::Create(uint16_t port) {
   struct addrinfo hints, *res;
   int sockfd;
 
@@ -109,46 +109,46 @@ std::expected<TcpListenSocket, Socket::Error> TcpListenSocket::Create(uint16_t p
 
   int ret = getaddrinfo(NULL, std::to_string(port).c_str(), &hints, &res);
   if (ret != 0) {
-    return std::unexpected(Socket::Error{Socket::ErrorSource::GETADDRINFO, ret});
+    return nonstd::make_unexpected(Socket::Error{Socket::ErrorSource::GETADDRINFO, ret});
   }
 
   sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
   if (sockfd == -1) {
-    return std::unexpected(Socket::Error{Socket::ErrorSource::SOCKET, errno});
+    return nonstd::make_unexpected(Socket::Error{Socket::ErrorSource::SOCKET, errno});
   }
 
   int yes = 1;
   ret = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
   if (ret == -1) {
-    return std::unexpected(Socket::Error{Socket::ErrorSource::SETSOCKOPT, errno});
+    return nonstd::make_unexpected(Socket::Error{Socket::ErrorSource::SETSOCKOPT, errno});
   }
 
   // bind it to the port we passed in to getaddrinfo():
   ret = bind(sockfd, res->ai_addr, res->ai_addrlen);
   if (ret != 0) {
-    return std::unexpected(Socket::Error{Socket::ErrorSource::BIND, errno});
+    return nonstd::make_unexpected(Socket::Error{Socket::ErrorSource::BIND, errno});
   }
 
   if (listen(sockfd, max_backlog_connections) == -1) {
-    return std::unexpected(Socket::Error{Socket::ErrorSource::LISTEN, errno});
+    return nonstd::make_unexpected(Socket::Error{Socket::ErrorSource::LISTEN, errno});
   }
 
   return TcpListenSocket(sockfd);
 }
 
-std::expected<TcpSocket, Socket::Error> TcpListenSocket::Accept(int timeout_s) {
+nonstd::expected<TcpSocket, Socket::Error> TcpListenSocket::Accept(int timeout_s) {
   sockaddr_storage addr{};
   socklen_t addr_size = sizeof(addr);
 
   if (timeout_s >= 0) {
     auto error = Select(timeout_s, 0);
     if (error) {
-      return std::unexpected(*error);
+      return nonstd::make_unexpected(*error);
     }
   }
   int client_fd = accept4(fd, (struct sockaddr *)&addr, &addr_size, O_CLOEXEC);
   if (client_fd == -1) {
-    return std::unexpected(Socket::Error{ErrorSource::ACCEPT, errno});
+    return nonstd::make_unexpected(Socket::Error{ErrorSource::ACCEPT, errno});
   }
   return client_fd;
 }

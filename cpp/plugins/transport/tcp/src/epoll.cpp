@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include <basis/plugins/transport/epoll.h>
 
 namespace basis::plugins::transport {

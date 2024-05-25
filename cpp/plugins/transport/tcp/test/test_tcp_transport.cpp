@@ -153,7 +153,7 @@ TEST_F(TestTcpTransport, TestPublisher) {
   spdlog::debug("Successfully created publisher on port {}", port);
   ASSERT_FALSE(publish_over_port.has_value());
   int error = publish_over_port.error().second;
-  spdlog::debug("Failed to create another publisher on same port - got [{}: {}]", strerrorname_np(error),
+  spdlog::debug("Failed to create another publisher on same port - got [{}: {}]", error,
                 strerror(error));
 
   std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);

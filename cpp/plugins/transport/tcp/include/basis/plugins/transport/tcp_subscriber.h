@@ -67,7 +67,7 @@ private:
 class TcpSubscriber : public core::transport::TransportSubscriber {
 public:
   // todo: error condition
-  static std::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
+  static nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
   Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
          core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue = nullptr,
          std::vector<std::pair<std::string_view, uint16_t>> addresses = {});

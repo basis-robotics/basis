@@ -24,6 +24,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spdlog)
 target_compile_options(spdlog PUBLIC -fPIC)
 
+FetchContent_Declare(
+  expected-lite
+  URL https://github.com/martinmoene/expected-lite/archive/refs/tags/v0.6.3.zip
+)
+FetchContent_MakeAvailable(expected-lite)
+
 # Enable warnings after we've included dependencies
 add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 
