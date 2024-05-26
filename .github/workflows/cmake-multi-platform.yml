@@ -59,7 +59,7 @@ jobs:
             cmake-options: -DBASIS_ENABLE_ROS=1
 
     container:
-      image: ghcr.io/basis-robotics/${{ matrix.image }}:${{ github.sha }}
+      image: ghcr.io/basis-robotics/${{ matrix.configuration.image }}:${{ github.sha }}
       options: --user root
 
     steps:
@@ -69,7 +69,7 @@ jobs:
         run: >
           cmake -B ./build
           -DCMAKE_CXX_COMPILER=clang++-18
-          ${{matrix.cmake-options}}
+          ${{matrix.configuration.cmake-options}}
           -S .
 
       - name: Build
