@@ -62,8 +62,7 @@ jobs:
     steps:
       - name: Test command
         run: ls /basis
-      - uses: actions/checkout@v4
-
+        
     # - name: Upgrade compiler
     #   run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" && clang++-18 --version
     # - name: Install deps
