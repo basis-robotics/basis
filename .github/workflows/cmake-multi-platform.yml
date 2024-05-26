@@ -61,25 +61,18 @@ jobs:
     container:
       image: ghcr.io/basis-robotics/basis-env:${{ github.sha }}
     steps:
-      - name: Test command
-        run: ls /basis
-        
-    # - name: Upgrade compiler
-    #   run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" && clang++-18 --version
-    # - name: Install deps
-    #   run: sudo apt install -y libprotobuf-dev protobuf-compiler
-    # - name: Configure CMake
-    #   run: >
-    #     cmake -B ${{ steps.strings.outputs.build-output-dir }}
-    #     -DCMAKE_CXX_COMPILER=clang++-18
-    #     -S ${{ github.workspace }}
+      - uses: actions/checkout@v4
 
-    # - name: Build
-    #   # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-    #   run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} -j
+      - name: Configure CMake
+        run: >
+          cmake -B /basis/build
+          -DCMAKE_CXX_COMPILER=clang++-18
+          -S /basis
 
-    # - name: Test
-    #   working-directory: ${{ steps.strings.outputs.build-output-dir }}
-    #   # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-    #   # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-    #   run: ctest --build-config ${{ matrix.build_type }}
+   - name: Build
+      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
+      run: cmake --build /basis/build -j
+
+    - name: Test
+      working-directory: /basis/build
+      run: ctest
