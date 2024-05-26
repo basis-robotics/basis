@@ -61,6 +61,8 @@ jobs:
     container:
       image: ghcr.io/basis-robotics/basis-env:${{ github.sha }}
     steps:
+      - run: pwd
+      - run: ls -al
       - uses: actions/checkout@v4
 
       - name: Configure CMake
