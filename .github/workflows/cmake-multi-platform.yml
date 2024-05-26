@@ -9,9 +9,9 @@ on:
 jobs:
   build-container:
     runs-on: ubuntu-latest
-  permissions:
-    contents: read
-    packages: write
+    permissions:
+      contents: read
+      packages: write
 
 
     steps:
