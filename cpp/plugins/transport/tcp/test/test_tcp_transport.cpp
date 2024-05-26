@@ -438,7 +438,6 @@ TEST_F(TestTcpTransport, MPSCQueue) {
   core::threading::ThreadPool thread_pool(4);
 
   core::transport::SimpleMPSCQueue<std::shared_ptr<core::transport::MessagePacket>> output_queue;
-  spdlog::set_level(spdlog::level::debug);
 
   /**
    * Create callback, storing in the bind
@@ -451,7 +450,8 @@ TEST_F(TestTcpTransport, MPSCQueue) {
      * This is called by epoll when new data is available on a socket. We immediately do nothing with it, and instead
      * push the work off to the thread pool. This should be a very fast operation.
      */
-    thread_pool.enqueue([&] {
+    thread_pool.enqueue([&, fd, incomplete=std::move(incomplete)] {
+      
       // It's an error to actually call this with multiple threads.
       // TODO: add debug only checks for this
       spdlog::debug("Running poller callback on {}", fd);
@@ -480,6 +480,8 @@ TEST_F(TestTcpTransport, MPSCQueue) {
       spdlog::debug("Rearmed");
     });
   };
+
+  ASSERT_NE(receiver->GetSocket().GetFd(), -1);
 
   ASSERT_TRUE(poller.AddFd(
       receiver->GetSocket().GetFd(),
