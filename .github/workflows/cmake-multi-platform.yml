@@ -1,4 +1,6 @@
 name: Build basis
+permissions:
+  packages: write
 
 on:
   push:
@@ -9,10 +11,6 @@ on:
 jobs:
   build-container:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
 
     steps:
     - uses: actions/checkout@v4
@@ -35,7 +33,7 @@ jobs:
         file: ./docker/Dockerfile
         push: true
         target: basis-env
-        tags: ghcr.io/basis-robotics/basis-env:latest
+        tags: ghcr.io/basis-robotics/basis-env:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
     - name: Build and push ROS image
@@ -45,7 +43,7 @@ jobs:
         file: ./docker/Dockerfile
         push: true
         target: basis-env-ros
-        tags: ghcr.io/basis-robotics/basis-env-ros:latest
+        tags: ghcr.io/basis-robotics/basis-env-ros:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -60,12 +58,12 @@ jobs:
     #         cmake-options: BASIS_ENABLE_ROS=1
 
     container:
-      image: ghcr.io/basis-robotics/basis-env:latest
-      volumes:
-        - ${{ github.workspace }}:/basis
+      image: ghcr.io/basis-robotics/basis-env:${{ github.sha }}
     steps:
       - name: Test command
         run: ls /basis
+      - uses: actions/checkout@v4
+
     # - name: Upgrade compiler
     #   run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" && clang++-18 --version
     # - name: Install deps
