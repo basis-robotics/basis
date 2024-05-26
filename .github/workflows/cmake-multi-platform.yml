@@ -69,10 +69,10 @@ jobs:
           -DCMAKE_CXX_COMPILER=clang++-18
           -S /basis
 
-   - name: Build
-      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build /basis/build -j
+      - name: Build
+          # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
+          run: cmake --build /basis/build -j
 
-    - name: Test
-      working-directory: /basis/build
-      run: ctest
+        - name: Test
+          working-directory: /basis/build
+          run: ctest
