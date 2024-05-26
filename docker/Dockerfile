@@ -3,6 +3,8 @@
 # focal as this is the last version that ROS1 supports
 FROM ubuntu:focal as basis-env
 
+LABEL org.opencontainers.image.source https://github.com/basis-robotics/basis
+
 RUN rm -f /etc/apt/apt.conf.d/docker-clean
 # Basic dependencies
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
