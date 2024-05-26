@@ -60,7 +60,7 @@ jobs:
 
     container:
       image: ghcr.io/basis-robotics/basis-env:${{ github.sha }}
-      options: --user basis
+      options: --user root
 
     steps:
       - run: pwd
