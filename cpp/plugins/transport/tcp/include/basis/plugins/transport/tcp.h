@@ -14,6 +14,8 @@
 
 namespace basis::plugins::transport {
 
+constexpr char TCP_TRANSPORT_NAME[] = "net_tcp";
+
 /**
  * Used to send serialized data over TCP.
  *
@@ -87,7 +89,9 @@ public:
 
   uint16_t GetPort();
 
-  virtual std::string GetPublisherInfo() override { return std::to_string(GetPort()); }
+  virtual std::string GetTransportName() override { return TCP_TRANSPORT_NAME; }
+
+  virtual std::string GetConnectionInformation() override { return std::to_string(GetPort()); }
 
   virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
 

@@ -7,7 +7,7 @@ add_executable(
 target_link_libraries(
   test_time
   GTest::gtest_main
-  basis::core::transport::inproc
+  basis::core::time
 )
 
 include(GoogleTest REQUIRED)

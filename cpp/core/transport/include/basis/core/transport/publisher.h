@@ -1,17 +1,29 @@
 #pragma once
 #include <cassert>
+#include <cstdint>
+#include <atomic>
 #include <memory>
 #include <string_view>
+
+#include <spdlog/spdlog.h>
 
 #include "inproc.h"
 #include "message_packet.h"
 #include "message_type_info.h"
+#include "publisher_info.h"
 
 #include <basis/core/serialization.h>
 namespace basis::core::transport {
+
+extern std::atomic<uint32_t> publisher_id_counter;
+
+/**
+ * Create a publisher ID per Publisher.
+ */
+__uint128_t CreatePublisherId();
+
 /**
  * @brief PublisherBase - used to type erase Publisher
- *
  */
 class PublisherBase {
 public:
@@ -25,7 +37,9 @@ public:
 
   virtual void SendMessage(std::shared_ptr<MessagePacket> message) = 0;
 
-  virtual std::string GetPublisherInfo() = 0;
+  virtual std::string GetTransportName() = 0;
+
+  virtual std::string GetConnectionInformation() = 0;
 
   virtual size_t GetSubscriberCount() = 0;
 };
@@ -41,13 +55,20 @@ public:
         get_message_size_cb(std::move(get_message_size_cb)),
         write_message_to_span_cb(std::move(write_message_to_span_cb)) {}
 
-  std::vector<std::string> GetPublisherInfo() {
-    std::vector<std::string> out;
+  PublisherInfo GetPublisherInfo() {
+    PublisherInfo out;
+    out.publisher_id = publisher_id;
+    out.topic = topic;
+
+    //out.transport_info["inproc"] = getpid();
+    
     for (auto &pub : transport_publishers) {
-      out.push_back(pub->GetPublisherInfo());
+      out.transport_info[pub->GetTransportName()] = pub->GetConnectionInformation();
     }
+
     return out;
   }
+
 
   size_t GetSubscriberCount() {
     size_t n = 0;
@@ -83,7 +104,8 @@ public:
       pub->SendMessage(packet);
     }
   }
-
+private:
+  __uint128_t publisher_id = CreatePublisherId();
   const std::string topic;
   const MessageTypeInfo type_info;
   std::shared_ptr<InprocPublisher<T_MSG>> inproc;

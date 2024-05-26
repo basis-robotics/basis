@@ -191,10 +191,10 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_NE(test_publisher, nullptr);
 
   uint16_t port = 0;
-  for (const std::string &info : test_publisher->GetPublisherInfo()) {
+  const std::string &info = test_publisher->GetPublisherInfo().transport_info[TCP_TRANSPORT_NAME];
     spdlog::info("publisher at {}", info);
     port = stoi(info);
-  }
+  
   ASSERT_NE(port, 0);
 
   std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
@@ -261,10 +261,9 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
   ASSERT_NE(test_publisher, nullptr);
 
   uint16_t port = 0;
-  for (const std::string &info : test_publisher->GetPublisherInfo()) {
+  const std::string &info = test_publisher->GetPublisherInfo().transport_info[TCP_TRANSPORT_NAME];
     spdlog::info("publisher at {}", info);
     port = stoi(info);
-  }
   ASSERT_NE(port, 0);
 
   auto send_msg = std::make_shared<TestProtoStruct>();
@@ -439,6 +438,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
   core::threading::ThreadPool thread_pool(4);
 
   core::transport::SimpleMPSCQueue<std::shared_ptr<core::transport::MessagePacket>> output_queue;
+  spdlog::set_level(spdlog::level::debug);
 
   /**
    * Create callback, storing in the bind

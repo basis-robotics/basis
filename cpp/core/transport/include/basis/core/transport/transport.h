@@ -19,21 +19,6 @@ namespace basis::core::transport {
 
 /**
  * Helper for holding incomplete messages.
- *
- * TODO: use instructions are out of date
- *
- * To use:
-
-    size_t count = 0;
-    do {
-        // Request space to download in
-        std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
-
-        // Download some bytes
-        count = recv(buffer.data(), buffer.size());
-    // Continue downloading until we've gotten the whole message
-    } while(!incomplete.AdvanceCounter(count));
-
  */
 class IncompleteMessagePacket {
 public:
@@ -79,6 +64,8 @@ private:
 
   size_t progress_counter = 0;
 };
+
+
 
 /**
  * Helper class

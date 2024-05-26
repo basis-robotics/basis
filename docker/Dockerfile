@@ -48,6 +48,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
         libstdc++-10-dev \
         libprotobuf-dev \
         protobuf-compiler \
+        uuid-dev \
         # Optional, but useful
         ccache \
         ninja-build
