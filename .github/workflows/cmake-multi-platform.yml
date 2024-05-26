@@ -28,7 +28,7 @@ jobs:
 
     # TODO: use proper tags
     - name: Build and push base image
-      uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+      uses: docker/build-push-action@v5
       with:
         context: .
         file: ./docker/Dockerfile
@@ -38,7 +38,7 @@ jobs:
         cache-from: type=gha
         # cache-to: type=gha,mode=max
     - name: Build and push ROS image
-      uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+      uses: docker/build-push-action@v5
       with:
         context: .
         file: ./docker/Dockerfile
@@ -69,14 +69,14 @@ jobs:
 
       - name: Configure CMake
         run: >
-          cmake -B /basis/build
+          cmake -B ${{ github.workspace }}/build
           -DCMAKE_CXX_COMPILER=clang++-18
-          -S /basis
+          -S ${{ github.workspace }}
 
       - name: Build
-        run: cmake --build /basis/build -j
+        run: cmake --build ${{ github.workspace }}/build -j
 
       - name: Test
-        working-directory: /basis/build
+        working-directory: ${{ github.workspace }}/build
         run: ctest
 
