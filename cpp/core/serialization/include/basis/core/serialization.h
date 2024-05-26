@@ -8,6 +8,7 @@
 #include <cassert>
 #include <functional>
 #include <span>
+#include <memory>
 
 namespace basis {
 namespace core::serialization {

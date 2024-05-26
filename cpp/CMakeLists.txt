@@ -30,10 +30,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(expected-lite)
 
+
 # Enable warnings after we've included dependencies
 add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 
 add_subdirectory(core)
 
 add_subdirectory(plugins/serialization/protobuf)
+if(BASIS_ENABLE_ROS)
+  add_subdirectory(plugins/serialization/rosmsg)
+endif()
+
 add_subdirectory(plugins/transport/tcp)
