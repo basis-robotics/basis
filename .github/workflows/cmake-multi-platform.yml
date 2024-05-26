@@ -36,7 +36,7 @@ jobs:
         target: basis-env
         tags: ghcr.io/basis-robotics/basis-env:${{ github.sha }}
         cache-from: type=gha
-        cache-to: type=gha,mode=max
+        # cache-to: type=gha,mode=max
     - name: Build and push ROS image
       uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
       with:
