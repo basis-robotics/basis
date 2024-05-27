@@ -4,9 +4,13 @@
 #include "message_event.h"
 #include "message_packet.h"
 #include "message_type_info.h"
+#include "publisher_info.h"
+
 #include <basis/core/time.h>
 #include <functional>
 #include <memory>
+
+class TestTcpTransport;
 
 namespace basis {
 namespace core {
@@ -26,22 +30,42 @@ public:
  *
  */
 class SubscriberBase {
+protected:
+  SubscriberBase(
+    std::string_view topic, MessageTypeInfo type_info,
+             std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers) :
+               topic(topic), type_info(std::move(type_info)), transport_subscribers(std::move(transport_subscribers)) {
+
+             }
 public:
+
+  /**
+   * Notify this subscriber of one or more publishers.
+   * 
+   * The subscriber will pass the relevant information down into the correct transports.
+   */
+  void HandlePublisherInfo(const std::vector<PublisherInfo>& info);
+
   virtual ~SubscriberBase() = default;
+
+protected:
+  friend class ::TestTcpTransport;
+  std::string topic;
+  MessageTypeInfo type_info;
+  std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers;
+
 };
 
 template <typename T_MSG> class Subscriber : public SubscriberBase {
 public:
-  Subscriber([[maybe_unused]] std::string_view topic, MessageTypeInfo type_info,
+  Subscriber(std::string_view topic, MessageTypeInfo type_info,
              std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers,
              std::shared_ptr<InprocSubscriber<T_MSG>> inproc)
-      : topic(std::move(topic)), type_info(type_info), transport_subscribers(std::move(transport_subscribers)),
+      : SubscriberBase(topic, std::move(type_info), std::move(transport_subscribers)),
         inproc(std::move(inproc)) {}
 
-  const std::string topic;
-  const MessageTypeInfo type_info;
+
   // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
-  std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers;
   std::shared_ptr<InprocSubscriber<T_MSG>> inproc;
 };
 

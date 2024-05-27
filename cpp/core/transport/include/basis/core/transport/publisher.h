@@ -22,15 +22,6 @@ extern std::atomic<uint32_t> publisher_id_counter;
  */
 __uint128_t CreatePublisherId();
 
-/**
- * @brief PublisherBase - used to type erase Publisher
- */
-class PublisherBase {
-public:
-  PublisherBase() = default;
-  virtual ~PublisherBase() = default;
-};
-
 class TransportPublisher {
 public:
   virtual ~TransportPublisher() = default;
@@ -44,6 +35,28 @@ public:
   virtual size_t GetSubscriberCount() = 0;
 };
 
+/**
+ * @brief PublisherBase - used to type erase Publisher
+ */
+class PublisherBase {
+protected:
+  PublisherBase(std::string_view topic, MessageTypeInfo type_info, bool has_inproc,
+            std::vector<std::shared_ptr<TransportPublisher>> transport_publishers) : topic(topic), type_info(type_info), has_inproc(has_inproc), transport_publishers(transport_publishers) {}
+public:
+  virtual ~PublisherBase() = default;
+
+  PublisherInfo GetPublisherInfo();
+
+protected:
+  const __uint128_t publisher_id = CreatePublisherId();
+  const std::string topic;
+  const MessageTypeInfo type_info;
+  const bool has_inproc;
+    // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
+  std::vector<std::shared_ptr<TransportPublisher>> transport_publishers;
+};
+
+
 template <typename T_MSG> class Publisher : public PublisherBase {
 public:
   Publisher(std::string_view topic, MessageTypeInfo type_info,
@@ -51,24 +64,10 @@ public:
             std::shared_ptr<InprocPublisher<T_MSG>> inproc, SerializeGetSizeCallback<T_MSG> get_message_size_cb,
             SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb)
 
-      : topic(topic), type_info(type_info), inproc(inproc), transport_publishers(std::move(transport_publishers)),
+      :
+      PublisherBase(topic,type_info, inproc != nullptr, transport_publishers), inproc(inproc),
         get_message_size_cb(std::move(get_message_size_cb)),
         write_message_to_span_cb(std::move(write_message_to_span_cb)) {}
-
-  PublisherInfo GetPublisherInfo() {
-    PublisherInfo out;
-    out.publisher_id = publisher_id;
-    out.topic = topic;
-
-    //out.transport_info["inproc"] = getpid();
-    
-    for (auto &pub : transport_publishers) {
-      out.transport_info[pub->GetTransportName()] = pub->GetConnectionInformation();
-    }
-
-    return out;
-  }
-
 
   size_t GetSubscriberCount() {
     size_t n = 0;
@@ -105,12 +104,8 @@ public:
     }
   }
 private:
-  __uint128_t publisher_id = CreatePublisherId();
-  const std::string topic;
-  const MessageTypeInfo type_info;
   std::shared_ptr<InprocPublisher<T_MSG>> inproc;
-  // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
-  std::vector<std::shared_ptr<TransportPublisher>> transport_publishers;
+
   SerializeGetSizeCallback<T_MSG> get_message_size_cb;
   SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb;
 };

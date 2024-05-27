@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include <uuid/uuid.h>
 #include <basis/core/transport/publisher.h>
 
@@ -14,4 +16,18 @@ __uint128_t CreatePublisherId() {
   return out;
 }
 
+  PublisherInfo PublisherBase::GetPublisherInfo() {
+    PublisherInfo out;
+    out.publisher_id = publisher_id;
+    out.topic = topic;
+
+    if(has_inproc) {
+        out.transport_info["inproc"] = std::to_string(getpid());
+    }
+    for (auto &pub : transport_publishers) {
+      out.transport_info[pub->GetTransportName()] = pub->GetConnectionInformation();
+    }
+
+    return out;
+  }
 }

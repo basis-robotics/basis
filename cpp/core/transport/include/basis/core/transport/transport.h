@@ -8,6 +8,7 @@
 #include "inproc.h"
 #include "message_type_info.h"
 #include "publisher.h"
+#include "publisher_info.h"
 #include "subscriber.h"
 #include "thread_pool_manager.h"
 
@@ -195,9 +196,32 @@ public:
     for (auto &[_, transport] : transports) {
       transport->Update();
     }
+
+    // Generate updated topic info and clean up old publishers
+    std::vector<PublisherInfo> new_publisher_info;
+
+    for (auto it = publishers.cbegin(); it != publishers.cend();)
+    {
+      if(auto publisher = it->second.lock())
+      {
+        new_publisher_info.emplace_back(publisher->GetPublisherInfo());
+        ++it;
+      }
+      else
+      {
+        it = publishers.erase(it);
+      }
+    }
+
+    last_publisher_info = std::move(new_publisher_info);
+
   }
 
+
+
 protected:
+  std::vector<PublisherInfo> last_publisher_info;
+
   std::unique_ptr<InprocTransport> inproc;
 
   std::unordered_map<std::string, std::unique_ptr<Transport>> transports;

@@ -12,6 +12,8 @@
 
 #include "tcp_subscriber.h"
 
+class TestTcpTransport;
+
 namespace basis::plugins::transport {
 
 constexpr char TCP_TRANSPORT_NAME[] = "net_tcp";
@@ -64,7 +66,7 @@ public:
   }
 
 protected:
-  friend class TestTcpTransport;
+  friend class ::TestTcpTransport;
   virtual bool Send(const std::byte *data, size_t len) override;
 
 private:
@@ -167,12 +169,11 @@ public:
 
 private:
   std::mutex publishers_mutex;
+  // TODO: this doesn't appear to actually be used - we can probably remove it
   std::unordered_multimap<std::string, std::weak_ptr<TcpPublisher>> publishers;
 
   std::mutex subscribers_mutex;
   std::unordered_multimap<std::string, std::weak_ptr<TcpSubscriber>> subscribers;
-
-  // TODO: store list of known publishers?
 
   /// One epoll instance is shared across the whole TcpTransport - it's an implementation detail of tcp, even if we
   /// could share with other transports
