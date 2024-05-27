@@ -36,6 +36,7 @@ public:
     return false;
   }
 
+  /// @todo this isn't strictly true. Need to store a flag on error, instead
   bool IsConnected() const { return socket.IsValid(); }
 
   /**
@@ -72,7 +73,7 @@ public:
          core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue = nullptr,
          std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
 
-  virtual bool Connect(std::string_view host, std::string_view endpoint) override;
+  virtual bool Connect(std::string_view host, std::string_view endpoint, __uint128_t publisher_id) override;
 
   // todo: error handling
   bool ConnectToPort(std::string_view address, uint16_t port);

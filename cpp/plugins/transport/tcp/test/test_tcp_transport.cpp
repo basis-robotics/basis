@@ -238,11 +238,26 @@ TEST_F(TestTcpTransport, TestWithManager) {
   std::shared_ptr<Subscriber<TestRawStruct>> immediate_subscriber =
       transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
 
+  auto& pub_info = transport_manager.GetLastPublisherInfo();
+
+  // todo: handle subscriber created before publisher!
+
   std::array subscribers = {queue_subscriber, immediate_subscriber};
   for (auto &subscriber : subscribers) {
-    TcpSubscriber *tcp_subscriber = GetTcpSubscriber(subscriber.get());
-    ASSERT_NE(tcp_subscriber, nullptr);
-    tcp_subscriber->ConnectToPort("127.0.0.1", port);
+    //TcpSubscriber *tcp_subscriber = GetTcpSubscriber(subscriber.get());
+    //ASSERT_NE(tcp_subscriber, nullptr);
+    //tcp_subscriber->ConnectToPort("127.0.0.1", port);
+    subscriber->HandlePublisherInfo(pub_info);
+  }
+
+  transport_manager.Update();
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
+
+  for (auto &subscriber : subscribers) {
+    // Handling identical publishers is a noop
+    subscriber->HandlePublisherInfo(pub_info);
+    subscriber->HandlePublisherInfo(pub_info);
+    subscriber->HandlePublisherInfo(pub_info);
   }
 
   transport_manager.Update();
@@ -287,11 +302,17 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
     callback_times++;
   };
 
+  
+
   auto subscriber = transport_manager.Subscribe<TestProtoStruct>("test_proto", callback);
+#if 1
+  transport_manager.Update();
+  subscriber->HandlePublisherInfo(transport_manager.GetLastPublisherInfo());
+#else
   TcpSubscriber *tcp_subscriber = GetTcpSubscriber(subscriber.get());
   ASSERT_NE(tcp_subscriber, nullptr);
   tcp_subscriber->ConnectToPort("127.0.0.1", port);
-
+#endif
   transport_manager.Update();
 
   ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);

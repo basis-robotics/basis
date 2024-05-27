@@ -219,6 +219,7 @@ public:
 
   }
 
+  const std::vector<PublisherInfo>& GetLastPublisherInfo() { return last_publisher_info; }
 
 
 protected:

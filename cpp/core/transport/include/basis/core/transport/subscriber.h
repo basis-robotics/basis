@@ -26,7 +26,7 @@ protected:
 public:
   std::string_view GetTransportName() const { return transport_name; }
 
-  virtual bool Connect(std::string_view host, std::string_view endpoint) = 0;
+  virtual bool Connect(std::string_view host, std::string_view endpoint, __uint128_t publisher_id) = 0;
 
   virtual ~TransportSubscriber() = default;
   const std::string transport_name;

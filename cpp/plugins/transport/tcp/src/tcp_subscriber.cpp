@@ -23,7 +23,8 @@ TcpSubscriber::TcpSubscriber(std::string_view topic_name, core::transport::TypeE
                              core::transport::OutputQueue *output_queue)
     :core::transport::TransportSubscriber(TCP_TRANSPORT_NAME), topic_name(topic_name), callback(callback), epoll(epoll), worker_pool(worker_pool), output_queue(output_queue) {}
 
-bool TcpSubscriber::Connect(std::string_view host, std::string_view endpoint) {
+
+bool TcpSubscriber::Connect(std::string_view host, std::string_view endpoint, [[maybe_unused]] __uint128_t publisher_id) {
   uint16_t port;
   auto result = std::from_chars(endpoint.data(), endpoint.data() + endpoint.size(), port);
   if (result.ec !=  std::errc()) {
@@ -31,6 +32,7 @@ bool TcpSubscriber::Connect(std::string_view host, std::string_view endpoint) {
     return false;
   }
 
+  /// @todo BASIS-13: this should take in a publisher ID and send it as part of the intial connection, protecting against subscribing to a port that's stale
   return ConnectToPort(host, port);
 }
 

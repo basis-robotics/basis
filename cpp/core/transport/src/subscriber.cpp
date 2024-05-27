@@ -17,8 +17,9 @@ namespace basis::core::transport {
         if(it->second->IsConnectedToPublisher(publisher_id)) {
           continue;
         }
-      #endif
+      #else
         continue;
+      #endif
       }
 
       if(has_inproc && publisher_info.transport_info.contains("inproc")) {
@@ -31,7 +32,7 @@ namespace basis::core::transport {
       for(auto& transport_subscriber : transport_subscribers) {
         for(const auto& [pub_transport_name, pub_transport_endpoint] : publisher_info.transport_info) {
           if(pub_transport_name == transport_subscriber->GetTransportName()) {
-            if(transport_subscriber->Connect("127.0.0.1", pub_transport_endpoint)) {
+            if(transport_subscriber->Connect("127.0.0.1", pub_transport_endpoint, publisher_id)) {
               publisher_id_to_transport_sub.emplace(publisher_id, transport_subscriber.get());
             }
           }
