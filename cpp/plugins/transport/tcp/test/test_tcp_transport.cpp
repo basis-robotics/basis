@@ -251,8 +251,6 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_EQ(queue_subscriber->GetPublisherCount(), 1);
   ASSERT_EQ(immediate_subscriber->GetPublisherCount(), 1);
 
-
-
   transport_manager.Update();
   ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
 
