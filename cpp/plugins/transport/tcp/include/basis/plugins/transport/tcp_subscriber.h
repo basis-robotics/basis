@@ -72,8 +72,10 @@ public:
          core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue = nullptr,
          std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
 
+  virtual bool Connect(std::string_view host, std::string_view endpoint) override;
+
   // todo: error handling
-  void Connect(std::string_view address, uint16_t port);
+  bool ConnectToPort(std::string_view address, uint16_t port);
 
 protected:
   TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,

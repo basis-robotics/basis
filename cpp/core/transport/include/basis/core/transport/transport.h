@@ -90,8 +90,10 @@ class TransportReceiver {
 public:
   virtual ~TransportReceiver() = default;
 
+
 private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
+
 };
 
 // TODO: use MessageEvent

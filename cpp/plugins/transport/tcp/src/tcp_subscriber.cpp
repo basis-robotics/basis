@@ -1,6 +1,10 @@
 #include <basis/plugins/transport/tcp_subscriber.h>
+#include <basis/plugins/transport/tcp_transport_name.h>
+
+#include <charconv>
 
 namespace basis::plugins::transport {
+
 
 nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
 TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
@@ -9,7 +13,7 @@ TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSu
   auto subscriber = std::shared_ptr<TcpSubscriber>(
       new TcpSubscriber(topic_name, std::move(callback), epoll, worker_pool, output_queue));
   for (auto &[address, port] : addresses) {
-    subscriber->Connect(address, port);
+    subscriber->ConnectToPort(address, port);
   }
   return subscriber;
 }
@@ -17,21 +21,33 @@ TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSu
 TcpSubscriber::TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback,
                              Epoll *epoll, core::threading::ThreadPool *worker_pool,
                              core::transport::OutputQueue *output_queue)
-    : topic_name(topic_name), callback(callback), epoll(epoll), worker_pool(worker_pool), output_queue(output_queue) {}
+    :core::transport::TransportSubscriber(TCP_TRANSPORT_NAME), topic_name(topic_name), callback(callback), epoll(epoll), worker_pool(worker_pool), output_queue(output_queue) {}
 
-void TcpSubscriber::Connect(std::string_view address, uint16_t port) {
+bool TcpSubscriber::Connect(std::string_view host, std::string_view endpoint) {
+  uint16_t port;
+  auto result = std::from_chars(endpoint.data(), endpoint.data() + endpoint.size(), port);
+  if (result.ec !=  std::errc()) {
+    spdlog::error("TcpSubscriber::Connect: '{}' is not a valid port", endpoint);
+    return false;
+  }
+
+  return ConnectToPort(host, port);
+}
+
+
+bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
   std::pair<std::string, uint16_t> key(address, port);
   {
     if (receivers.count(key) != 0) {
       spdlog::warn("Already have address {}:{}", address, port);
-      return;
+      return true;
     }
 
     auto receiver = TcpReceiver(address, port);
     if (!receiver.Connect()) {
       spdlog::error("Unable to connect to {}:{}", address, port);
 
-      return;
+      return false;
     }
 
     // TODO now hook up to epoll!
@@ -82,6 +98,8 @@ void TcpSubscriber::Connect(std::string_view address, uint16_t port) {
   epoll->AddFd(receiver_ptr->GetSocket().GetFd(),
                std::bind(on_epoll_callback, std::placeholders::_1, std::placeholders::_2, receiver_ptr,
                          std::make_shared<core::transport::IncompleteMessagePacket>()));
+
+  return true;
 }
 
 } // namespace basis::plugins::transport

@@ -11,12 +11,11 @@
 #include <basis/core/transport/transport.h>
 
 #include "tcp_subscriber.h"
-
+#include "tcp_transport_name.h"
 class TestTcpTransport;
 
 namespace basis::plugins::transport {
 
-constexpr char TCP_TRANSPORT_NAME[] = "net_tcp";
 
 /**
  * Used to send serialized data over TCP.
@@ -32,7 +31,7 @@ public:
   /**
    * Construct a sender, given an already created+valid socket.
    */
-  TcpSender(core::networking::TcpSocket socket) : socket(std::move(socket)) { StartThread(); }
+  TcpSender(core::networking::TcpSocket socket) :  socket(std::move(socket)) { StartThread(); }
 
   /**
    * Destruct.

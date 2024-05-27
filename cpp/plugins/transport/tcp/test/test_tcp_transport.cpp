@@ -242,7 +242,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   for (auto &subscriber : subscribers) {
     TcpSubscriber *tcp_subscriber = GetTcpSubscriber(subscriber.get());
     ASSERT_NE(tcp_subscriber, nullptr);
-    tcp_subscriber->Connect("127.0.0.1", port);
+    tcp_subscriber->ConnectToPort("127.0.0.1", port);
   }
 
   transport_manager.Update();
@@ -290,7 +290,7 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
   auto subscriber = transport_manager.Subscribe<TestProtoStruct>("test_proto", callback);
   TcpSubscriber *tcp_subscriber = GetTcpSubscriber(subscriber.get());
   ASSERT_NE(tcp_subscriber, nullptr);
-  tcp_subscriber->Connect("127.0.0.1", port);
+  tcp_subscriber->ConnectToPort("127.0.0.1", port);
 
   transport_manager.Update();
 
