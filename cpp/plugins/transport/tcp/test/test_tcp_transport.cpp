@@ -193,6 +193,12 @@ TEST_F(TestTcpTransport, TestWithManager) {
   TransportManager transport_manager;
   transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
 
+  std::atomic<int> callback_times{0};
+  SubscriberCallback<TestRawStruct> callback = [&](std::shared_ptr<const TestRawStruct> t) {
+    spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
+    callback_times++;
+  };
+
   auto test_publisher =
       transport_manager.Advertise<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct");
   ASSERT_NE(test_publisher, nullptr);
@@ -226,11 +232,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   OutputQueue output_queue;
 
-  std::atomic<int> callback_times{0};
-  SubscriberCallback<TestRawStruct> callback = [&](std::shared_ptr<const TestRawStruct> t) {
-    spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
-    callback_times++;
-  };
+  transport_manager.Update();
 
   std::shared_ptr<Subscriber<TestRawStruct>> queue_subscriber =
       transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
@@ -239,25 +241,29 @@ TEST_F(TestTcpTransport, TestWithManager) {
       transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
 
   auto& pub_info = transport_manager.GetLastPublisherInfo();
+  transport_manager.Update();
 
   // todo: handle subscriber created before publisher!
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
 
   std::array subscribers = {queue_subscriber, immediate_subscriber};
-  for (auto &subscriber : subscribers) {
-    //TcpSubscriber *tcp_subscriber = GetTcpSubscriber(subscriber.get());
-    //ASSERT_NE(tcp_subscriber, nullptr);
-    //tcp_subscriber->ConnectToPort("127.0.0.1", port);
-    subscriber->HandlePublisherInfo(pub_info);
-  }
+
+  ASSERT_EQ(queue_subscriber->GetPublisherCount(), 1);
+  ASSERT_EQ(immediate_subscriber->GetPublisherCount(), 1);
+
+
 
   transport_manager.Update();
   ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
 
+  // todo: why do we have to manually connect this? the transport manager should be doing this
   for (auto &subscriber : subscribers) {
     // Handling identical publishers is a noop
     subscriber->HandlePublisherInfo(pub_info);
     subscriber->HandlePublisherInfo(pub_info);
     subscriber->HandlePublisherInfo(pub_info);
+    ASSERT_EQ(subscriber->GetPublisherCount(), 1);
+
   }
 
   transport_manager.Update();
@@ -273,6 +279,41 @@ TEST_F(TestTcpTransport, TestWithManager) {
   event->callback(std::move(event->packet));
   ASSERT_EQ(callback_times, 2);
 }
+
+TEST_F(TestTcpTransport, DISABLED_TestPubSubOrder) {
+  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
+  TransportManager transport_manager;
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+
+  std::atomic<int> callback_times{0};
+  SubscriberCallback<TestRawStruct> callback = [&](std::shared_ptr<const TestRawStruct> t) {
+    spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
+    callback_times++;
+  };
+
+  std::shared_ptr<Subscriber<TestRawStruct>> prev_sub =
+      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
+
+  transport_manager.Update();
+
+  auto test_publisher =
+      transport_manager.Advertise<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct");
+  
+  transport_manager.Update();
+
+  std::shared_ptr<Subscriber<TestRawStruct>> after_sub =
+      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
+
+  
+  transport_manager.Update();
+
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
+  auto send_msg = std::make_shared<const TestRawStruct>();
+  test_publisher->Publish(send_msg);
+
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+}
+
 
 TEST_F(TestTcpTransport, TestWithProtobuf) {
   auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
@@ -301,8 +342,6 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
 
     callback_times++;
   };
-
-  
 
   auto subscriber = transport_manager.Subscribe<TestProtoStruct>("test_proto", callback);
 #if 1

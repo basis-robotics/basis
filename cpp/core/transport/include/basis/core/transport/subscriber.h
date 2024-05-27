@@ -28,6 +28,8 @@ public:
 
   virtual bool Connect(std::string_view host, std::string_view endpoint, __uint128_t publisher_id) = 0;
 
+  virtual size_t GetPublisherCount() = 0;
+
   virtual ~TransportSubscriber() = default;
   const std::string transport_name;
 
@@ -56,6 +58,7 @@ public:
    */
   void HandlePublisherInfo(const std::vector<PublisherInfo>& info);
 
+  size_t GetPublisherCount();
 protected:
   friend class ::TestTcpTransport;
   const std::string topic;

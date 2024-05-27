@@ -1,8 +1,14 @@
 #include <basis/core/transport/subscriber.h>
 
+#include <spdlog/spdlog.h>
+
 namespace basis::core::transport {
   void SubscriberBase::HandlePublisherInfo(const std::vector<PublisherInfo>& info) {
     for(const PublisherInfo& publisher_info : info) {
+      if(publisher_info.topic != topic) {
+        spdlog::error("Skipping because no topic");
+        continue;
+      }
       const __uint128_t& publisher_id = publisher_info.publisher_id;
       auto it = publisher_id_to_transport_sub.find(publisher_id);
 
@@ -39,5 +45,13 @@ namespace basis::core::transport {
         }
       }
     }
+  }
+
+  size_t SubscriberBase::GetPublisherCount() {
+    size_t count = 0;
+    for(auto& ts : transport_subscribers) {
+      count += ts->GetPublisherCount();
+    }
+    return count;
   }
 }

@@ -78,6 +78,7 @@ public:
   // todo: error handling
   bool ConnectToPort(std::string_view address, uint16_t port);
 
+  virtual size_t GetPublisherCount() override;
 protected:
   TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
                 core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue);

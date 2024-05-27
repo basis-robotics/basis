@@ -103,5 +103,7 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
 
   return true;
 }
-
+ size_t TcpSubscriber::GetPublisherCount() {
+  return receivers.size();
+ }
 } // namespace basis::plugins::transport

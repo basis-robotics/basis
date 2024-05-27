@@ -182,6 +182,9 @@ public:
 
     auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
     subscribers.push_back(subscriber);
+
+    subscriber->HandlePublisherInfo(GetLastPublisherInfo());
+
     return subscriber;
   }
 
@@ -215,15 +218,16 @@ public:
       }
     }
 
-    last_publisher_info = std::move(new_publisher_info);
+    last_owned_publish_info = std::move(new_publisher_info);
 
   }
 
-  const std::vector<PublisherInfo>& GetLastPublisherInfo() { return last_publisher_info; }
+  const std::vector<PublisherInfo>& GetLastPublisherInfo() { return last_owned_publish_info; }
 
 
 protected:
-  std::vector<PublisherInfo> last_publisher_info;
+  /// @todo is this for all transports or just local ones? probably just local ones
+  std::vector<PublisherInfo> last_owned_publish_info;
 
   std::unique_ptr<InprocTransport> inproc;
 
