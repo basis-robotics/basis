@@ -51,6 +51,7 @@ TEST(TestCoordinator, TestPubSubOrder) {
 
   connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
   coordinator.Update();
+  connector->Update();
 
   std::shared_ptr<Subscriber<TestRawStruct>> prev_sub =
     transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
@@ -58,7 +59,7 @@ TEST(TestCoordinator, TestPubSubOrder) {
   transport_manager.Update();
   connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
   coordinator.Update();
-
+    connector->Update();
 
   auto test_publisher =
       transport_manager.Advertise<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct");
@@ -72,6 +73,7 @@ TEST(TestCoordinator, TestPubSubOrder) {
   transport_manager.Update();
   connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
   coordinator.Update();
+  connector->Update();
 
   // ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
   auto send_msg = std::make_shared<const TestRawStruct>();

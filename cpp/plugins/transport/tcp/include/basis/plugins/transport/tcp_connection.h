@@ -29,6 +29,7 @@ public:
   std::unique_ptr<const basis::core::transport::MessagePacket> ReceiveMessage(int timeout_s);
 
   // todo: standardized class for handling these
+  // todo: error and disconnect should be the same state with different codes
   enum class ReceiveStatus { DOWNLOADING, DONE, ERROR, DISCONNECTED };
   ReceiveStatus ReceiveMessage(basis::core::transport::IncompleteMessagePacket &message);
 
