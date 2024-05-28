@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <list>
 
 #include <basis/plugins/transport/tcp.h>
+#include <basis/plugins/serialization/protobuf.h>
 
 #include <transport.pb.h>
 
@@ -35,12 +37,14 @@ constexpr uint16_t BASIS_PUBLISH_INFO_PORT = 1492;
 
 namespace basis::core::transport {
     class Coordinator {
-        struct Connection : public basis::plugins::transport::TcpConnection {
-        Connection(core::networking::TcpSocket socket) : TcpConnection(std::move(socket)) {
-
+        struct Connection : public basis::plugins::transport::TcpSender {
+        Connection(core::networking::TcpSocket socket) : TcpSender(std::move(socket)) {
+            socket.SetNonblocking();
         }
 
         IncompleteMessagePacket in_progress_packet;
+
+        std::unique_ptr<proto::TransportManagerInfo> info;
     };
     public:
         static std::optional<Coordinator> Create(uint16_t port = BASIS_PUBLISH_INFO_PORT) {
@@ -65,7 +69,7 @@ namespace basis::core::transport {
 
             //
             while(auto maybe_socket = listen_socket.Accept(0)) {
-                clients.emplace_back(Connection(std::move(maybe_socket.value())));
+                clients.emplace_back(std::move(maybe_socket.value()));
             }
 
 
@@ -74,7 +78,8 @@ namespace basis::core::transport {
                 switch (client.ReceiveMessage(client.in_progress_packet)) {
                     case plugins::transport::TcpConnection::ReceiveStatus::DONE: {
                         auto complete = client.in_progress_packet.GetCompletedMessage();
-                        spdlog::info("Got completed message");
+                        client.info = basis::DeserializeFromSpan<proto::TransportManagerInfo>(complete->GetPayload());
+                        spdlog::info("Got completed message {}", client.info->DebugString());
 
                         // convert to proto::PublisherInfo 
                         // fallthrough
@@ -90,6 +95,7 @@ namespace basis::core::transport {
                         // fallthrough
                     }
                     case plugins::transport::TcpConnection::ReceiveStatus::DISCONNECTED: {
+                        // TODO: we can do a fast delete here instead, swapping with .last()
                         it = clients.erase(it);
                         break;
                     }
@@ -101,10 +107,35 @@ namespace basis::core::transport {
         
         core::networking::TcpListenSocket listen_socket;
         
-        std::vector<Connection> clients;
+        std::list<Connection> clients;
     };
 
-    class CoordinatorConnector {
+    class CoordinatorConnector : basis::plugins::transport::TcpSender {
+        using TcpSender::TcpSender;
+
+    public:
+
+        static std::unique_ptr<CoordinatorConnector> Create(uint16_t port = BASIS_PUBLISH_INFO_PORT) {
+            auto maybe_socket = networking::TcpSocket::Connect("127.0.0.1", port);
+            if(maybe_socket) {
+                return std::make_unique<CoordinatorConnector>(std::move(*maybe_socket));
+            }
+            return {};
+        }
+        // TODO: this logic is somewhat duplicated with TcpSender - need to refactor TcpSender to be able to track progress of the current send
+        void SendTransportManagerInfo(const proto::TransportManagerInfo& info) {
+            using Serializer = SerializationHandler<proto::TransportManagerInfo>::type;
+            const size_t size = Serializer::GetSerializedSize(info);
+            
+            auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
+                basis::core::transport::MessageHeader::DataType::MESSAGE, size);
+                Serializer::SerializeToSpan(info, shared_message->GetMutablePayload());
+            
+            SendMessage(shared_message);
+        }
         
+        void Update() {
+            
+        }
     };
 }

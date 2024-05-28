@@ -2,9 +2,26 @@ syntax= "proto3";
 
 package basis.core.transport.proto;
 
+// Common
 message PublisherInfo {
     uint64 publisher_id_high = 1;
     uint64 publisher_id_low = 2;
+    // TODO: type
+    // TODO: this results in a lot of duplication of topic names, but its probably ok - topic names are mostly unique
     string topic = 3;
     map<string, string> transport_info = 4;
+}
+
+// TransportManager -> Coordinator
+message TransportManagerInfo {
+    repeated PublisherInfo publishers = 1;
+}
+
+
+// Coordinator -> TransportManager
+message RepeatedPublisherInfo {
+    repeated PublisherInfo publishers = 1;
+}
+message NetworkInfo {
+    map<string, RepeatedPublisherInfo> publishers_by_topic = 1;
 }

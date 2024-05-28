@@ -37,6 +37,9 @@ public:
    */
   bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s = -1);
 
+  bool Send(const std::byte *data, size_t len);
+
+
 protected:
   basis::core::networking::TcpSocket socket;
 };

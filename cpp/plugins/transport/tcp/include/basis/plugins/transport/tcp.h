@@ -27,12 +27,14 @@ namespace basis::plugins::transport {
  *
  * @todo Move to using a worker/thread pool - should be relatively easy.
  */
-class TcpSender : public core::transport::TransportSender {
+class TcpSender : public TcpConnection {
 public:
   /**
    * Construct a sender, given an already created+valid socket.
    */
-  TcpSender(core::networking::TcpSocket socket) :  socket(std::move(socket)) { StartThread(); }
+  TcpSender(core::networking::TcpSocket socket) :  TcpConnection(std::move(socket)) { 
+    socket.SetNonblocking();
+    StartThread(); }
 
   /**
    * Destruct.
@@ -50,7 +52,7 @@ public:
   }
 
   // TODO: do we want to be able to send high priority packets?
-  virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
+  void SendMessage(std::shared_ptr<core::transport::MessagePacket> message);
 
   void Stop(bool wait = false) {
     {
@@ -67,12 +69,9 @@ public:
 
 protected:
   friend class ::TestTcpTransport;
-  virtual bool Send(const std::byte *data, size_t len) override;
 
 private:
   void StartThread();
-
-  core::networking::TcpSocket socket;
 
   std::thread send_thread;
   std::condition_variable send_cv;

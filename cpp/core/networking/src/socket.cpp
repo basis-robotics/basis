@@ -31,14 +31,14 @@ int Socket::RecvInto(char *buffer, size_t buffer_len, bool peek) {
 
 std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
   struct timeval tv;
-  fd_set rfds;
-  FD_ZERO(&rfds);
-  FD_SET(fd, &rfds);
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(fd, &fds);
 
   tv.tv_sec = timeout_s;
   tv.tv_usec = timeout_ns;
 
-  int select_results = select(fd + 1, &rfds, (fd_set *)0, (fd_set *)0, &tv);
+  int select_results = select(fd + 1, /*read*/&fds, /*write*/(fd_set *)0, /*exceptional*/(fd_set *)0, &tv);
   if (select_results == 0) {
     // TODO: double check errno values in timeout
     return Error{ErrorSource::TIMEOUT, 0};

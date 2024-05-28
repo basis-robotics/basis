@@ -79,4 +79,19 @@ bool TcpConnection::Receive(std::byte *buffer, size_t buffer_len, int timeout_s)
   return true;
 }
 
+
+bool TcpConnection::Send(const std::byte *data, size_t len) {
+  // TODO: this loop should go on a helper on Socket(?)
+  while (len) {
+    int sent_size = socket.Send(data, len);
+    if (sent_size < 0) {
+      return false;
+    }
+    len -= sent_size;
+    data += sent_size;
+  }
+
+  return true;
+}
+
 }

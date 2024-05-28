@@ -86,6 +86,7 @@ private:
   virtual void SendMessage(std::shared_ptr<MessagePacket> message) = 0;
 };
 
+#if 0
 class TransportReceiver {
 public:
   virtual ~TransportReceiver() = default;
@@ -95,6 +96,7 @@ private:
   virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
 
 };
+#endif
 
 // TODO: use MessageEvent
 // TODO: don't store the packet directly, store a weak reference to the transport subscriber
@@ -125,6 +127,7 @@ protected:
   std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager;
 };
 
+// todo: break this into a separate library - transports don't need to know about it
 class TransportManager {
 public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
@@ -224,12 +227,24 @@ public:
 
   const std::vector<PublisherInfo>& GetLastPublisherInfo() { return last_owned_publish_info; }
 
+   
+    basis::core::transport::proto::TransportManagerInfo GetTransportManagerInfo() {
+      /// @todo arena allocate
+      basis::core::transport::proto::TransportManagerInfo sent_info;
+      for(auto& pub_info : last_owned_publish_info) {
+        *sent_info.add_publishers() = pub_info.ToProto();
+      }
+      return sent_info;
+    }
+
 
 protected:
   /// @todo id? probably not needed, pid is fine, unless we _really_ need multiple transport managers
   /// ...which might be needed for integration testing
 
-  /// @todo is this for all transports or just local ones? probably just local ones
+  /**
+   * publisher summary from last Update() call
+   */
   std::vector<PublisherInfo> last_owned_publish_info;
 
   std::unique_ptr<InprocTransport> inproc;
