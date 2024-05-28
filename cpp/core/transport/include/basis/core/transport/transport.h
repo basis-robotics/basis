@@ -184,12 +184,16 @@ public:
     }
 
     auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
-    subscribers.push_back(subscriber);
+    subscribers.emplace(std::string(topic), subscriber);
 
-    subscriber->HandlePublisherInfo(GetLastPublisherInfo());
+    if(use_local_publishers_for_subscribers) {
+      subscriber->HandlePublisherInfo(GetLastPublisherInfo());
+    }
+    subscriber->HandlePublisherInfo(last_network_publish_info[std::string(topic)]);
 
     return subscriber;
   }
+
 
   /**
    *
@@ -237,6 +241,23 @@ public:
       return sent_info;
     }
 
+  void HandleNetworkInfo(const proto::NetworkInfo& network_info) {
+    last_network_publish_info.clear();
+
+    for(auto& [topic, publisher_infos_msg] : network_info.publishers_by_topic()) {
+      std::vector<PublisherInfo>& info = last_network_publish_info[topic];
+      info.reserve(publisher_infos_msg.publishers_size());
+      for(auto& publisher_info : publisher_infos_msg.publishers()) {
+        info.emplace_back(PublisherInfo::FromProto(publisher_info));
+      }
+      for(auto [it, end] = subscribers.equal_range(topic); it != end; it++) { 
+        auto subscriber = it->second.lock();
+        if(subscriber) {
+          subscriber->HandlePublisherInfo(info);
+        }
+      }
+    }
+  }
 
 protected:
   /// @todo id? probably not needed, pid is fine, unless we _really_ need multiple transport managers
@@ -247,14 +268,25 @@ protected:
    */
   std::vector<PublisherInfo> last_owned_publish_info;
 
+  std::unordered_map<std::string, std::vector<PublisherInfo>> last_network_publish_info;
+  
   std::unique_ptr<InprocTransport> inproc;
 
   std::unordered_map<std::string, std::unique_ptr<Transport>> transports;
 
   std::unordered_multimap<std::string, std::weak_ptr<PublisherBase>> publishers;
 
-  // TODO: these need to be by topic name, also
-  std::vector<std::weak_ptr<SubscriberBase>> subscribers;
+  /**
+   * The subscribers.
+   * 
+   * @todo: it may be wise to make this a unnordered_map<string, vector<subscriber>> instead
+   */
+  std::unordered_multimap<std::string, std::weak_ptr<SubscriberBase>> subscribers;
+
+  /**
+   * For testing only - set to false to disable using known subscribers and force a coordinator connection
+   */
+  bool use_local_publishers_for_subscribers = true;
 };
 
 } // namespace basis::core::transport

@@ -172,8 +172,8 @@ public:
     switch (ReceiveMessage(in_progress_packet)) {
       case plugins::transport::TcpConnection::ReceiveStatus::DONE: {
         auto complete = in_progress_packet.GetCompletedMessage();
-        auto info = basis::DeserializeFromSpan<proto::NetworkInfo>(complete->GetPayload());
-        spdlog::info("Got network info message {}", info->DebugString());
+        last_network_info = basis::DeserializeFromSpan<proto::NetworkInfo>(complete->GetPayload());
+        spdlog::info("Got network info message {}", last_network_info->DebugString());
 
         // convert to proto::PublisherInfo
         // fallthrough
@@ -192,6 +192,8 @@ public:
       }
       }
   }
+
+  std::unique_ptr<proto::NetworkInfo> last_network_info;
     
   IncompleteMessagePacket in_progress_packet;
 

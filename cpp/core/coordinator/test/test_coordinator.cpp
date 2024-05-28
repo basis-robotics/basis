@@ -1,6 +1,20 @@
 #include <basis/core/coordinator.h>
 #include <gtest/gtest.h>
 
+struct TestTransportManager : public basis::core::transport::TransportManager {
+  TestTransportManager():TransportManager(nullptr) {
+    // Ensure we actually test the coordinator and not just transport manager
+    // todo: we can just make two transport managers
+    use_local_publishers_for_subscribers = false;
+  }
+
+    /**
+     * Clear local publisher info, ensuring we only pull data from the coordinator
+     */
+  void ClearLocalPublisherInfo() {
+  }
+};
+
 TEST(TestCoordinator, BasicTest) {
   basis::core::transport::Coordinator coordinator = *basis::core::transport::Coordinator::Create();
 
@@ -40,7 +54,7 @@ TEST(TestCoordinator, TestPubSubOrder) {
   auto connector = basis::core::transport::CoordinatorConnector::Create();
 
   auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
-  TransportManager transport_manager;
+  TestTransportManager transport_manager;
   transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
 
   std::atomic<int> callback_times{0};
@@ -49,35 +63,58 @@ TEST(TestCoordinator, TestPubSubOrder) {
     callback_times++;
   };
 
-  connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
-  coordinator.Update();
-  connector->Update();
+  auto update = [&](int expected_publishers) {
+    // local to transport manager
+    {
+      // let the transport manager gather any new publishers
+      transport_manager.Update();
+      auto info = transport_manager.GetTransportManagerInfo();
+      ASSERT_EQ(expected_publishers, info.publishers_size());
+      // send it off to the coordinator
+      connector->SendTransportManagerInfo(std::move(info));
+      // give the TCP stack time to work
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    {
+      // let the coordinator process any new publishers, send out updates
+      coordinator.Update();
+      // give the TCP stack time to work
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    // local to transport manager
+    {
+      // Let the connector pull the data back from coordinator
+      connector->Update();
+      // 
+      if (connector->last_network_info) {
+        transport_manager.HandleNetworkInfo(*connector->last_network_info);
+      }
+
+      transport_manager.Update();
+    }
+  };
+
+  update(0);
 
   std::shared_ptr<Subscriber<TestRawStruct>> prev_sub =
-    transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
+      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
 
-  transport_manager.Update();
-  connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
-  coordinator.Update();
-    connector->Update();
-
+  update(0);
   auto test_publisher =
       transport_manager.Advertise<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct");
 
-  transport_manager.Update();
-  connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
-  coordinator.Update();
+  update(1);
+
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+
   std::shared_ptr<Subscriber<TestRawStruct>> after_sub =
       transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
-
-  transport_manager.Update();
-  connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
-  coordinator.Update();
-  connector->Update();
-
-  // ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
+  update(1);
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
   auto send_msg = std::make_shared<const TestRawStruct>();
   test_publisher->Publish(send_msg);
 
-  // ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+  
 }
