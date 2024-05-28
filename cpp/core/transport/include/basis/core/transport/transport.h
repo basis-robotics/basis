@@ -226,6 +226,9 @@ public:
 
 
 protected:
+  /// @todo id? probably not needed, pid is fine, unless we _really_ need multiple transport managers
+  /// ...which might be needed for integration testing
+
   /// @todo is this for all transports or just local ones? probably just local ones
   std::vector<PublisherInfo> last_owned_publish_info;
 

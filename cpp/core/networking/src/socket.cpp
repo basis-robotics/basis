@@ -24,17 +24,9 @@ int Socket::Send(const std::byte *data, size_t len) {
   return send(fd, data, len, 0);
 }
 
-int Socket::RecvInto(char *buffer, size_t buffer_len, int timeout_s) {
-  // TODO: remove this, force consumer to call select themselves
-  if (timeout_s >= 0) {
-    auto error = Select(timeout_s, 0);
-    if (error) {
-      return -1;
-    }
-  }
-
+int Socket::RecvInto(char *buffer, size_t buffer_len, bool peek) {
   // todo: error handling + close
-  return recv(fd, buffer, buffer_len, 0);
+  return recv(fd, buffer, buffer_len, peek ? MSG_PEEK : 0);
 }
 
 std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
@@ -55,6 +47,12 @@ std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
   }
 
   return {};
+}
+
+void Socket::SetNonblocking() {
+  /// @todo error handling
+  int flags = fcntl(fd, F_GETFL);
+  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 nonstd::expected<TcpSocket, Socket::Error> TcpSocket::Connect(std::string_view address, uint16_t port) {

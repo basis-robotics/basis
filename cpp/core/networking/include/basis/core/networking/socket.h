@@ -87,13 +87,17 @@ public:
    */
   std::optional<Error> Select(int timeout_s, int timeout_ns);
 
+  
+
   /**
    * Receives data into the requested buffer,
    *
    * @todo Make a proper error handling API here
    * @todo Use basis::core::Time
    */
-  int RecvInto(char *buffer, size_t buffer_len, int timeout_s = -1);
+  int RecvInto(char *buffer, size_t buffer_len, bool peek = false);
+
+  void SetNonblocking();
 
 protected:
   int fd{-1};
