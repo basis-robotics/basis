@@ -12,6 +12,7 @@
 
 #include "tcp_subscriber.h"
 #include "tcp_transport_name.h"
+
 class TestTcpTransport;
 
 namespace basis::plugins::transport {
@@ -116,18 +117,23 @@ public:
       : core::transport::Transport(thread_pool_manager) {}
 
   virtual std::shared_ptr<basis::core::transport::TransportPublisher>
-  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
-    std::shared_ptr<TcpPublisher> publisher = *TcpPublisher::Create();
+  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) override {
+    return Advertise(topic, type_info, 0);
+  }
+
+  std::shared_ptr<TcpPublisher>
+  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info, uint16_t port) {
+    std::shared_ptr<TcpPublisher> publisher = *TcpPublisher::Create(port);
     {
       std::lock_guard lock(publishers_mutex);
       publishers.emplace(std::string(topic), publisher);
     }
-    return std::shared_ptr<basis::core::transport::TransportPublisher>(std::move(publisher));
-  };
+    return publisher;
+  }
 
   virtual std::shared_ptr<basis::core::transport::TransportSubscriber>
   Subscribe(std::string_view topic, core::transport::TypeErasedSubscriberCallback callback,
-            core::transport::OutputQueue *output_queue, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
+            core::transport::OutputQueue *output_queue, [[maybe_unused]] core::transport::MessageTypeInfo type_info) override {
     // TODO: specify thread pool name
     // TODO: pass in the thread pool every time
     // TODO: error handling
@@ -140,7 +146,7 @@ public:
     return std::shared_ptr<basis::core::transport::TransportSubscriber>(std::move(subscriber));
   }
 
-  void Update() {
+  virtual void Update() override {
     decltype(publishers)::iterator it;
     {
       std::lock_guard lock(publishers_mutex);

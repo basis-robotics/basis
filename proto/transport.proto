@@ -1,0 +1,8 @@
+syntax= "proto3";
+
+package basis.core.transport.proto;
+
+message PublisherInfo {
+    string test = 1;
+}
+
