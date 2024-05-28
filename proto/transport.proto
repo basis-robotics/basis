@@ -3,6 +3,8 @@ syntax= "proto3";
 package basis.core.transport.proto;
 
 message PublisherInfo {
-    string test = 1;
+    uint64 publisher_id_high = 1;
+    uint64 publisher_id_low = 2;
+    string topic = 3;
+    map<string, string> transport_info = 4;
 }
-

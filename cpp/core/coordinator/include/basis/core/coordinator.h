@@ -75,11 +75,12 @@ namespace basis::core::transport {
             for (auto it = clients.begin(); it != clients.end();) {
                 auto& client = *it;
                 switch (client.ReceiveMessage(client.in_progress_packet)) {
-
                     case plugins::transport::TcpConnection::ReceiveStatus::DONE: {
                         auto complete = client.in_progress_packet.GetCompletedMessage();
                         spdlog::info("Got completed message");
-              
+
+                        // convert to proto::PublisherInfo 
+                        // fallthrough
                     }
                     case plugins::transport::TcpConnection::ReceiveStatus::DOWNLOADING: {
                         // No work to be done
@@ -100,14 +101,13 @@ namespace basis::core::transport {
             }
             
         }
+        
         core::networking::TcpListenSocket listen_socket;
         
         std::vector<CoordinatorConnection> clients;
-
-        //std::unordered_map<
     };
 
     class CoordinatorConnector {
-    // todo    
+        
     };
 }
