@@ -1,9 +1,9 @@
 enable_testing()
 
-add_library(libcoordinator SHARED src/coordinator.cpp)
-target_include_directories(libcoordinator PUBLIC include)
+add_library(basis_libcoordinator SHARED src/coordinator.cpp)
+target_include_directories(basis_libcoordinator PUBLIC include)
 target_link_libraries(
-  libcoordinator
+  basis_libcoordinator
   basis::plugins::transport::tcp
   basis::plugins::serialization::protobuf
   basis_proto
@@ -15,5 +15,9 @@ add_executable(
 )
 target_link_libraries(
   coordinator
-  libcoordinator
+  basis_libcoordinator
 )
+
+add_library(basis::core::coordinator ALIAS basis_libcoordinator)
+
+add_subdirectory(test)

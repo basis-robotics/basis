@@ -33,20 +33,17 @@ constexpr uint16_t BASIS_PUBLISH_INFO_PORT = 1492;
 
 //constexpr char BASIS_PUBLISHER_INFO_TOPIC[] = "/basis/publisher_info";
 
-namespace basis::core::transport { 
-
-    class CoordinatorConnection : public basis::plugins::transport::TcpConnection {
-    public:
-        CoordinatorConnection(core::networking::TcpSocket socket) : TcpConnection(std::move(socket)) {
+namespace basis::core::transport {
+    class Coordinator {
+        struct Connection : public basis::plugins::transport::TcpConnection {
+        Connection(core::networking::TcpSocket socket) : TcpConnection(std::move(socket)) {
 
         }
 
         IncompleteMessagePacket in_progress_packet;
     };
-
-    class Coordinator {
     public:
-        std::optional<Coordinator> Create(uint16_t port = BASIS_PUBLISH_INFO_PORT) {
+        static std::optional<Coordinator> Create(uint16_t port = BASIS_PUBLISH_INFO_PORT) {
             // todo: maybe return the listen socket error type?
             auto maybe_listen_socket = networking::TcpListenSocket::Create(port);
             if(!maybe_listen_socket) {
@@ -68,7 +65,7 @@ namespace basis::core::transport {
 
             //
             while(auto maybe_socket = listen_socket.Accept(0)) {
-                clients.emplace_back(CoordinatorConnection(std::move(maybe_socket.value())));
+                clients.emplace_back(Connection(std::move(maybe_socket.value())));
             }
 
 
@@ -104,7 +101,7 @@ namespace basis::core::transport {
         
         core::networking::TcpListenSocket listen_socket;
         
-        std::vector<CoordinatorConnection> clients;
+        std::vector<Connection> clients;
     };
 
     class CoordinatorConnector {
