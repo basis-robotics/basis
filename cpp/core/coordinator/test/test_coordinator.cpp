@@ -1,4 +1,6 @@
 #include <basis/core/coordinator.h>
+#include <basis/core/coordinator_connector.h>
+
 #include <gtest/gtest.h>
 
 struct TestTransportManager : public basis::core::transport::TransportManager {
@@ -87,8 +89,8 @@ TEST(TestCoordinator, TestPubSubOrder) {
       // Let the connector pull the data back from coordinator
       connector->Update();
       //
-      if (connector->last_network_info) {
-        transport_manager.HandleNetworkInfo(*connector->last_network_info);
+      if (connector->GetLastNetworkInfo()) {
+        transport_manager.HandleNetworkInfo(*connector->GetLastNetworkInfo());
       }
 
       transport_manager.Update();

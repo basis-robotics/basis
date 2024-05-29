@@ -6,5 +6,8 @@ option(BASIS_ENABLE_ROS "Enable basis support for ROS" OFF)
 if(BASIS_ENABLE_ROS)
     set(BASIS_ROS_ROOT /opt/ros/noetic CACHE STRING "ros root to use")
 endif()
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_subdirectory(cpp)
 add_subdirectory(proto)
