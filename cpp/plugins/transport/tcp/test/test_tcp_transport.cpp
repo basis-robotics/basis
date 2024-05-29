@@ -3,9 +3,9 @@
 #include <thread>
 
 #include "spdlog/cfg/env.h"
+#include <basis/core/transport/transport_manager.h>
 #include <basis/plugins/transport/epoll.h>
 #include <basis/plugins/transport/tcp.h>
-#include <basis/core/transport/transport_manager.h>
 #include <gtest/gtest.h>
 
 #include "spdlog/async.h"
@@ -85,10 +85,9 @@ public:
     return sender;
   }
 
-  TcpSubscriber * GetTcpSubscriber(basis::core::transport::SubscriberBase* subscriber) {
+  TcpSubscriber *GetTcpSubscriber(basis::core::transport::SubscriberBase *subscriber) {
     return dynamic_cast<TcpSubscriber *>(subscriber->transport_subscribers[0].get());
   }
-
 
   /**
    * friend-ness isn't inherited, so make a helper here for the tests
@@ -165,8 +164,7 @@ TEST_F(TestTcpTransport, TestPublisher) {
   spdlog::debug("Successfully created publisher on port {}", port);
   ASSERT_FALSE(publish_over_port.has_value());
   int error = publish_over_port.error().second;
-  spdlog::debug("Failed to create another publisher on same port - got [{}: {}]", error,
-                strerror(error));
+  spdlog::debug("Failed to create another publisher on same port - got [{}: {}]", error, strerror(error));
 
   std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
 
@@ -184,10 +182,12 @@ TEST_F(TestTcpTransport, TestTransport) {
   ASSERT_NE(publisher, nullptr);
 }
 
-struct TestRawStruct {
+struct TestStruct {
   uint32_t foo = 3;
   float bar = 8.5;
   char baz[4] = "baz";
+
+  friend auto operator<=>(const TestStruct&, const TestStruct&) = default;
 };
 
 /**
@@ -198,21 +198,34 @@ TEST_F(TestTcpTransport, TestWithManager) {
   TransportManager transport_manager;
   transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
 
+  auto send_msg = std::make_shared<TestStruct>(5, 10.3);
+  strcpy(send_msg->baz, "bat");
+
   std::atomic<int> callback_times{0};
-  SubscriberCallback<TestRawStruct> callback = [&](std::shared_ptr<const TestRawStruct> t) {
-    spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
+  SubscriberCallback<TestStruct> callback = [&](std::shared_ptr<const TestStruct> t) {
+    spdlog::warn("Got TestStruct {{ {} {} {} }}", t->foo, t->bar, t->baz);
+    ASSERT_EQ(*t, *send_msg);
     callback_times++;
   };
 
+  std::atomic<int> raw_callback_times{0};
+  TypeErasedSubscriberCallback raw_callback = [&](std::unique_ptr<MessagePacket> packet) {
+    TestStruct* t = (TestStruct*)packet->GetPayload().data();
+    spdlog::warn("Got a raw TestStruct {{ {} {} {} }}", t->foo, t->bar, t->baz);
+
+    ASSERT_EQ(*t, *send_msg);
+    raw_callback_times++;
+  };
+
   auto test_publisher =
-      transport_manager.Advertise<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct");
+      transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("test_struct");
   ASSERT_NE(test_publisher, nullptr);
 
   uint16_t port = 0;
   const std::string &info = test_publisher->GetPublisherInfo().transport_info[TCP_TRANSPORT_NAME];
-    spdlog::info("publisher at {}", info);
-    port = stoi(info);
-  
+  spdlog::info("publisher at {}", info);
+  port = stoi(info);
+
   ASSERT_NE(port, 0);
 
   std::unique_ptr<TcpReceiver> receiver = SubscribeToPort(port);
@@ -220,7 +233,6 @@ TEST_F(TestTcpTransport, TestWithManager) {
   transport_manager.Update();
 
   ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
-  auto send_msg = std::make_shared<const TestRawStruct>();
   test_publisher->Publish(send_msg);
   // auto string_publisher = transport_manager.Advertise("test_string");
   // ASSERT_NE(publisher, nullptr);
@@ -229,35 +241,38 @@ TEST_F(TestTcpTransport, TestWithManager) {
   // Ensure we have a message
   ASSERT_NE(recv_msg, nullptr);
   // Ensure we didn't accidentally invoke the inproc transport
-  ASSERT_NE((TestRawStruct *)recv_msg->GetPayload().data(), send_msg.get());
+  ASSERT_NE((TestStruct *)recv_msg->GetPayload().data(), send_msg.get());
 
   // Ensure we got what we sent
-  ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestRawStruct));
-  ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestRawStruct)), 0);
+  ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
+  ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
 
   OutputQueue output_queue;
 
   transport_manager.Update();
 
-  std::shared_ptr<Subscriber<TestRawStruct>> queue_subscriber =
-      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
+  std::shared_ptr<Subscriber<TestStruct>> queue_subscriber =
+      transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
                                                                                             &output_queue);
-  std::shared_ptr<Subscriber<TestRawStruct>> immediate_subscriber =
-      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
+  std::shared_ptr<Subscriber<TestStruct>> immediate_subscriber =
+      transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
 
-  auto& pub_info = transport_manager.GetLastPublisherInfo();
+  std::shared_ptr<SubscriberBase> immediate_raw_subscriber =
+      transport_manager.SubscribeRaw("test_struct", raw_callback, nullptr, {});
+
+  auto &pub_info = transport_manager.GetLastPublisherInfo();
   transport_manager.Update();
 
-  // todo: handle subscriber created before publisher!
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 4);
 
-  std::array subscribers = {queue_subscriber, immediate_subscriber};
+  std::array<std::shared_ptr<SubscriberBase>, 3> subscribers = {queue_subscriber, immediate_subscriber,
+                                                                immediate_raw_subscriber};
 
   ASSERT_EQ(queue_subscriber->GetPublisherCount(), 1);
   ASSERT_EQ(immediate_subscriber->GetPublisherCount(), 1);
 
   transport_manager.Update();
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 4);
 
   // todo: why do we have to manually connect this? the transport manager should be doing this
   for (auto &subscriber : subscribers) {
@@ -266,57 +281,29 @@ TEST_F(TestTcpTransport, TestWithManager) {
     subscriber->HandlePublisherInfo(pub_info);
     subscriber->HandlePublisherInfo(pub_info);
     ASSERT_EQ(subscriber->GetPublisherCount(), 1);
-
   }
 
   transport_manager.Update();
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 3);
+  ASSERT_EQ(test_publisher->GetSubscriberCount(), 4);
 
   test_publisher->Publish(send_msg);
 
   // todo: handy dandy condition variable wrapper to not have to wait here
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+  // Check immediate subscriber
   ASSERT_EQ(callback_times, 1);
+
+  // Check queue subscriber
   auto event = output_queue.Pop(10);
   ASSERT_NE(event, std::nullopt);
   event->callback(std::move(event->packet));
   ASSERT_EQ(callback_times, 2);
+
+  // Check raw subscriber
+  ASSERT_EQ(raw_callback_times, 1);
+
 }
-
-TEST_F(TestTcpTransport, DISABLED_TestPubSubOrder) {
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
-  TransportManager transport_manager;
-  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
-
-  std::atomic<int> callback_times{0};
-  SubscriberCallback<TestRawStruct> callback = [&](std::shared_ptr<const TestRawStruct> t) {
-    spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
-    callback_times++;
-  };
-
-  std::shared_ptr<Subscriber<TestRawStruct>> prev_sub =
-      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
-
-  transport_manager.Update();
-
-  auto test_publisher =
-      transport_manager.Advertise<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct");
-  
-  transport_manager.Update();
-
-  std::shared_ptr<Subscriber<TestRawStruct>> after_sub =
-      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
-
-  
-  transport_manager.Update();
-
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
-  auto send_msg = std::make_shared<const TestRawStruct>();
-  test_publisher->Publish(send_msg);
-
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
-}
-
 
 TEST_F(TestTcpTransport, TestWithProtobuf) {
   auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
@@ -328,8 +315,8 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
 
   uint16_t port = 0;
   const std::string &info = test_publisher->GetPublisherInfo().transport_info[TCP_TRANSPORT_NAME];
-    spdlog::info("publisher at {}", info);
-    port = stoi(info);
+  spdlog::info("publisher at {}", info);
+  port = stoi(info);
   ASSERT_NE(port, 0);
 
   auto send_msg = std::make_shared<TestProtoStruct>();
@@ -520,8 +507,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
      * This is called by epoll when new data is available on a socket. We immediately do nothing with it, and instead
      * push the work off to the thread pool. This should be a very fast operation.
      */
-    thread_pool.enqueue([&, fd, incomplete=std::move(incomplete)] {
-      
+    thread_pool.enqueue([&, fd, incomplete = std::move(incomplete)] {
       // It's an error to actually call this with multiple threads.
       // TODO: add debug only checks for this
       spdlog::debug("Running poller callback on {}", fd);
@@ -553,9 +539,8 @@ TEST_F(TestTcpTransport, MPSCQueue) {
 
   ASSERT_NE(receiver->GetSocket().GetFd(), -1);
 
-  ASSERT_TRUE(poller.AddFd(
-      receiver->GetSocket().GetFd(),
-      std::bind(callback, std::placeholders::_1, std::make_shared<IncompleteMessagePacket>())));
+  ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(),
+                           std::bind(callback, std::placeholders::_1, std::make_shared<IncompleteMessagePacket>())));
   ASSERT_EQ(output_queue.Pop(0), std::nullopt);
   spdlog::info("Testing with one message");
   sender->SendMessage(shared_message);
@@ -592,9 +577,9 @@ TEST_F(TestTcpTransport, Torture) {
    * The metadata here (channel_name) is completely arbitrary. Real code should make up a Context object to hold it all
    * in.
    */
-  auto callback = [&thread_pool, poller = poller.get(), &output_queue](
-                      int fd, std::unique_lock<std::mutex> lock, std::string channel_name, TcpReceiver *receiver,
-                      std::shared_ptr<IncompleteMessagePacket> incomplete) {
+  auto callback = [&thread_pool, poller = poller.get(),
+                   &output_queue](int fd, std::unique_lock<std::mutex> lock, std::string channel_name,
+                                  TcpReceiver *receiver, std::shared_ptr<IncompleteMessagePacket> incomplete) {
     spdlog::info("Queuing work for {}", fd);
 
     /**
@@ -613,9 +598,8 @@ TEST_F(TestTcpTransport, Torture) {
         std::string expected_msg = "Hello, World! ";
         expected_msg += channel_name;
         ASSERT_STREQ((char *)msg->GetPayload().data(), expected_msg.c_str());
-        OutputQueueEvent event = {.topic_name = channel_name,
-                                                   .packet = std::move(msg),
-                                                   .callback = TypeErasedSubscriberCallback()};
+        OutputQueueEvent event = {
+            .topic_name = channel_name, .packet = std::move(msg), .callback = TypeErasedSubscriberCallback()};
         output_queue.Emplace(std::move(event));
 
         // TODO: peek

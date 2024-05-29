@@ -26,8 +26,8 @@ public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
   // todo: deducing a raw type should be an error unless requested
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-  [[nodiscard]] std::shared_ptr<Publisher<T_MSG>> Advertise(std::string_view topic,
-                                              MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+  [[nodiscard]] std::shared_ptr<Publisher<T_MSG>>
+  Advertise(std::string_view topic, MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     if (inproc) {
@@ -47,14 +47,26 @@ public:
     return publisher;
   }
 
+  /**
+   * Subscribe to a topic, without attempting to deserialize.
+   * 
+   * @warning This will not subscribe to messages sent over the `inproc` transport, as they are not serialized in the first place.
+   */
+  [[nodiscard]] std::shared_ptr<SubscriberBase> SubscribeRaw(std::string_view topic,
+                                                             TypeErasedSubscriberCallback callback,
+                                                             core::transport::OutputQueue *output_queue,
+                                                             MessageTypeInfo message_type) {
+    return SubscribeInternal<SubscriberBase>(topic, callback, output_queue, message_type, {});
+  }
+
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-  [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>> Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
-                                               core::transport::OutputQueue *output_queue = nullptr,
-                                               MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+  [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
+  Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
+            core::transport::OutputQueue *output_queue = nullptr,
+            MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
-    [[maybe_unused]] TypeErasedSubscriberCallback outer_callback = [topic,
-                                                                    callback](std::shared_ptr<MessagePacket> packet) {
+    TypeErasedSubscriberCallback outer_callback = [topic, callback](std::shared_ptr<MessagePacket> packet) {
       std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
       if (!message) {
         spdlog::error("Unable to deserialize message on topic {}", topic);
@@ -70,21 +82,7 @@ public:
 #endif
     }
 
-    std::vector<std::shared_ptr<TransportSubscriber>> tps;
-
-    for (auto &[transport_name, transport] : transports) {
-      tps.push_back(transport->Subscribe(topic, outer_callback, output_queue, message_type));
-    }
-
-    auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
-    subscribers.emplace(std::string(topic), subscriber);
-
-    if (use_local_publishers_for_subscribers) {
-      subscriber->HandlePublisherInfo(GetLastPublisherInfo());
-    }
-    subscriber->HandlePublisherInfo(last_network_publish_info[std::string(topic)]);
-
-    return subscriber;
+    return SubscribeInternal<Subscriber<T_MSG>>(topic, outer_callback, output_queue, message_type, inproc_subscriber);
   }
 
   /**
@@ -149,6 +147,45 @@ public:
   }
 
 protected:
+ /**
+  * Internal helper used to allow subscribing with a number of different callback signatures.
+  * 
+  * @tparam T_SUBSCRIBER the subscriber type in use - typically Subscriber<MyMessageType> or SubscriberBase for raw
+  * @tparam T_INPROC_SUBSCRIBER 
+  * @param topic the topic to subscribe to
+  * @param callback type independent callback
+  * @param output_queue 
+  * @param message_type 
+  * @param inproc_subscriber can be nullptr for SubscriberBase
+  * @return std::shared_ptr<T_SUBSCRIBER>
+  */
+  template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
+  [[nodiscard]] std::shared_ptr<T_SUBSCRIBER>
+  SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback,
+                    core::transport::OutputQueue *output_queue, MessageTypeInfo message_type,
+                    std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
+
+    std::vector<std::shared_ptr<TransportSubscriber>> tps;
+
+    for (auto &[transport_name, transport] : transports) {
+      tps.push_back(transport->Subscribe(topic, callback, output_queue, message_type));
+    }
+
+    std::shared_ptr<T_SUBSCRIBER> subscriber;
+    if constexpr (std::is_same_v<T_SUBSCRIBER, SubscriberBase>) {
+      subscriber = std::make_shared<T_SUBSCRIBER>(topic, message_type, std::move(tps), false);
+    } else {
+      subscriber = std::make_shared<T_SUBSCRIBER>(topic, message_type, std::move(tps), inproc_subscriber);
+    }
+    subscribers.emplace(std::string(topic), subscriber);
+
+    if (use_local_publishers_for_subscribers) {
+      subscriber->HandlePublisherInfo(GetLastPublisherInfo());
+    }
+    subscriber->HandlePublisherInfo(last_network_publish_info[std::string(topic)]);
+
+    return subscriber;
+  }
   /// @todo id? probably not needed, pid is fine, unless we _really_ need multiple transport managers
   /// ...which might be needed for integration testing
 
@@ -164,7 +201,8 @@ protected:
 
   /**
    * The inproc transport. Optional as for testing sending shared pointers directly may not be desired.
-   * This is separate from `transports` as it has a different API - InprocTransport is type safe, and doesn't need to (de)serialize.
+   * This is separate from `transports` as it has a different API - InprocTransport is type safe, and doesn't need to
+   * (de)serialize.
    */
   std::unique_ptr<InprocTransport> inproc;
 
