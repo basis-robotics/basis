@@ -66,38 +66,6 @@ private:
   size_t progress_counter = 0;
 };
 
-
-
-/**
- * Helper class
- * @todo move to another file, it's implementation detail.
- */
-class TransportSender {
-public:
-  virtual ~TransportSender() = default;
-
-private:
-  // todo: this needs error handling
-  // TODO: do all transports actually need to declare this?
-  virtual bool Send(const std::byte *data, size_t len) = 0;
-
-  // TODO: why is this a shared_ptr?
-  // ah, is it because this needs to be shared across multiple senders?
-  virtual void SendMessage(std::shared_ptr<MessagePacket> message) = 0;
-};
-
-#if 0
-class TransportReceiver {
-public:
-  virtual ~TransportReceiver() = default;
-
-
-private:
-  virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
-
-};
-#endif
-
 // TODO: use MessageEvent
 // TODO: don't store the packet directly, store a weak reference to the transport subscriber
 struct OutputQueueEvent {

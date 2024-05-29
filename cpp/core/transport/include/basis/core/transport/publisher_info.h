@@ -32,6 +32,9 @@ struct PublisherInfo {
    */
   std::unordered_map<std::string, std::string> transport_info;
 
+  /**
+   * Converts to a proto::PublisherInfo 
+   */
   proto::PublisherInfo ToProto() {
     proto::PublisherInfo out;
     out.set_publisher_id_high(publisher_id_64s[0]);
@@ -43,7 +46,10 @@ struct PublisherInfo {
     }
     return out;
   }
-
+  
+  /**
+   * Converts from a proto::PublisherInfo 
+   */
   static PublisherInfo FromProto(const proto::PublisherInfo& proto) {
     PublisherInfo out;
     out.publisher_id_64s[0] = proto.publisher_id_high();
