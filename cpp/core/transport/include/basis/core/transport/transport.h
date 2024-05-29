@@ -232,20 +232,33 @@ protected:
   /// ...which might be needed for integration testing
 
   /**
-   * publisher summary from last Update() call
+   * Publisher summary from last Update() call
    */
   std::vector<PublisherInfo> last_owned_publish_info;
 
+  /**
+   * Latest summary of publishers from other processes.
+   */
   std::unordered_map<std::string, std::vector<PublisherInfo>> last_network_publish_info;
 
+  /**
+   * The inproc transport. Optional as for testing sending shared pointers directly may not be desired.
+   * This is separate from `transports` as it has a different API - InprocTransport is type safe, and doesn't need to (de)serialize.
+   */
   std::unique_ptr<InprocTransport> inproc;
 
+  /**
+   * A map of transport ID to transport.
+   */
   std::unordered_map<std::string, std::unique_ptr<Transport>> transports;
 
+  /**
+   * The publishers we've created.
+   */
   std::unordered_multimap<std::string, std::weak_ptr<PublisherBase>> publishers;
 
   /**
-   * The subscribers.
+   * The subscribers we've created.
    *
    * @todo: it may be wise to make this a unnordered_map<string, vector<subscriber>> instead
    */
