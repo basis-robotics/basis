@@ -42,6 +42,13 @@ public:
 
     return parsed_message;
   }
+
+/* TODO: needs schema support to work
+  static std::string DumpDebugStringFromSpan(std::span<const std::byte> bytes) {
+
+  }
+*/
+
 };
 } // namespace plugins::serialization
 

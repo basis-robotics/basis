@@ -17,7 +17,6 @@ namespace core {
 namespace transport {
 
 template <typename T_MSG> using SubscriberCallback = std::function<void(std::shared_ptr<const T_MSG>)>;
-// TODO: this can almost certainly be a unique ptr
 using TypeErasedSubscriberCallback = std::function<void(std::unique_ptr<MessagePacket>)>;
 
 class TransportSubscriber {
@@ -40,14 +39,13 @@ public:
  *
  */
 class SubscriberBase {
-protected:
+public:
   SubscriberBase(
-    std::string_view topic, MessageTypeInfo type_info, bool has_inproc,
-             std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers) :
+    std::string_view topic, MessageTypeInfo type_info,
+             std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers, bool has_inproc) :
                topic(topic), type_info(std::move(type_info)), has_inproc(has_inproc), transport_subscribers(std::move(transport_subscribers)) {
 
              }
-public:
 
   virtual ~SubscriberBase() = default;
 
@@ -81,10 +79,12 @@ public:
   Subscriber(std::string_view topic, MessageTypeInfo type_info,
              std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers,
              std::shared_ptr<InprocSubscriber<T_MSG>> inproc)
-      : SubscriberBase(topic, std::move(type_info), inproc != nullptr, std::move(transport_subscribers)),
+      : SubscriberBase(topic, std::move(type_info), std::move(transport_subscribers), inproc != nullptr),
         inproc(std::move(inproc)) {}
+  
 
 
+protected:
   std::shared_ptr<InprocSubscriber<T_MSG>> inproc;
 };
 

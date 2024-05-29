@@ -37,7 +37,7 @@ void Epoll::MainThread() {
     SPDLOG_DEBUG("epoll_wait nfds {}", nfds);
     for (int n = 0; n < nfds; ++n) {
       int fd = events[n].data.fd;
-      spdlog::info("Socket {} ready.", events[n].data.fd);
+      spdlog::debug("Socket {} ready.", events[n].data.fd);
 
       std::unique_lock map_guard(callbacks_mutex);
       auto it = callbacks.find(fd);
