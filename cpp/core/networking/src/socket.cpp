@@ -24,29 +24,21 @@ int Socket::Send(const std::byte *data, size_t len) {
   return send(fd, data, len, 0);
 }
 
-int Socket::RecvInto(char *buffer, size_t buffer_len, int timeout_s) {
-  // TODO: remove this, force consumer to call select themselves
-  if (timeout_s >= 0) {
-    auto error = Select(timeout_s, 0);
-    if (error) {
-      return -1;
-    }
-  }
-
+int Socket::RecvInto(char *buffer, size_t buffer_len, bool peek) {
   // todo: error handling + close
-  return recv(fd, buffer, buffer_len, 0);
+  return recv(fd, buffer, buffer_len, peek ? MSG_PEEK : 0);
 }
 
 std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
   struct timeval tv;
-  fd_set rfds;
-  FD_ZERO(&rfds);
-  FD_SET(fd, &rfds);
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(fd, &fds);
 
   tv.tv_sec = timeout_s;
   tv.tv_usec = timeout_ns;
 
-  int select_results = select(fd + 1, &rfds, (fd_set *)0, (fd_set *)0, &tv);
+  int select_results = select(fd + 1, /*read*/&fds, /*write*/(fd_set *)0, /*exceptional*/(fd_set *)0, &tv);
   if (select_results == 0) {
     // TODO: double check errno values in timeout
     return Error{ErrorSource::TIMEOUT, 0};
@@ -55,6 +47,12 @@ std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
   }
 
   return {};
+}
+
+void Socket::SetNonblocking() {
+  /// @todo error handling
+  int flags = fcntl(fd, F_GETFL);
+  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 nonstd::expected<TcpSocket, Socket::Error> TcpSocket::Connect(std::string_view address, uint16_t port) {

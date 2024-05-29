@@ -9,6 +9,8 @@
 #include <basis/core/transport/subscriber.h>
 #include <basis/core/transport/transport.h>
 
+#include "tcp_connection.h"
+
 namespace basis::plugins::transport {
 
 struct AddressPortHash {
@@ -22,12 +24,14 @@ struct AddressPortHash {
  *
  * @todo these could be pooled. If multiple subscribers to the same topic are created, we should only have to recieve
  * once. It's a bit of an early optimization, though.
+ * 
+ * @todo this class is fairly useless, now - we can juts utilize TcpConnection's Socket constructor
  */
-class TcpReceiver : public core::transport::TransportReceiver {
+class TcpReceiver : public TcpConnection {
 public:
   TcpReceiver(std::string_view address, uint16_t port) : address(address), port(port) {}
 
-  virtual bool Connect() {
+  bool Connect() {
     auto maybe_socket = core::networking::TcpSocket::Connect(address, port);
     if (maybe_socket) {
       socket = std::move(maybe_socket.value());
@@ -36,30 +40,9 @@ public:
     return false;
   }
 
-  bool IsConnected() const { return socket.IsValid(); }
-
-  /**
-   *
-   *
-   * returns unique as it's expected a transport will handle this.
-   * @todo why do we need to return unique? We have a unique ptr wrapping a unique ptr - unneccessary.
-   */
-  std::unique_ptr<const core::transport::MessagePacket> ReceiveMessage(int timeout_s);
-
-  // todo: standardized class for handling these
-  enum class ReceiveStatus { DOWNLOADING, DONE, ERROR, DISCONNECTED };
-  ReceiveStatus ReceiveMessage(core::transport::IncompleteMessagePacket &message);
-
-  /**
-   * @todo error handling
-   */
-  virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s = -1) override;
-
   const core::networking::Socket &GetSocket() const { return socket; }
 
 private:
-  core::networking::TcpSocket socket;
-
   std::string address;
   uint16_t port;
 };
@@ -72,9 +55,12 @@ public:
          core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue = nullptr,
          std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
 
-  // todo: error handling
-  void Connect(std::string_view address, uint16_t port);
+  virtual bool Connect(std::string_view host, std::string_view endpoint, __uint128_t publisher_id) override;
 
+  // todo: error handling
+  bool ConnectToPort(std::string_view address, uint16_t port);
+
+  virtual size_t GetPublisherCount() override;
 protected:
   TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
                 core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue);

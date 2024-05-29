@@ -8,6 +8,7 @@
 #include "inproc.h"
 #include "message_type_info.h"
 #include "publisher.h"
+#include "publisher_info.h"
 #include "subscriber.h"
 #include "thread_pool_manager.h"
 
@@ -19,21 +20,6 @@ namespace basis::core::transport {
 
 /**
  * Helper for holding incomplete messages.
- *
- * TODO: use instructions are out of date
- *
- * To use:
-
-    size_t count = 0;
-    do {
-        // Request space to download in
-        std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
-
-        // Download some bytes
-        count = recv(buffer.data(), buffer.size());
-    // Continue downloading until we've gotten the whole message
-    } while(!incomplete.AdvanceCounter(count));
-
  */
 class IncompleteMessagePacket {
 public:
@@ -80,32 +66,6 @@ private:
   size_t progress_counter = 0;
 };
 
-/**
- * Helper class
- * @todo move to another file, it's implementation detail.
- */
-class TransportSender {
-public:
-  virtual ~TransportSender() = default;
-
-private:
-  // todo: this needs error handling
-  // TODO: do all transports actually need to declare this?
-  virtual bool Send(const std::byte *data, size_t len) = 0;
-
-  // TODO: why is this a shared_ptr?
-  // ah, is it because this needs to be shared across multiple senders?
-  virtual void SendMessage(std::shared_ptr<MessagePacket> message) = 0;
-};
-
-class TransportReceiver {
-public:
-  virtual ~TransportReceiver() = default;
-
-private:
-  virtual bool Receive(std::byte *buffer, size_t buffer_len, int timeout_s) = 0;
-};
-
 // TODO: use MessageEvent
 // TODO: don't store the packet directly, store a weak reference to the transport subscriber
 struct OutputQueueEvent {
@@ -125,7 +85,7 @@ public:
                                                          OutputQueue *output_queue, MessageTypeInfo type_info) = 0;
 
   /**
-   * Implementations should call this function at a regular rate.
+   * Implementations (ie TransportManager) should call this function at a regular rate.
    * @todo: do we want to keep this or enforce each transport taking care of its own update calls?
    */
   virtual void Update() {}
@@ -135,6 +95,11 @@ protected:
   std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager;
 };
 
+/**
+ * Class responsible for creating publishers/subscribers and accumulating data to send to the Coordinator
+ * 
+ * @todo: break this into a separate file/library - transports don't need to know about it
+ */
 class TransportManager {
 public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
@@ -191,7 +156,13 @@ public:
     }
 
     auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
-    subscribers.push_back(subscriber);
+    subscribers.emplace(std::string(topic), subscriber);
+
+    if (use_local_publishers_for_subscribers) {
+      subscriber->HandlePublisherInfo(GetLastPublisherInfo());
+    }
+    subscriber->HandlePublisherInfo(last_network_publish_info[std::string(topic)]);
+
     return subscriber;
   }
 
@@ -204,21 +175,99 @@ public:
     transports.emplace(std::string(transport_name), std::move(transport));
   }
 
+  /**
+   * Updates all transports and cleans up old publishers.
+   */
   void Update() {
     for (auto &[_, transport] : transports) {
       transport->Update();
     }
+
+    // Generate updated topic info and clean up old publishers
+    std::vector<PublisherInfo> new_publisher_info;
+
+    for (auto it = publishers.cbegin(); it != publishers.cend();) {
+      if (auto publisher = it->second.lock()) {
+        new_publisher_info.emplace_back(publisher->GetPublisherInfo());
+        ++it;
+      } else {
+        it = publishers.erase(it);
+      }
+    }
+
+    last_owned_publish_info = std::move(new_publisher_info);
+  }
+
+  const std::vector<PublisherInfo> &GetLastPublisherInfo() { return last_owned_publish_info; }
+
+  basis::core::transport::proto::TransportManagerInfo GetTransportManagerInfo() {
+    /// @todo arena allocate
+    basis::core::transport::proto::TransportManagerInfo sent_info;
+    for (auto &pub_info : last_owned_publish_info) {
+      *sent_info.add_publishers() = pub_info.ToProto();
+    }
+    return sent_info;
+  }
+
+  void HandleNetworkInfo(const proto::NetworkInfo &network_info) {
+    last_network_publish_info.clear();
+
+    for (auto &[topic, publisher_infos_msg] : network_info.publishers_by_topic()) {
+      std::vector<PublisherInfo> &info = last_network_publish_info[topic];
+      info.reserve(publisher_infos_msg.publishers_size());
+      for (auto &publisher_info : publisher_infos_msg.publishers()) {
+        info.emplace_back(PublisherInfo::FromProto(publisher_info));
+      }
+      for (auto [it, end] = subscribers.equal_range(topic); it != end; it++) {
+        auto subscriber = it->second.lock();
+        if (subscriber) {
+          subscriber->HandlePublisherInfo(info);
+        }
+      }
+    }
   }
 
 protected:
+  /// @todo id? probably not needed, pid is fine, unless we _really_ need multiple transport managers
+  /// ...which might be needed for integration testing
+
+  /**
+   * Publisher summary from last Update() call
+   */
+  std::vector<PublisherInfo> last_owned_publish_info;
+
+  /**
+   * Latest summary of publishers from other processes.
+   */
+  std::unordered_map<std::string, std::vector<PublisherInfo>> last_network_publish_info;
+
+  /**
+   * The inproc transport. Optional as for testing sending shared pointers directly may not be desired.
+   * This is separate from `transports` as it has a different API - InprocTransport is type safe, and doesn't need to (de)serialize.
+   */
   std::unique_ptr<InprocTransport> inproc;
 
+  /**
+   * A map of transport ID to transport.
+   */
   std::unordered_map<std::string, std::unique_ptr<Transport>> transports;
 
+  /**
+   * The publishers we've created.
+   */
   std::unordered_multimap<std::string, std::weak_ptr<PublisherBase>> publishers;
 
-  // TODO: these need to be by topic name, also
-  std::vector<std::weak_ptr<SubscriberBase>> subscribers;
+  /**
+   * The subscribers we've created.
+   *
+   * @todo: it may be wise to make this a unnordered_map<string, vector<subscriber>> instead
+   */
+  std::unordered_multimap<std::string, std::weak_ptr<SubscriberBase>> subscribers;
+
+  /**
+   * For testing only - set to false to disable using known subscribers and force a coordinator connection
+   */
+  bool use_local_publishers_for_subscribers = true;
 };
 
 } // namespace basis::core::transport

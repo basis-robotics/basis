@@ -1,0 +1,45 @@
+syntax= "proto3";
+
+package basis.core.transport.proto;
+
+// Common
+message PublisherInfo {
+    uint64 publisher_id_high = 1;
+    uint64 publisher_id_low = 2;
+    // TODO: type
+    // TODO: this results in a lot of duplication of topic names, but its probably ok - topic names are mostly unique
+    string topic = 3;
+    map<string, string> transport_info = 4;
+}
+
+// TransportManager -> Coordinator
+message TransportManagerInfo {
+    // todo we should consider letting these also be mapped, to simplify things
+    repeated PublisherInfo publishers = 1;
+}
+
+// Coordinator -> TransportManager
+message RepeatedPublisherInfo {
+    repeated PublisherInfo publishers = 1;
+}
+
+/*
+// todo not implemented on either side
+message PublishersDelta {
+    map<string, RepeatedPublisherInfo> added_publishers = 1;
+    map<string, RepeatedPublisherInfo> removed_publishers = 2;
+}
+*/
+message NetworkInfo {
+    map<string, RepeatedPublisherInfo> publishers_by_topic = 1;
+}
+
+/*
+// todo not implemented in Coordinator
+message CoordinatorMessage {
+    oneof PossibleMessages {
+        NetworkInfo network_info = 1;
+        PublishersDelta publishers_delta = 2;
+    }
+}
+*/

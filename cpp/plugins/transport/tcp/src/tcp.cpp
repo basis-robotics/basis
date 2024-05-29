@@ -7,6 +7,7 @@
 namespace basis::plugins::transport {
 void TcpSender::StartThread() {
   spdlog::info("Starting TcpSender thread\n");
+
   send_thread = std::thread([this]() {
     while (!stop_thread) {
       std::vector<std::shared_ptr<const core::transport::MessagePacket>> buffer;
@@ -22,8 +23,6 @@ void TcpSender::StartThread() {
       }
 
       for (auto &message : buffer) {
-        spdlog::trace("sending message... '{}'",
-                      (char *)(message->GetPacket().data() + sizeof(core::transport::MessageHeader)));
         std::span<const std::byte> packet = message->GetPacket();
         if (!Send(packet.data(), packet.size())) {
           spdlog::trace("Stopping send thread due to {}: {}", errno, strerror(errno));
@@ -39,91 +38,10 @@ void TcpSender::StartThread() {
   });
 }
 
-bool TcpSender::Send(const std::byte *data, size_t len) {
-  // TODO: this loop should go on a helper on Socket(?)
-  while (len) {
-    int sent_size = socket.Send(data, len);
-    if (sent_size < 0) {
-      return false;
-    }
-    len -= sent_size;
-    data += sent_size;
-  }
-
-  return true;
-}
-
 void TcpSender::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
   std::lock_guard lock(send_mutex);
   send_buffer.emplace_back(std::move(message));
   send_cv.notify_one();
-}
-
-bool TcpReceiver::Receive(std::byte *buffer, size_t buffer_len, int timeout_s) {
-  while (buffer_len) {
-    int recv_size = socket.RecvInto((char *)buffer, buffer_len, timeout_s);
-    // timeout
-    // todo: error handling
-    if (recv_size == 0) {
-      return false;
-    }
-    if (recv_size < 0) {
-      printf("Error: %i", errno);
-      // should disconnect here
-      return false;
-    }
-    buffer += recv_size;
-    buffer_len -= recv_size;
-  }
-  return true;
-}
-
-std::unique_ptr<const core::transport::MessagePacket> TcpReceiver::ReceiveMessage(int timeout_s) {
-  core::transport::MessageHeader header;
-  if (!Receive((std::byte *)&header, sizeof(header), timeout_s)) {
-    spdlog::error("ReceiveMessage failed to get header due to {} {}", errno, strerror(errno));
-    spdlog::error("Failed to get header");
-    return {};
-  }
-
-  auto message = std::make_unique<core::transport::MessagePacket>(header);
-  std::span<std::byte> payload(message->GetMutablePayload());
-  if (!Receive(payload.data(), payload.size(), timeout_s)) {
-    spdlog::error("ReceiveMessage failed to get payload due to {} {}", errno, strerror(errno));
-
-    spdlog::error("Failed to get payload");
-    return {};
-  }
-
-  return message;
-}
-
-TcpReceiver::ReceiveStatus TcpReceiver::ReceiveMessage(core::transport::IncompleteMessagePacket &incomplete) {
-  spdlog::info("TcpReceiver::ReceiveMessage");
-  int count = 0;
-  do {
-    std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
-
-    // Download some bytes
-    count = socket.RecvInto((char *)buffer.data(), buffer.size());
-    if (count < 0) {
-      if (errno != EAGAIN && errno != EWOULDBLOCK) {
-        spdlog::error("ReceiveMessage failed due to {} {}", errno, strerror(errno));
-        return ReceiveStatus::ERROR;
-      }
-      return ReceiveStatus::DOWNLOADING;
-    }
-    if (count == 0) {
-      return ReceiveStatus::DISCONNECTED;
-    }
-    if (count > 0) {
-      spdlog::info("ReceiveMessage Got {} bytes", count);
-    }
-    // todo: handle EAGAIN
-    // Continue downloading until we've gotten the whole message
-  } while (!incomplete.AdvanceCounter(count));
-
-  return ReceiveStatus::DONE;
 }
 
 nonstd::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> TcpPublisher::Create(uint16_t port) {

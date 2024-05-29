@@ -11,8 +11,12 @@
 #include <basis/core/transport/transport.h>
 
 #include "tcp_subscriber.h"
+#include "tcp_transport_name.h"
+
+class TestTcpTransport;
 
 namespace basis::plugins::transport {
+
 
 /**
  * Used to send serialized data over TCP.
@@ -23,12 +27,14 @@ namespace basis::plugins::transport {
  *
  * @todo Move to using a worker/thread pool - should be relatively easy.
  */
-class TcpSender : public core::transport::TransportSender {
+class TcpSender : public TcpConnection {
 public:
   /**
    * Construct a sender, given an already created+valid socket.
    */
-  TcpSender(core::networking::TcpSocket socket) : socket(std::move(socket)) { StartThread(); }
+  TcpSender(core::networking::TcpSocket socket) :  TcpConnection(std::move(socket)) { 
+    socket.SetNonblocking();
+    StartThread(); }
 
   /**
    * Destruct.
@@ -46,7 +52,7 @@ public:
   }
 
   // TODO: do we want to be able to send high priority packets?
-  virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
+  void SendMessage(std::shared_ptr<core::transport::MessagePacket> message);
 
   void Stop(bool wait = false) {
     {
@@ -62,13 +68,10 @@ public:
   }
 
 protected:
-  friend class TestTcpTransport;
-  virtual bool Send(const std::byte *data, size_t len) override;
+  friend class ::TestTcpTransport;
 
 private:
   void StartThread();
-
-  core::networking::TcpSocket socket;
 
   std::thread send_thread;
   std::condition_variable send_cv;
@@ -87,7 +90,9 @@ public:
 
   uint16_t GetPort();
 
-  virtual std::string GetPublisherInfo() override { return std::to_string(GetPort()); }
+  virtual std::string GetTransportName() override { return TCP_TRANSPORT_NAME; }
+
+  virtual std::string GetConnectionInformation() override { return std::to_string(GetPort()); }
 
   virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
 
@@ -111,18 +116,23 @@ public:
       : core::transport::Transport(thread_pool_manager) {}
 
   virtual std::shared_ptr<basis::core::transport::TransportPublisher>
-  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
-    std::shared_ptr<TcpPublisher> publisher = *TcpPublisher::Create();
+  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) override {
+    return Advertise(topic, type_info, 0);
+  }
+
+  std::shared_ptr<TcpPublisher>
+  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info, uint16_t port) {
+    std::shared_ptr<TcpPublisher> publisher = *TcpPublisher::Create(port);
     {
       std::lock_guard lock(publishers_mutex);
       publishers.emplace(std::string(topic), publisher);
     }
-    return std::shared_ptr<basis::core::transport::TransportPublisher>(std::move(publisher));
-  };
+    return publisher;
+  }
 
   virtual std::shared_ptr<basis::core::transport::TransportSubscriber>
   Subscribe(std::string_view topic, core::transport::TypeErasedSubscriberCallback callback,
-            core::transport::OutputQueue *output_queue, [[maybe_unused]] core::transport::MessageTypeInfo type_info) {
+            core::transport::OutputQueue *output_queue, [[maybe_unused]] core::transport::MessageTypeInfo type_info) override {
     // TODO: specify thread pool name
     // TODO: pass in the thread pool every time
     // TODO: error handling
@@ -135,7 +145,7 @@ public:
     return std::shared_ptr<basis::core::transport::TransportSubscriber>(std::move(subscriber));
   }
 
-  void Update() {
+  virtual void Update() override {
     decltype(publishers)::iterator it;
     {
       std::lock_guard lock(publishers_mutex);
@@ -163,12 +173,11 @@ public:
 
 private:
   std::mutex publishers_mutex;
+  // TODO: this doesn't appear to actually be used - we can probably remove it
   std::unordered_multimap<std::string, std::weak_ptr<TcpPublisher>> publishers;
 
   std::mutex subscribers_mutex;
   std::unordered_multimap<std::string, std::weak_ptr<TcpSubscriber>> subscribers;
-
-  // TODO: store list of known publishers?
 
   /// One epoll instance is shared across the whole TcpTransport - it's an implementation detail of tcp, even if we
   /// could share with other transports

@@ -1,4 +1,3 @@
-
 enable_testing()
 
 add_executable(
@@ -8,7 +7,7 @@ add_executable(
 target_link_libraries(
   test_basic_transport
   GTest::gtest_main
-  basis::core::transport::inproc
+  basis::core::transport
 )
 
 include(GoogleTest REQUIRED)

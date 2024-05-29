@@ -10,6 +10,7 @@ TODO: markdown syntax to link to sections.
 
 - **Unit**: A single program. Can be composed with others in the same process, or run as a single process. Maps to a ROS node, approximately. (This one needs a better name)
 - **Transport**: A way for units (or other software) to coordinate - think shared memory or TCP 
+- **TransportManager**: Responsible for bringing together all enabled transports and creating subscribers/publishers that are agnostic to the transports 
 - **Serializer**: A handler for data written over a transport - think "Protobuf" or "ROS message"
 - **Schema**: A definition of a message type read or written by a Serializer. Has a unique ID associated with it, possibly also including a version.
 - **Message**: A single instance of a message (TODO: self referencing), has a Schema associated with it
@@ -91,8 +92,15 @@ TODO: namespacing, standards
 ## Publisher
 
 Publishers only have controls for internal buffer size.
-
-They may also choose to latch topics.
+Configuration includes:
+- Buffer size 
+    - Unlimited
+    - Queue up to N messages before dropping
+- Drop type:
+    - Newest - Always keep the oldest data in the buffer
+    - Oldest - Always keep the newest data in the buffer
+- Latching
+    - When a new subscriber connects, immediately resend the latest message
 
 ## Subscriber
 
@@ -113,4 +121,4 @@ Used to synchronize multiple topics together.
 
 ## Coordinator
 
-Coordinator is a tricky beast.
+Coordinator is responsible for notifying differing processes (and TransportManagers) of publishers.

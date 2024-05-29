@@ -1,6 +1,6 @@
 project(basis_core)
 
-
+add_subdirectory(coordinator)
 add_subdirectory(networking)
 add_subdirectory(serialization)
 add_subdirectory(threading)
