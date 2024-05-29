@@ -5,7 +5,6 @@
 
 namespace basis::plugins::transport {
 
-// TODO this is dangerous and should probably go away
 std::unique_ptr<const basis::core::transport::MessagePacket> TcpConnection::ReceiveMessage(int timeout_s) {
   core::transport::MessageHeader header;
   if (!Receive((std::byte *)&header, sizeof(header), timeout_s)) {

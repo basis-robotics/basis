@@ -24,6 +24,8 @@ struct AddressPortHash {
  *
  * @todo these could be pooled. If multiple subscribers to the same topic are created, we should only have to recieve
  * once. It's a bit of an early optimization, though.
+ * 
+ * @todo this class is fairly useless, now - we can juts utilize TcpConnection's Socket constructor
  */
 class TcpReceiver : public TcpConnection {
 public:

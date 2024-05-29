@@ -7,6 +7,7 @@
 namespace basis::plugins::transport {
 void TcpSender::StartThread() {
   spdlog::info("Starting TcpSender thread\n");
+
   send_thread = std::thread([this]() {
     while (!stop_thread) {
       std::vector<std::shared_ptr<const core::transport::MessagePacket>> buffer;
@@ -22,8 +23,6 @@ void TcpSender::StartThread() {
       }
 
       for (auto &message : buffer) {
-        spdlog::trace("sending message... '{}'",
-                      (char *)(message->GetPacket().data() + sizeof(core::transport::MessageHeader)));
         std::span<const std::byte> packet = message->GetPacket();
         if (!Send(packet.data(), packet.size())) {
           spdlog::trace("Stopping send thread due to {}: {}", errno, strerror(errno));

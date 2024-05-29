@@ -22,8 +22,9 @@
  *   - per transport configuration (for the well known port)
  *   - duplexed communication between
  *      - how? because of epoll we probably don't want to have two objects sharing a socket.
- *          Likely it would mean combining sender and receiver, and letting epoll have differing callbacks for getting
+ *          - Likely it would mean combining sender and receiver, and letting epoll have differing callbacks for getting
  * and sending data.
+ *          - this work has been started
  *      - this has an additional complication - the send and recv side are different types
  *   - this is really just an RPC system
  *
@@ -60,6 +61,7 @@ public:
     // todo: maybe return the listen socket error type?
     auto maybe_listen_socket = networking::TcpListenSocket::Create(port);
     if (!maybe_listen_socket) {
+        spdlog::error("Coordinator: Unable to create listen socket on port {}");
       return {};
     }
 
