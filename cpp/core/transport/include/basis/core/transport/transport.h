@@ -85,7 +85,7 @@ public:
                                                          OutputQueue *output_queue, MessageTypeInfo type_info) = 0;
 
   /**
-   * Implementations should call this function at a regular rate.
+   * Implementations (ie TransportManager) should call this function at a regular rate.
    * @todo: do we want to keep this or enforce each transport taking care of its own update calls?
    */
   virtual void Update() {}
@@ -95,7 +95,11 @@ protected:
   std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager;
 };
 
-// todo: break this into a separate library - transports don't need to know about it
+/**
+ * Class responsible for creating publishers/subscribers and accumulating data to send to the Coordinator
+ * 
+ * @todo: break this into a separate file/library - transports don't need to know about it
+ */
 class TransportManager {
 public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
@@ -154,14 +158,13 @@ public:
     auto subscriber = std::make_shared<Subscriber<T_MSG>>(topic, message_type, std::move(tps), inproc_subscriber);
     subscribers.emplace(std::string(topic), subscriber);
 
-    if(use_local_publishers_for_subscribers) {
+    if (use_local_publishers_for_subscribers) {
       subscriber->HandlePublisherInfo(GetLastPublisherInfo());
     }
     subscriber->HandlePublisherInfo(last_network_publish_info[std::string(topic)]);
 
     return subscriber;
   }
-
 
   /**
    *
@@ -172,6 +175,9 @@ public:
     transports.emplace(std::string(transport_name), std::move(transport));
   }
 
+  /**
+   * Updates all transports and cleans up old publishers.
+   */
   void Update() {
     for (auto &[_, transport] : transports) {
       transport->Update();
@@ -180,47 +186,41 @@ public:
     // Generate updated topic info and clean up old publishers
     std::vector<PublisherInfo> new_publisher_info;
 
-    for (auto it = publishers.cbegin(); it != publishers.cend();)
-    {
-      if(auto publisher = it->second.lock())
-      {
+    for (auto it = publishers.cbegin(); it != publishers.cend();) {
+      if (auto publisher = it->second.lock()) {
         new_publisher_info.emplace_back(publisher->GetPublisherInfo());
         ++it;
-      }
-      else
-      {
+      } else {
         it = publishers.erase(it);
       }
     }
 
     last_owned_publish_info = std::move(new_publisher_info);
-
   }
 
-  const std::vector<PublisherInfo>& GetLastPublisherInfo() { return last_owned_publish_info; }
+  const std::vector<PublisherInfo> &GetLastPublisherInfo() { return last_owned_publish_info; }
 
-   
-    basis::core::transport::proto::TransportManagerInfo GetTransportManagerInfo() {
-      /// @todo arena allocate
-      basis::core::transport::proto::TransportManagerInfo sent_info;
-      for(auto& pub_info : last_owned_publish_info) {
-        *sent_info.add_publishers() = pub_info.ToProto();
-      }
-      return sent_info;
+  basis::core::transport::proto::TransportManagerInfo GetTransportManagerInfo() {
+    /// @todo arena allocate
+    basis::core::transport::proto::TransportManagerInfo sent_info;
+    for (auto &pub_info : last_owned_publish_info) {
+      *sent_info.add_publishers() = pub_info.ToProto();
     }
+    return sent_info;
+  }
 
-  void HandleNetworkInfo(const proto::NetworkInfo& network_info) {
+  void HandleNetworkInfo(const proto::NetworkInfo &network_info) {
     last_network_publish_info.clear();
 
-    for(auto& [topic, publisher_infos_msg] : network_info.publishers_by_topic()) {
-      std::vector<PublisherInfo>& info = last_network_publish_info[topic];
+    for (auto &[topic, publisher_infos_msg] : network_info.publishers_by_topic()) {
+      std::vector<PublisherInfo> &info = last_network_publish_info[topic];
       info.reserve(publisher_infos_msg.publishers_size());
-      for(auto& publisher_info : publisher_infos_msg.publishers()) {
+      for (auto &publisher_info : publisher_infos_msg.publishers()) {
         info.emplace_back(PublisherInfo::FromProto(publisher_info));
       }
-      for(auto [it, end] = subscribers.equal_range(topic); it != end; it++) { 
+      for (auto [it, end] = subscribers.equal_range(topic); it != end; it++) {
         auto subscriber = it->second.lock();
-        if(subscriber) {
+        if (subscriber) {
           subscriber->HandlePublisherInfo(info);
         }
       }
@@ -237,7 +237,7 @@ protected:
   std::vector<PublisherInfo> last_owned_publish_info;
 
   std::unordered_map<std::string, std::vector<PublisherInfo>> last_network_publish_info;
-  
+
   std::unique_ptr<InprocTransport> inproc;
 
   std::unordered_map<std::string, std::unique_ptr<Transport>> transports;
@@ -246,7 +246,7 @@ protected:
 
   /**
    * The subscribers.
-   * 
+   *
    * @todo: it may be wise to make this a unnordered_map<string, vector<subscriber>> instead
    */
   std::unordered_multimap<std::string, std::weak_ptr<SubscriberBase>> subscribers;
