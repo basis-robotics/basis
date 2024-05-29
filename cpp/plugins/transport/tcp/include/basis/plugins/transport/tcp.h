@@ -33,7 +33,6 @@ public:
    * Construct a sender, given an already created+valid socket.
    */
   TcpSender(core::networking::TcpSocket socket) :  TcpConnection(std::move(socket)) { 
-    socket.SetNonblocking();
     StartThread(); }
 
   /**

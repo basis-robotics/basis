@@ -26,13 +26,14 @@ std::unique_ptr<const basis::core::transport::MessagePacket> TcpConnection::Rece
 }
 
 TcpConnection::ReceiveStatus TcpConnection::ReceiveMessage(core::transport::IncompleteMessagePacket &incomplete) {
-  spdlog::info("TcpConnection::ReceiveMessage");
+  spdlog::trace("TcpConnection::ReceiveMessage");
   int count = 0;
   do {
     std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
 
     // Download some bytes
     count = socket.RecvInto((char *)buffer.data(), buffer.size());
+
     if (count < 0) {
       if (errno != EAGAIN && errno != EWOULDBLOCK) {
         spdlog::error("ReceiveMessage failed due to {} {}", errno, strerror(errno));
@@ -44,7 +45,7 @@ TcpConnection::ReceiveStatus TcpConnection::ReceiveMessage(core::transport::Inco
       return ReceiveStatus::DISCONNECTED;
     }
     if (count > 0) {
-      spdlog::info("ReceiveMessage Got {} bytes", count);
+      spdlog::debug("ReceiveMessage Got {} bytes", count);
     }
     // todo: handle EAGAIN
     // Continue downloading until we've gotten the whole message

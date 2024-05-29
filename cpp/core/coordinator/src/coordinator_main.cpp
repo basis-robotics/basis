@@ -12,7 +12,7 @@ int main() {
     std::optional<Coordinator> coordinator = Coordinator::Create();
     if(!coordinator) {
         spdlog::error("Unable to create coordinator.");
-        return -1;
+        return 1;
     }
     auto next_sleep = std::chrono::steady_clock::now();
     while(true) {

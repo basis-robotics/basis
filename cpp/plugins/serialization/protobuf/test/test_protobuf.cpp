@@ -1,7 +1,10 @@
 #include <google/protobuf/util/message_differencer.h>
 #include <gtest/gtest.h>
 
-#include "test.pb.h"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#include <test.pb.h>
+#pragma clang diagnostic pop
 
 #include <basis/plugins/serialization/protobuf.h>
 

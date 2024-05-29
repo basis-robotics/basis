@@ -43,7 +43,7 @@ public:
   int GetFd() const { return fd; }
 
 protected:
-  Socket(int fd = -1) : fd(fd) {}
+  Socket(int fd = -1);
   Socket(const Socket &) = delete;
   Socket &operator=(const Socket &) = delete;
   Socket(Socket &&other) {

@@ -18,7 +18,9 @@ class TcpConnection {
 protected:
     TcpConnection() {}
 
-    explicit TcpConnection(basis::core::networking::TcpSocket socket) : socket(std::move(socket)) {}
+    explicit TcpConnection(basis::core::networking::TcpSocket socket) : socket(std::move(socket)) {
+      this->socket.SetNonblocking();
+    }
 public:
   /**
    * Checks if this socket is likely connection. The state is 

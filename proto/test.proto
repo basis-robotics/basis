@@ -11,3 +11,7 @@ message TestProtoStruct {
   float bar = 2;
   string baz = 3;
 };
+
+message TimeTest {
+  double time = 1;
+}

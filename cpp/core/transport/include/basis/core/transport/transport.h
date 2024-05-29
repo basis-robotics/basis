@@ -105,7 +105,7 @@ public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
   // todo: deducing a raw type should be an error unless requested
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-  std::shared_ptr<Publisher<T_MSG>> Advertise(std::string_view topic,
+  [[nodiscard]] std::shared_ptr<Publisher<T_MSG>> Advertise(std::string_view topic,
                                               MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
@@ -127,7 +127,7 @@ public:
   }
 
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-  std::shared_ptr<Subscriber<T_MSG>> Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
+  [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>> Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
                                                core::transport::OutputQueue *output_queue = nullptr,
                                                MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
