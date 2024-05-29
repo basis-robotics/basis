@@ -1,3 +1,9 @@
+/**
+ * @file basis_example.cpp
+ * 
+ * A living example of how to use basis, that should have any new features added to it as they are implemented.
+ * 
+ */
 #include <spdlog/spdlog.h>
 
 #include <basis/core/coordinator_connector.h>
@@ -7,7 +13,6 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   auto connector = basis::core::transport::CoordinatorConnector::Create();
-
 
   auto thread_pool_manager = std::make_shared<basis::core::transport::ThreadPoolManager>();
 

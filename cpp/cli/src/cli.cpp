@@ -1,3 +1,9 @@
+/**
+ * @file cli.cpp
+ * 
+ * The main command line utility for basis. Used for querying the robot. See `basis --help` for more information.
+ * 
+ */
 #include <argparse/argparse.hpp>
 #include <spdlog/spdlog.h>
 
