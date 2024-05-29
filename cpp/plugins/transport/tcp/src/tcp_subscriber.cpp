@@ -58,7 +58,7 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
 
   auto on_epoll_callback = [this](int fd, std::unique_lock<std::mutex> lock, TcpReceiver *receiver_ptr,
                                   std::shared_ptr<core::transport::IncompleteMessagePacket> incomplete) {
-    spdlog::info("Queuing work for {}", fd);
+    spdlog::debug("Queuing work for socket {}", fd);
 
     worker_pool->enqueue([this, fd, incomplete = std::move(incomplete), receiver_ptr, lock = std::move(lock)] {
       // It's an error to actually call this with multiple threads.
