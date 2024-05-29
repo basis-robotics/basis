@@ -19,17 +19,19 @@ void PrintTopic(std::string_view topic, basis::core::transport::CoordinatorConne
   transport_manager.RegisterTransport("net_tcp",
                                       std::make_unique<basis::plugins::transport::TcpTransport>(thread_pool_manager));
 
-  // This looks dangerous to take as a reference but is actually safe - the subscriber destructor does all the right
-  // things
+  // This looks dangerous to take as a reference but is actually safe - 
+  // the subscriber destructor will wait until the callback exits before the atomic goes out of scope
   std::atomic<size_t> num_messages;
   auto time_test_sub = transport_manager.SubscribeRaw(topic,
                                                       [&]([[maybe_unused]] auto msg) {
                                                         num_messages++;
-                                                        spdlog::info("Got message {}", (size_t)num_messages);
+                                                        spdlog::info("Got message number {} of size {}", (size_t)num_messages, msg->GetPayload().size());
+                                                        spdlog::info("print functionality requires schema support over network");
                                                       },
                                                       nullptr, {});
 
   while (!max_num_messages || max_num_messages > num_messages) {
+    // todo: move this out into "unit"
     connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
     connector->Update();
 
