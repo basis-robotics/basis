@@ -18,18 +18,17 @@ void PrintTopic(std::string_view topic, basis::core::transport::CoordinatorConne
       std::make_unique<basis::core::transport::InprocTransport>());
   transport_manager.RegisterTransport("net_tcp",
                                       std::make_unique<basis::plugins::transport::TcpTransport>(thread_pool_manager));
-  
-  // This looks dangerous to take as a reference but is actually safe - the subscriber destructor does all the right things
-  std::atomic<size_t> num_messages;
-  auto time_test_sub =
-      transport_manager.SubscribeRaw(topic,
-                                     [&]([[maybe_unused]] auto msg) {
-                                       num_messages++;
-                                       spdlog::info("Got message {}", (size_t)num_messages);
-                                     },
-                                     nullptr, {});
 
-  
+  // This looks dangerous to take as a reference but is actually safe - the subscriber destructor does all the right
+  // things
+  std::atomic<size_t> num_messages;
+  auto time_test_sub = transport_manager.SubscribeRaw(topic,
+                                                      [&]([[maybe_unused]] auto msg) {
+                                                        num_messages++;
+                                                        spdlog::info("Got message {}", (size_t)num_messages);
+                                                      },
+                                                      nullptr, {});
+
   while (!max_num_messages || max_num_messages > num_messages) {
     connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
     connector->Update();
@@ -39,7 +38,6 @@ void PrintTopic(std::string_view topic, basis::core::transport::CoordinatorConne
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
-
 }
 
 int main(int argc, char *argv[]) {
@@ -125,7 +123,6 @@ int main(int argc, char *argv[]) {
     } else if (topic_command.is_subcommand_used("print")) {
       auto topic = topic_print_command.get("topic");
       PrintTopic(topic, connection.get(), topic_print_command.present<size_t>("-n"));
-      
     }
   }
 
