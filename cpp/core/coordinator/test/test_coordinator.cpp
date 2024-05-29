@@ -2,17 +2,16 @@
 #include <gtest/gtest.h>
 
 struct TestTransportManager : public basis::core::transport::TransportManager {
-  TestTransportManager():TransportManager(nullptr) {
+  TestTransportManager() : TransportManager(nullptr) {
     // Ensure we actually test the coordinator and not just transport manager
     // todo: we can just make two transport managers
     use_local_publishers_for_subscribers = false;
   }
 
-    /**
-     * Clear local publisher info, ensuring we only pull data from the coordinator
-     */
-  void ClearLocalPublisherInfo() {
-  }
+  /**
+   * Clear local publisher info, ensuring we only pull data from the coordinator
+   */
+  void ClearLocalPublisherInfo() {}
 };
 
 TEST(TestCoordinator, BasicTest) {
@@ -87,7 +86,7 @@ TEST(TestCoordinator, TestPubSubOrder) {
     {
       // Let the connector pull the data back from coordinator
       connector->Update();
-      // 
+      //
       if (connector->last_network_info) {
         transport_manager.HandleNetworkInfo(*connector->last_network_info);
       }
@@ -97,24 +96,32 @@ TEST(TestCoordinator, TestPubSubOrder) {
   };
 
   update(0);
+  {
+    std::shared_ptr<Subscriber<TestRawStruct>> prev_sub =
+        transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
 
-  std::shared_ptr<Subscriber<TestRawStruct>> prev_sub =
-      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
+    update(0);
+    auto test_publisher =
+        transport_manager.Advertise<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct");
 
+    update(1);
+
+    ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+
+    {
+      std::shared_ptr<Subscriber<TestRawStruct>> after_sub =
+          transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct",
+                                                                                                callback);
+      update(1);
+      ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
+      auto send_msg = std::make_shared<const TestRawStruct>();
+      test_publisher->Publish(send_msg);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      ASSERT_EQ(callback_times, 2);
+    }
+    update(1);
+  }
+
+  // Update and check that we forgot about the publisher
   update(0);
-  auto test_publisher =
-      transport_manager.Advertise<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct");
-
-  update(1);
-
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
-
-  std::shared_ptr<Subscriber<TestRawStruct>> after_sub =
-      transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
-  update(1);
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
-  auto send_msg = std::make_shared<const TestRawStruct>();
-  test_publisher->Publish(send_msg);
-
-  
 }
