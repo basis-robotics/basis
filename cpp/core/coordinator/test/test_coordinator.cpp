@@ -1,5 +1,6 @@
 #include <basis/core/coordinator.h>
 #include <basis/core/coordinator_connector.h>
+#include <basis/core/transport/transport_manager.h>
 
 #include <gtest/gtest.h>
 
