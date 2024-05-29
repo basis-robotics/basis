@@ -7,9 +7,9 @@ int main(int argc, char *argv[]) {
   argparse::ArgumentParser parser("basis");
 
   parser.add_argument("--port")
-  .help("The port that the basis coordinator is listening at.")
-    .scan<'i', uint16_t>()
-    .default_value(BASIS_PUBLISH_INFO_PORT);
+      .help("The port that the basis coordinator is listening at.")
+      .scan<'i', uint16_t>()
+      .default_value(BASIS_PUBLISH_INFO_PORT);
 
   // basis topic
   argparse::ArgumentParser topic_command("topic");
@@ -39,17 +39,28 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-auto port = parser.get<uint16_t>("--port");
+  auto port = parser.get<uint16_t>("--port");
   auto connection = basis::core::transport::CoordinatorConnector::Create(port);
-  if(!connection) {
+  if (!connection) {
     spdlog::error("Unable to connect to the basis coordinator at port {}", port);
     return 1;
   }
-
-
-  if(parser.is_subcommand_used("topic")) {
-    if(topic_command.is_subcommand_used("ls")) {
-    //    auto input = program.get<int>("square");
+  auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (!connection->GetLastNetworkInfo() && std::chrono::steady_clock::now() < end) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    connection->Update();
+  }
+  auto *info = connection->GetLastNetworkInfo();
+  if (!info) {
+    spdlog::error("Timed out waiting for network info from coordinator");
+    return 1;
+  }
+  if (parser.is_subcommand_used("topic")) {
+    if (topic_command.is_subcommand_used("ls")) {
+      std::cout << "Topics:" << std::endl;
+      for (auto &[topic, pubs] : info->publishers_by_topic()) {
+        std::cout << "\t" << topic << " (" << pubs.publishers().size() << ")" << std::endl;
+      }
     }
   }
 

@@ -4,7 +4,7 @@ std::optional<Coordinator> Coordinator::Create(uint16_t port) {
   // todo: maybe return the listen socket error type?
   auto maybe_listen_socket = networking::TcpListenSocket::Create(port);
   if (!maybe_listen_socket) {
-    spdlog::error("Coordinator: Unable to create listen socket on port {}");
+    spdlog::error("Coordinator: Unable to create listen socket on port {}", port);
     return {};
   }
 
@@ -37,7 +37,7 @@ void Coordinator::Update() {
     case plugins::transport::TcpConnection::ReceiveStatus::DONE: {
       auto complete = client.in_progress_packet.GetCompletedMessage();
       client.info = basis::DeserializeFromSpan<proto::TransportManagerInfo>(complete->GetPayload());
-      spdlog::info("Got completed message {}", client.info->DebugString());
+      spdlog::debug("Got completed message {}", client.info->DebugString());
       [[fallthrough]];
     }
     case plugins::transport::TcpConnection::ReceiveStatus::DOWNLOADING: {

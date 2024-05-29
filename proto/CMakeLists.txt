@@ -7,7 +7,7 @@ target_link_libraries(basis_proto protobuf::libprotobuf)
 
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 make_directory(${GENERATED_DIR})
-target_include_directories(basis_proto PUBLIC "$<BUILD_INTERFACE:${GENERATED_DIR}>")
+target_include_directories(basis_proto SYSTEM PUBLIC "$<BUILD_INTERFACE:${GENERATED_DIR}>")
 
 protobuf_generate(
  LANGUAGE cpp

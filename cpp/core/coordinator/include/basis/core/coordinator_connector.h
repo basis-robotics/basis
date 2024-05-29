@@ -13,6 +13,8 @@
 
 #include "coordinator_default_port.h"
 
+#include <iostream>
+
 namespace basis::core::transport {
 
 /**
@@ -46,7 +48,7 @@ public:
     case plugins::transport::TcpConnection::ReceiveStatus::DONE: {
       auto complete = in_progress_packet.GetCompletedMessage();
       last_network_info = basis::DeserializeFromSpan<proto::NetworkInfo>(complete->GetPayload());
-      spdlog::info("Got network info message {}", last_network_info->DebugString());
+      spdlog::debug("Got network info message {}", last_network_info->DebugString());
 
       // convert to proto::PublisherInfo
       // fallthrough

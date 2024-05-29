@@ -1,10 +1,10 @@
-add_executable(
-  basis
-  src/cli.cpp
-)
 
+add_executable(
+  basis_example
+  src/basis_example.cpp
+)
 target_link_libraries(
-  basis
+  basis_example
   basis::plugins::transport::tcp
   basis::plugins::serialization::protobuf
   basis::core::coordinator

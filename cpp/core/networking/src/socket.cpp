@@ -14,6 +14,8 @@ namespace basis {
 namespace core {
 namespace networking {
 
+Socket::Socket(int fd) : fd(fd) {}
+
 Socket::~Socket() { Close(); }
 
 void Socket::Close() { close(fd); }
@@ -21,7 +23,7 @@ int Socket::Send(const std::byte *data, size_t len) {
   if (fd == -1) {
     spdlog::critical("Trying to send() on an invalid socket");
   }
-  return send(fd, data, len, 0);
+  return send(fd, data, len, MSG_NOSIGNAL);
 }
 
 int Socket::RecvInto(char *buffer, size_t buffer_len, bool peek) {
@@ -38,7 +40,7 @@ std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
   tv.tv_sec = timeout_s;
   tv.tv_usec = timeout_ns;
 
-  int select_results = select(fd + 1, /*read*/&fds, /*write*/(fd_set *)0, /*exceptional*/(fd_set *)0, &tv);
+  int select_results = select(fd + 1, /*read*/ &fds, /*write*/ (fd_set *)0, /*exceptional*/ (fd_set *)0, &tv);
   if (select_results == 0) {
     // TODO: double check errno values in timeout
     return Error{ErrorSource::TIMEOUT, 0};

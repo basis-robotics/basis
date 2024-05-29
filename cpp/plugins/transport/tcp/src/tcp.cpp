@@ -6,7 +6,7 @@
 
 namespace basis::plugins::transport {
 void TcpSender::StartThread() {
-  spdlog::info("Starting TcpSender thread\n");
+  spdlog::trace("Starting TcpSender thread");
 
   send_thread = std::thread([this]() {
     while (!stop_thread) {
