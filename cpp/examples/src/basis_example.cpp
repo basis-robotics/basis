@@ -13,7 +13,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   transport_manager.RegisterTransport("net_tcp",
                                       std::make_unique<basis::plugins::transport::TcpTransport>(thread_pool_manager));
 
-  // auto publish_proto_
+  // TODO: add ROS example
   auto time_test_pub = transport_manager.Advertise<TimeTest>("/time_test");
 
   while (true) {
@@ -29,6 +29,13 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    auto current_time = std::chrono::system_clock::now();
+    auto duration_in_seconds = std::chrono::duration<double>(current_time.time_since_epoch());
+    double num_seconds = duration_in_seconds.count();
+
+    auto msg = std::make_shared<TimeTest>();
+    msg->set_time(num_seconds);
+    time_test_pub->Publish(msg);
   }
   return 0;
 }

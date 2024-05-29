@@ -57,10 +57,32 @@ int main(int argc, char *argv[]) {
   }
   if (parser.is_subcommand_used("topic")) {
     if (topic_command.is_subcommand_used("ls")) {
-      std::cout << "Topics:" << std::endl;
+      std::cout << "topics:" << std::endl;
       for (auto &[topic, pubs] : info->publishers_by_topic()) {
-        std::cout << "\t" << topic << " (" << pubs.publishers().size() << ")" << std::endl;
+        std::cout << "  " << topic << " (" << pubs.publishers().size() << ")" << std::endl;
       }
+    } else if (topic_command.is_subcommand_used("info")) {
+      auto topic = topic_info_command.get("topic");
+
+      auto it = info->publishers_by_topic().find(topic);
+      if (it == info->publishers_by_topic().end()) {
+        std::cout << "No publishers for topic " << topic << std::endl;
+        return 1;
+      }
+      std::cout << "topic: " << topic << std::endl;
+      std::cout << "type: <TODO>" << std::endl;
+      std::cout << std::endl;
+      for (const auto &pub : (it->second.publishers())) {
+        std::cout << "id: " << std::hex << pub.publisher_id_high() << pub.publisher_id_low() << std::dec << std::endl;
+        std::cout << "  endpoints: " << std::endl;
+        for(const auto& [transport, endpoint] : pub.transport_info()) {
+            std::cout << "    " << transport << ": " << endpoint << std::endl;
+        }
+        std::cout << std::endl;
+      }
+      // for (auto &[topic, info] : pubs) {
+      //  std::cout << "\t" << topic << " (" << pubs.publishers().size() << ")" << std::endl;
+      //}
     }
   }
 
