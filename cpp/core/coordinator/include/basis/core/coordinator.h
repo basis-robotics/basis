@@ -3,7 +3,10 @@
 #include <cstdint>
 #include <list>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include <transport.pb.h>
+#pragma clang diagnostic pop
 
 #include <basis/plugins/serialization/protobuf.h>
 #include <basis/plugins/transport/tcp.h>

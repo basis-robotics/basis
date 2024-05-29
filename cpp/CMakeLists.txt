@@ -30,11 +30,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(expected-lite)
 
+set(ARGPARSE_BUILD_TESTS OFF)
+FetchContent_Declare(
+  argparse
+  GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+  GIT_TAG v3.0
+)
+FetchContent_MakeAvailable(argparse)
 
 # Enable warnings after we've included dependencies
 add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 
 add_subdirectory(core)
+add_subdirectory(cli)
 
 add_subdirectory(plugins/serialization/protobuf)
 if(BASIS_ENABLE_ROS)
