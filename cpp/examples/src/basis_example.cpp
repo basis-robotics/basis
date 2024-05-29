@@ -8,8 +8,10 @@
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   auto connector = basis::core::transport::CoordinatorConnector::Create();
 
+
   auto thread_pool_manager = std::make_shared<basis::core::transport::ThreadPoolManager>();
-  basis::core::transport::TransportManager transport_manager;
+
+  basis::core::transport::TransportManager transport_manager(std::make_unique<basis::core::transport::InprocTransport>());
   transport_manager.RegisterTransport("net_tcp",
                                       std::make_unique<basis::plugins::transport::TcpTransport>(thread_pool_manager));
 

@@ -39,12 +39,14 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  auto port = parser.get<uint16_t>("--port");
+  const uint16_t port = parser.get<uint16_t>("--port");
+
   auto connection = basis::core::transport::CoordinatorConnector::Create(port);
   if (!connection) {
     spdlog::error("Unable to connect to the basis coordinator at port {}", port);
     return 1;
   }
+  
   auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
   while (!connection->GetLastNetworkInfo() && std::chrono::steady_clock::now() < end) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
