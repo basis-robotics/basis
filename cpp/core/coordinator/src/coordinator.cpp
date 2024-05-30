@@ -50,6 +50,7 @@ void Coordinator::Update() {
           for (auto &schema : msg->schemas().schemas()) {
             std::string key = schema.serializer() + ":" + schema.name();
             if (!known_schemas.contains(key)) {
+              spdlog::info("Adding schema {}", key);
               known_schemas.emplace(std::move(key), std::move(schema));
             }
           }
@@ -80,7 +81,6 @@ void Coordinator::Update() {
           if (schemas.size()) {
             proto::CoordinatorMessage schema_message;
             *schema_message.mutable_schemas()->mutable_schemas() = {schemas.begin(), schemas.end()};
-            spdlog::error("Got it!{}", schema_message.DebugString());
 
             client.SendMessage(SerializeMessagePacket(schema_message));
           }

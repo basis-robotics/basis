@@ -31,6 +31,8 @@ namespace plugins::serialization {
  */
 class ProtobufSerializer : public core::serialization::Serializer {
 public:
+  static constexpr char SERIALIZER_ID[] = "protobuf";
+
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> span) {
     return message.SerializeToArray(span.data(), span.size());
@@ -99,6 +101,7 @@ public:
   template <typename T_MSG> static basis::core::serialization::MessageSchema DumpSchema() {
     const google::protobuf::Descriptor *descriptor = T_MSG::descriptor();
     basis::core::serialization::MessageSchema schema;
+    schema.serializer = SERIALIZER_ID;
     schema.name = descriptor->full_name();
     auto msg = fdSet(descriptor);
     // schema.schema = msg.SerializeAsString();

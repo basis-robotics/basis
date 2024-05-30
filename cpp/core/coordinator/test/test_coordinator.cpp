@@ -19,7 +19,7 @@ struct TestTransportManager : public basis::core::transport::TransportManager {
 };
 
 TEST(TestCoordinator, BasicTest) {
-    spdlog::cfg::load_env_levels();
+  spdlog::cfg::load_env_levels();
 
   basis::core::transport::Coordinator coordinator = *basis::core::transport::Coordinator::Create();
 
@@ -52,7 +52,8 @@ TEST(TestCoordinator, BasicTest) {
 
   ASSERT_EQ(coordinator.GetKnownSchemas().size(), 2);
 
-  std::array<std::string, 3> invalids = {"proto:foo", "proto:bar", "proto:baz"};
+  std::string proto = Serializer::SERIALIZER_ID;
+  std::array<std::string, 3> invalids = {proto + ":foo", proto + ":bar", proto + ":baz"};
 
   connector->RequestSchemas(invalids);
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -60,18 +61,21 @@ TEST(TestCoordinator, BasicTest) {
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
   connector->Update();
 
-
-   
-
-    ASSERT_EQ(connector->errors_from_coordinator.size(), 1);
-
-/*
   ASSERT_EQ(connector->errors_from_coordinator.size(), 1);
 
-  std::string request = "proto:" + schemas[0].name;
+  connector->errors_from_coordinator.clear();
+
+  std::string request = proto + ":" + schemas[0].name;
   connector->RequestSchemas({&request, 1});
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  coordinator.Update();*/
+  coordinator.Update();
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+  connector->Update();
+  spdlog::error("{}", connector->errors_from_coordinator[0]);
+  ASSERT_EQ(connector->errors_from_coordinator.size(), 0);
+
+  ASSERT_NE(connector->TryGetSchema(request), nullptr);
 }
 
 struct TestRawStruct {
