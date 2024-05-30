@@ -84,11 +84,10 @@ public:
       case plugins::transport::TcpConnection::ReceiveStatus::DONE: {
         auto complete = in_progress_packet.GetCompletedMessage();
         auto message = basis::DeserializeFromSpan<proto::CoordinatorMessage>(complete->GetPayload());
-        spdlog::error(" message from coordinator! {}", message->DebugString());
 
         switch (message->PossibleMessages_case()) {
         case proto::CoordinatorMessage::PossibleMessagesCase::kError: {
-          spdlog::error("Error: {}", message->error());
+          spdlog::debug("Error: {}", message->error());
           errors_from_coordinator.push_back(std::move(message->error()));
           break;
         }

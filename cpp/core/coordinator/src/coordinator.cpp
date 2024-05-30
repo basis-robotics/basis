@@ -64,19 +64,17 @@ void Coordinator::Update() {
               schemas.push_back(it->second);
             }
           }
-          
+
           if (errors.size()) {
             auto comma_fold = [](std::string a, std::string b) { return std::move(a) + ", " + b; };
 
             std::string s = std::accumulate(std::next(errors.begin()), errors.end(),
-                                            "?!Missing schemas: " + errors[0], // start with first element
+                                            "Missing schemas: " + errors[0], // start with first element
                                             comma_fold);
             proto::CoordinatorMessage errors_message;
 
             errors_message.set_error(s);
-            spdlog::error("{} !", errors_message.DebugString());
             auto shared_message = SerializeMessagePacket(errors_message);
-            spdlog::error("error size {}", shared_message->GetPacket().size());
             client.SendMessage(shared_message);
           }
           if (schemas.size()) {
