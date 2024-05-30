@@ -87,7 +87,7 @@ public:
     return {};
   }
 
-  static std::optional<std::string> DumpMessageJSON(std::span<const std::byte> span, std::string_view schema_name) {
+  static std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span, std::string_view schema_name) {
     // TODO: we could likely use TypeResolver and BinaryToJsonStream here
     // but neither DebugString nor TextFormat have implementations  
     std::unique_ptr<google::protobuf::Message> message = LoadMessageFromSchema(span, schema_name);

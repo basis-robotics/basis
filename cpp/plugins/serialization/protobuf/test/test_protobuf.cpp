@@ -68,7 +68,7 @@ TEST(TestProto, Schema) {
   ASSERT_NE(read_message, std::nullopt);
   ASSERT_EQ(read_message, written_message.DebugString());
 
-  std::optional<std::string> json_str =  ProtobufSerializer::DumpMessageJSON({bytes.get(), size}, schema.name);
+  std::optional<std::string> json_str =  ProtobufSerializer::DumpMessageJSONString({bytes.get(), size}, schema.name);
   ASSERT_NE(json_str, std::nullopt);
   spdlog::info("Json str: {}", *json_str);
   

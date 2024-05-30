@@ -13,8 +13,13 @@
 // todo: load via plugin
 #include <basis/plugins/serialization/protobuf.h>
 
-std::unordered_map<std::string, std::function<std::optional<std::string>(std::span<const std::byte>, std::string_view)>>
+// todo: one map :)
+using StringDumpCallback = std::function<std::optional<std::string>(std::span<const std::byte>, std::string_view)>;
+std::unordered_map<std::string, StringDumpCallback>
     string_dumpers = {{"protobuf", basis::plugins::serialization::ProtobufSerializer::DumpMessageString}};
+
+std::unordered_map<std::string, StringDumpCallback>
+    json_dumpers = {{"protobuf", basis::plugins::serialization::ProtobufSerializer::DumpMessageJSONString}};
 
 std::unordered_map<std::string, std::function<bool(std::string_view, std::string_view)>>
     schema_loaders = {{"protobuf", basis::plugins::serialization::ProtobufSerializer::LoadSchema}};
@@ -48,7 +53,7 @@ FetchSchema(const std::string &schema_id, basis::core::transport::CoordinatorCon
 }
 
 void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorConnector *connector,
-                std::optional<size_t> max_num_messages) {
+                std::optional<size_t> max_num_messages, bool json) {
 
   auto *info = connector->GetLastNetworkInfo();
 
@@ -64,8 +69,11 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
     return;
   }
 
-  auto to_string_it = string_dumpers.find(maybe_schema->serializer());
-  if(to_string_it == string_dumpers.end()) {
+  StringDumpCallback to_string;
+  auto* callback_map = json ? &json_dumpers : &string_dumpers;
+
+  auto to_string_it = callback_map->find(maybe_schema->serializer());
+  if(to_string_it == callback_map->end()) {
     // Note: theoretically we could do this string dumping on the publisher side, instead
     std::cerr << "Unknown serializer " << maybe_schema->serializer() << " please recompile basis_cli with support" << std::endl;
     return;
@@ -140,7 +148,7 @@ int main(int argc, char *argv[]) {
   topic_print_command.add_description("print a message on the topic");
   topic_print_command.add_argument("topic");
   topic_print_command.add_argument("-n").scan<'i', size_t>().help("number of messages to print (default: infinite)");
-  topic_print_command.add_argument("--json", "-j").help("dump this message as JSON");
+  topic_print_command.add_argument("--json", "-j").help("dump this message as JSON").flag();
   topic_command.add_subparser(topic_print_command);
 
   parser.add_subparser(topic_command);
@@ -213,7 +221,7 @@ int main(int argc, char *argv[]) {
       }
     } else if (topic_command.is_subcommand_used("print")) {
       auto topic = topic_print_command.get("topic");
-      PrintTopic(topic, connection.get(), topic_print_command.present<size_t>("-n"));
+      PrintTopic(topic, connection.get(), topic_print_command.present<size_t>("-n"), topic_print_command["--json"] == true);
     }
   } else if (parser.is_subcommand_used("schema")) {
     auto topic = schema_print_command.get("schema");
