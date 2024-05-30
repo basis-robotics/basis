@@ -12,6 +12,13 @@
 
 namespace basis {
 namespace core::serialization {
+
+struct MessageSchema {
+  std::string name;
+  std::string schema;
+  std::string hash_id;
+};
+
 /**
  * Base interface, used by all serializers. Will later contain ToJSON and other utilities.
  *

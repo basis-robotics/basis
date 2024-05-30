@@ -8,6 +8,7 @@ target_link_libraries(
   test_protobuf
   GTest::gtest_main
   basis::plugins::serialization::protobuf basis_proto
+  spdlog
 )
 
 include(GoogleTest REQUIRED)

@@ -8,6 +8,7 @@
 
 #include <basis/plugins/serialization/protobuf.h>
 
+#include <spdlog/spdlog.h>
 /**
  * Test basic protobuf integration - just ensure that we've linked the library properly
  */
@@ -41,6 +42,47 @@ TEST(TestProto, TestSerializer) {
   std::unique_ptr<TestExampleMessage> parsed_message =
       basis::DeserializeFromSpan<TestExampleMessage>({bytes.get(), size});
   ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(message, *parsed_message));
+}
+
+TEST(TestProto, Schema) {
+  using namespace basis::plugins::serialization;
+  // std::string schema = ProtobufSerializer::GetSchema<SchemaTestMessage>();
+
+  basis::core::serialization::MessageSchema schema = ProtobufSerializer::DumpSchema<SchemaTestMessage>();
+
+  spdlog::info("{}:\n{}", schema.name, schema.schema);
+
+  SchemaTestMessage written_message;
+  written_message.mutable_referenced()->set_data("referenced data");
+  for (int i = 0; i < 10; i++) {
+    written_message.add_repeated_u32(i);
+  }
+  written_message.set_an_enum(EnumTest::CORPUS_IMAGES);
+  written_message.set_some_string("test string");
+
+  auto [bytes, size] = basis::SerializeToBytes(written_message);
+  ASSERT_NE(bytes, nullptr);
+
+  ASSERT_TRUE(ProtobufSerializer::LoadSchema(schema.name, schema.schema));
+
+  std::optional<std::string> read_message = ProtobufSerializer::DumpMessageString({bytes.get(), size}, schema.name);
+  ASSERT_NE(read_message, std::nullopt);
+/*
+  auto descriptor = protoPool.FindMessageTypeByName(schema.name);
+  ASSERT_NE(descriptor, nullptr);
+  google::protobuf::Message *read_message = protoFactory.GetPrototype(descriptor)->New();
+  if (!read_message->ParseFromArray(static_cast<const void *>(bytes.get()), size)) {
+    spdlog::error("failed to parse message using included schema");
+  } else {
+    spdlog::info("message: {}", read_message->DebugString());
+  }
+
+  ASSERT_EQ(read_message->DebugString(), written_message.DebugString());
+*/
+  // google::protobuf::FileDescriptorSet fdSet;
+  // if (!fdSet.ParseFromArray(static_cast<const void*>(schema.schema.data()), schema.schema.size())) {
+  //   std::cerr << "failed to parse schema data" << std::endl;
+  // }
 }
 
 /**

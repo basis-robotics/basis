@@ -3,6 +3,13 @@ syntax= "proto3";
 package basis.core.transport.proto;
 
 // Common
+ 
+message MessageSchema {
+  string name = 1;
+  string schema = 2;
+  string hash_id = 3;
+}
+
 message PublisherInfo {
     uint64 publisher_id_high = 1;
     uint64 publisher_id_low = 2;

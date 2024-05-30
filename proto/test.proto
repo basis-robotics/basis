@@ -1,5 +1,6 @@
 syntax= "proto3";
 
+
 message TestExampleMessage {
   string name = 1;
   int32 id = 2;
@@ -14,4 +15,34 @@ message TestProtoStruct {
 
 message TimeTest {
   double time = 1;
+}
+
+message ReferencedMessage {
+  string data = 1;
+}
+
+
+enum EnumTest {
+  CORPUS_UNSPECIFIED = 0;
+  CORPUS_UNIVERSAL = 1;
+  CORPUS_WEB = 2;
+  CORPUS_IMAGES = 3;
+  CORPUS_LOCAL = 4;
+  CORPUS_NEWS = 5;
+  CORPUS_PRODUCTS = 6;
+  CORPUS_VIDEO = 7;
+}
+
+message SchemaTestMessage {
+  message EmbeddedMessage {
+    string url = 1;
+    string title = 2;
+    repeated string snippets = 3;
+  }
+
+  ReferencedMessage referenced = 1;
+  repeated uint32 repeated_u32 = 2;
+  EnumTest an_enum = 3;
+  EmbeddedMessage embedded = 4;
+  string some_string = 5;
 }
