@@ -1,4 +1,7 @@
+#include <numeric>
+
 #include <basis/core/coordinator.h>
+
 namespace basis::core::transport {
 std::optional<Coordinator> Coordinator::Create(uint16_t port) {
   // todo: maybe return the listen socket error type?
@@ -24,8 +27,6 @@ proto::NetworkInfo Coordinator::GenerateNetworkInfo() {
   return out;
 }
 
-
-
 void Coordinator::Update() {
   // Look for new clients
   while (auto maybe_socket = listen_socket.Accept(0)) {
@@ -39,20 +40,54 @@ void Coordinator::Update() {
     case plugins::transport::TcpConnection::ReceiveStatus::DONE: {
       auto complete = client.in_progress_packet.GetCompletedMessage();
       auto msg = basis::DeserializeFromSpan<proto::ClientToCoordinatorMessage>(complete->GetPayload());
-      if(!msg) {
+      if (!msg) {
         spdlog::error("Coordinator: failed to deserialize a message");
-      }
-      else {
-        if(msg->has_transport_manager_info()) {
+      } else {
+        // todo: break these out into handlers for better unit testing
+        if (msg->has_transport_manager_info()) {
           client.info = std::unique_ptr<proto::TransportManagerInfo>(msg->release_transport_manager_info());
-        }
-        else if (msg->has_schemas()) {
-          for(auto & schema : msg->schemas().schemas()) {
+        } else if (msg->has_schemas()) {
+          for (auto &schema : msg->schemas().schemas()) {
             std::string key = schema.serializer() + ":" + schema.name();
-            if(!known_schemas.contains(key)) {
+            if (!known_schemas.contains(key)) {
               known_schemas.emplace(std::move(key), std::move(schema));
             }
           }
+        } else if (msg->has_request_schemas()) {
+          std::vector<std::string> errors;
+          std::vector<proto::MessageSchema> schemas;
+          for (const auto &request : msg->request_schemas().schema_ids()) {
+            auto it = known_schemas.find(request);
+            if (it == known_schemas.end()) {
+              errors.push_back(request);
+            } else {
+              schemas.push_back(it->second);
+            }
+          }
+          
+          if (errors.size()) {
+            auto comma_fold = [](std::string a, std::string b) { return std::move(a) + ", " + b; };
+
+            std::string s = std::accumulate(std::next(errors.begin()), errors.end(),
+                                            "?!Missing schemas: " + errors[0], // start with first element
+                                            comma_fold);
+            proto::CoordinatorMessage errors_message;
+
+            errors_message.set_error(s);
+            spdlog::error("{} !", errors_message.DebugString());
+            auto shared_message = SerializeMessagePacket(errors_message);
+            spdlog::error("error size {}", shared_message->GetPacket().size());
+            client.SendMessage(shared_message);
+          }
+          if (schemas.size()) {
+            proto::CoordinatorMessage schema_message;
+            *schema_message.mutable_schemas()->mutable_schemas() = {schemas.begin(), schemas.end()};
+            spdlog::error("Got it!{}", schema_message.DebugString());
+
+            client.SendMessage(SerializeMessagePacket(schema_message));
+          }
+        } else {
+          spdlog::error("Unknown message from client!");
         }
       }
       spdlog::debug("Got completed message {}", client.info->DebugString());
@@ -79,16 +114,12 @@ void Coordinator::Update() {
     }
   }
 
+  proto::CoordinatorMessage message;
   // Compile the information
-  proto::NetworkInfo info = GenerateNetworkInfo();
+  *message.mutable_network_info() = GenerateNetworkInfo();
 
   // Serialize it
-  using Serializer = SerializationHandler<proto::TransportManagerInfo>::type;
-  const size_t size = Serializer::GetSerializedSize(info);
-
-  auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
-      basis::core::transport::MessageHeader::DataType::MESSAGE, size);
-  Serializer::SerializeToSpan(info, shared_message->GetMutablePayload());
+  auto shared_message = SerializeMessagePacket(message);
 
   // Send to all contacts
   for (auto &client : clients) {

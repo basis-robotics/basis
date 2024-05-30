@@ -52,13 +52,16 @@ message RequestSchemas {
 
 message ClientToCoordinatorMessage {
     oneof PossibleMessages {
-        TransportManagerInfo transport_manager_info = 1;
-        MessageSchemas schemas = 2;
+        //string error = 1;
+        TransportManagerInfo transport_manager_info = 2;
+        MessageSchemas schemas = 3;
+        RequestSchemas request_schemas = 4;
     }
 }
 message CoordinatorMessage {
     oneof PossibleMessages {
-        NetworkInfo network_info = 1;
-        MessageSchemas schemas = 2;
+        string error = 1;
+        NetworkInfo network_info = 2;
+        MessageSchemas schemas = 3;
     }
 }

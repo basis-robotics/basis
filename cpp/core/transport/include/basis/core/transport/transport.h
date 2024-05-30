@@ -27,9 +27,11 @@ public:
 
   std::span<std::byte> GetCurrentBuffer() {
     if (incomplete_message) {
+      spdlog::trace("Pulling payload");
       std::span<std::byte> ret = incomplete_message->GetMutablePayload();
       return ret.subspan(progress_counter);
     } else {
+      spdlog::trace("Pulling header");
       return std::span<std::byte>(incomplete_header + progress_counter, sizeof(MessageHeader) - progress_counter);
     }
   }

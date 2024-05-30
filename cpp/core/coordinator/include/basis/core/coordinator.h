@@ -80,18 +80,26 @@ public:
   proto::NetworkInfo GenerateNetworkInfo();
 
   /**
-   * Should be called on a regular basis, from the main thread.
+   * Update the coordinator. Should be called on a regular basis, from the main thread.
    *
    * Accept new clients
    * Compiles data about the subscription networks
    * Sends the data to each client
-   *
    */
   void Update();
 
-  const std::unordered_map<std::string, proto::MessageSchema> &GetKnownSchemas() { return known_schemas; }
+  const std::unordered_map<std::string, proto::MessageSchema> &GetKnownSchemas() const { return known_schemas; }
 
 protected:
+  std::shared_ptr<basis::core::transport::MessagePacket> SerializeMessagePacket(const proto::CoordinatorMessage& message) {
+    using Serializer = SerializationHandler<proto::CoordinatorMessage>::type;
+    const size_t size = Serializer::GetSerializedSize(message);
+
+    auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
+        basis::core::transport::MessageHeader::DataType::MESSAGE, size);
+    Serializer::SerializeToSpan(message, shared_message->GetMutablePayload());
+    return shared_message;
+  }
   /**
    * The TCP listen socket.
    */
