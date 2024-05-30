@@ -23,6 +23,7 @@
 #include <spdlog/spdlog.h>
 
 #include <basis/core/serialization.h>
+#include <basis/core/serialization/message_type_info.h>
 
 namespace basis {
 namespace plugins::serialization {
@@ -33,12 +34,12 @@ class ProtobufSerializer : public core::serialization::Serializer {
 public:
   static constexpr char SERIALIZER_ID[] = "protobuf";
 
-  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
+  template <typename T_MSG>
   static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> span) {
     return message.SerializeToArray(span.data(), span.size());
   }
 
-  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
+  template <typename T_MSG>
   static size_t GetSerializedSize(const T_MSG &message) {
     return message.ByteSizeLong();
   }
@@ -136,6 +137,11 @@ public:
 
     return true;
   }
+
+template <typename T_MSG>
+static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
+  return {SERIALIZER_ID, T_MSG::descriptor()->full_name()};
+};
 
   
 protected:

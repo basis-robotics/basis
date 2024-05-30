@@ -78,6 +78,8 @@ TEST(TestCoordinator, BasicTest) {
   ASSERT_NE(connector->TryGetSchema(request), nullptr);
 }
 
+// todo: explicitly check that connector and coordinator can consume multiple messages at once
+
 struct TestRawStruct {
   uint32_t foo = 3;
   float bar = 8.5;

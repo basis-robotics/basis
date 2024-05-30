@@ -178,7 +178,7 @@ TEST_F(TestTcpTransport, TestTransport) {
   auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
   TcpTransport transport(thread_pool_manager);
   std::shared_ptr<TransportPublisher> publisher =
-      transport.Advertise("test", basis::core::transport::DeduceMessageTypeInfo<int>());
+      transport.Advertise("test", {"raw", "int"});
   ASSERT_NE(publisher, nullptr);
 }
 

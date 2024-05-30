@@ -6,7 +6,6 @@
 #include <spdlog/spdlog.h>
 
 #include "inproc.h"
-#include "message_type_info.h"
 #include "publisher.h"
 #include "publisher_info.h"
 #include "subscriber.h"
@@ -82,9 +81,9 @@ public:
   Transport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
       : thread_pool_manager(thread_pool_manager) {}
   virtual ~Transport() = default;
-  virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, MessageTypeInfo type_info) = 0;
+  virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, serialization::MessageTypeInfo type_info) = 0;
   virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, TypeErasedSubscriberCallback callback,
-                                                         OutputQueue *output_queue, MessageTypeInfo type_info) = 0;
+                                                         OutputQueue *output_queue, serialization::MessageTypeInfo type_info) = 0;
 
   /**
    * Implementations (ie TransportManager) should call this function at a regular rate.

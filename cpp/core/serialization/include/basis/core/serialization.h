@@ -10,6 +10,8 @@
 #include <span>
 #include <memory>
 
+#include "serialization/message_type_info.h"
+
 namespace basis {
 namespace core::serialization {
 
@@ -77,6 +79,11 @@ private:
  */
 class RawSerializer : public Serializer {
 public:
+  template <typename T_MSG> static serialization::MessageTypeInfo DeduceMessageTypeInfo() {
+    // todo: deprecate
+    return {"raw", "unknown"};
+  }
+
   template <typename T_MSG> static size_t GetSerializedSize(const T_MSG &message) { return sizeof(message); }
 
   template <typename T_MSG> static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> span) {

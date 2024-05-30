@@ -17,7 +17,8 @@ message PublisherInfo {
     // TODO: type
     // TODO: this results in a lot of duplication of topic names, but its probably ok - topic names are mostly unique
     string topic = 3;
-    map<string, string> transport_info = 4;
+    string schema_id = 4;
+    map<string, string> transport_info = 5;
 }
 
 // TransportManager -> Coordinator

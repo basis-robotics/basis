@@ -6,7 +6,6 @@
 #include <spdlog/spdlog.h>
 
 #include "inproc.h"
-#include "message_type_info.h"
 #include "publisher.h"
 #include "publisher_info.h"
 #include "subscriber.h"
@@ -27,7 +26,7 @@ public:
   // todo: deducing a raw type should be an error unless requested
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<Publisher<T_MSG>>
-  Advertise(std::string_view topic, MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+  Advertise(std::string_view topic, serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     if (inproc) {
@@ -55,7 +54,7 @@ public:
   [[nodiscard]] std::shared_ptr<SubscriberBase> SubscribeRaw(std::string_view topic,
                                                              TypeErasedSubscriberCallback callback,
                                                              core::transport::OutputQueue *output_queue,
-                                                             MessageTypeInfo message_type) {
+                                                             serialization::MessageTypeInfo message_type) {
     return SubscribeInternal<SubscriberBase>(topic, callback, output_queue, message_type, {});
   }
 
@@ -63,7 +62,7 @@ public:
   [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
   Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
             core::transport::OutputQueue *output_queue = nullptr,
-            MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+            serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
     TypeErasedSubscriberCallback outer_callback = [topic, callback](std::shared_ptr<MessagePacket> packet) {
@@ -162,7 +161,7 @@ protected:
   template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
   [[nodiscard]] std::shared_ptr<T_SUBSCRIBER>
   SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback,
-                    core::transport::OutputQueue *output_queue, MessageTypeInfo message_type,
+                    core::transport::OutputQueue *output_queue, serialization::MessageTypeInfo message_type,
                     std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;

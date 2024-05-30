@@ -19,16 +19,17 @@ void PrintTopic(std::string_view topic, basis::core::transport::CoordinatorConne
   transport_manager.RegisterTransport("net_tcp",
                                       std::make_unique<basis::plugins::transport::TcpTransport>(thread_pool_manager));
 
-  // This looks dangerous to take as a reference but is actually safe - 
+  // This looks dangerous to take as a reference but is actually safe -
   // the subscriber destructor will wait until the callback exits before the atomic goes out of scope
   std::atomic<size_t> num_messages;
-  auto time_test_sub = transport_manager.SubscribeRaw(topic,
-                                                      [&]([[maybe_unused]] auto msg) {
-                                                        num_messages++;
-                                                        spdlog::info("Got message number {} of size {}", (size_t)num_messages, msg->GetPayload().size());
-                                                        spdlog::info("print functionality requires schema support over network");
-                                                      },
-                                                      nullptr, {});
+  auto time_test_sub = transport_manager.SubscribeRaw(
+      topic,
+      [&]([[maybe_unused]] auto msg) {
+        num_messages++;
+        spdlog::info("Got message number {} of size {}", (size_t)num_messages, msg->GetPayload().size());
+        spdlog::info("print functionality requires schema support over network");
+      },
+      nullptr, {});
 
   while (!max_num_messages || max_num_messages > num_messages) {
     // todo: move this out into "unit"
@@ -40,6 +41,20 @@ void PrintTopic(std::string_view topic, basis::core::transport::CoordinatorConne
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+}
+basis::core::transport::proto::MessageSchema FetchSchema(std::string_view schema, basis::core::transport::CoordinatorConnector *connector) {
+  // TODO
+  (void)schema;
+  (void)connector;
+  // 1. Enforce topic types being created on advertise
+  // 2. Make connector keep track of all schemas on advertise
+  // 3. 
+  return {};
+
+}
+
+void PrintSchema(std::string_view schema_name, basis::core::transport::CoordinatorConnector *connector) {
+  FetchSchema(schema_name, connector);
 }
 
 int main(int argc, char *argv[]) {
@@ -67,9 +82,23 @@ int main(int argc, char *argv[]) {
   topic_print_command.add_description("print a message on the topic");
   topic_print_command.add_argument("topic");
   topic_print_command.add_argument("-n").scan<'i', size_t>().help("number of messages to print (default: infinite)");
+  topic_print_command.add_argument("--json", "-j").help("dump this message as JSON");
   topic_command.add_subparser(topic_print_command);
 
   parser.add_subparser(topic_command);
+
+  // basis schema
+  argparse::ArgumentParser schema_command("schema");
+  schema_command.add_description("Schema information");
+  // basis schema ls
+  // todo
+  // basis schema print
+  argparse::ArgumentParser schema_print_command("print");
+  schema_print_command.add_description("print a schema");
+  schema_print_command.add_argument("schema");
+  schema_command.add_subparser(schema_print_command);
+
+  parser.add_subparser(schema_command);
 
   try {
     parser.parse_args(argc, argv);
@@ -112,7 +141,8 @@ int main(int argc, char *argv[]) {
         return 1;
       }
       std::cout << "topic: " << topic << std::endl;
-      std::cout << "type: <TODO>" << std::endl;
+      // TODO: should have a separate listing for types
+      std::cout << "type: " << it->second.publishers()[0].schema_id() << std::endl;
       std::cout << std::endl;
       for (const auto &pub : (it->second.publishers())) {
         std::cout << "id: " << std::hex << pub.publisher_id_high() << pub.publisher_id_low() << std::dec << std::endl;
@@ -125,6 +155,11 @@ int main(int argc, char *argv[]) {
     } else if (topic_command.is_subcommand_used("print")) {
       auto topic = topic_print_command.get("topic");
       PrintTopic(topic, connection.get(), topic_print_command.present<size_t>("-n"));
+    }
+  } else if (parser.is_subcommand_used("schema")) {
+    auto topic = schema_print_command.get("schema");
+    if (schema_command.is_subcommand_used("print")) {
+      PrintSchema(topic, connection.get());
     }
   }
 
