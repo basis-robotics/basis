@@ -59,31 +59,6 @@ public:
     return parsed_message;
   }
 
-  /*
-    template <typename T = google::protobuf::Descriptor>
-    static void DumpSchema(const T *descriptor, std::string &out, std::unordered_set<std::string> found_schemas = {}) {
-      const std::string &full_name = descriptor->full_name();
-      if (found_schemas.find(full_name) == found_schemas.end()) {
-        found_schemas.insert(full_name);
-        if constexpr (std::is_same_v<T, google::protobuf::Descriptor>) {
-          for (int i = 0; i < descriptor->field_count(); i++) {
-            auto *field_descriptor = descriptor->field(i);
-            // DumpSchema()
-            const google::protobuf::Descriptor *message_type = field_descriptor->message_type();
-            if (message_type) {
-              DumpSchema(message_type, out, found_schemas);
-            }
-            const google::protobuf::EnumDescriptor *enum_type = field_descriptor->enum_type();
-            if (enum_type) {
-              DumpSchema(enum_type, out, found_schemas);
-            }
-          }
-        }
-        out.append(descriptor->DebugString());
-      }
-    }
-  */
-
   static std::unique_ptr<google::protobuf::Message> LoadMessageFromSchema(std::span<const std::byte> span, std::string_view schema_name) {
     auto descriptor = protoPool.FindMessageTypeByName(std::string(schema_name));
 
