@@ -18,6 +18,7 @@
 #include <google/protobuf/dynamic_message.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
+#include <google/protobuf/util/json_util.h>
 
 #include <spdlog/spdlog.h>
 
@@ -105,6 +106,7 @@ public:
   }
 
   static std::optional<std::string> DumpMessageString(std::span<const std::byte> span, std::string_view schema_name) {
+    // TODO: we could use TextFormat here, but this might be easier to read
     std::unique_ptr<google::protobuf::Message> message = LoadMessageFromSchema(span, schema_name);
     if(message) {
       return message->DebugString();
@@ -112,7 +114,17 @@ public:
     return {};
   }
 
-
+  static std::optional<std::string> DumpMessageJSON(std::span<const std::byte> span, std::string_view schema_name) {
+    // TODO: we could likely use TypeResolver and BinaryToJsonStream here
+    // but neither DebugString nor TextFormat have implementations  
+    std::unique_ptr<google::protobuf::Message> message = LoadMessageFromSchema(span, schema_name);
+    if(message) {
+      std::string out;
+      google::protobuf::util::MessageToJsonString(*message, &out, {});
+      return out;
+    }
+    return {};
+  }
 
   static bool LoadSchema(std::string_view schema_name, std::string_view schema) {
     const std::string schema_name_str(schema_name);

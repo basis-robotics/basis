@@ -67,22 +67,17 @@ TEST(TestProto, Schema) {
 
   std::optional<std::string> read_message = ProtobufSerializer::DumpMessageString({bytes.get(), size}, schema.name);
   ASSERT_NE(read_message, std::nullopt);
-/*
-  auto descriptor = protoPool.FindMessageTypeByName(schema.name);
-  ASSERT_NE(descriptor, nullptr);
-  google::protobuf::Message *read_message = protoFactory.GetPrototype(descriptor)->New();
-  if (!read_message->ParseFromArray(static_cast<const void *>(bytes.get()), size)) {
-    spdlog::error("failed to parse message using included schema");
-  } else {
-    spdlog::info("message: {}", read_message->DebugString());
-  }
+  ASSERT_EQ(read_message, written_message.DebugString());
 
-  ASSERT_EQ(read_message->DebugString(), written_message.DebugString());
-*/
-  // google::protobuf::FileDescriptorSet fdSet;
-  // if (!fdSet.ParseFromArray(static_cast<const void*>(schema.schema.data()), schema.schema.size())) {
-  //   std::cerr << "failed to parse schema data" << std::endl;
-  // }
+  std::optional<std::string> json_str =  ProtobufSerializer::DumpMessageJSON({bytes.get(), size}, schema.name);
+  ASSERT_NE(json_str, std::nullopt);
+  spdlog::info("Json str: {}", *json_str);
+  
+  SchemaTestMessage msg_from_json;
+  ASSERT_TRUE(google::protobuf::util::JsonStringToMessage(*json_str, &msg_from_json, {}).ok());
+  ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(written_message, msg_from_json));
+
+
 }
 
 /**
