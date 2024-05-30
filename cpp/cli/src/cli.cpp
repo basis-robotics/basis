@@ -10,8 +10,69 @@
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/transport/transport_manager.h>
 
-void PrintTopic(std::string_view topic, basis::core::transport::CoordinatorConnector *connector,
+// todo: load via plugin
+#include <basis/plugins/serialization/protobuf.h>
+
+std::unordered_map<std::string, std::function<std::optional<std::string>(std::span<const std::byte>, std::string_view)>>
+    string_dumpers = {{"protobuf", basis::plugins::serialization::ProtobufSerializer::DumpMessageString}};
+
+std::unordered_map<std::string, std::function<bool(std::string_view, std::string_view)>>
+    schema_loaders = {{"protobuf", basis::plugins::serialization::ProtobufSerializer::LoadSchema}};
+
+std::optional<basis::core::transport::proto::MessageSchema>
+FetchSchema(const std::string &schema_id, basis::core::transport::CoordinatorConnector *connector, int timeout_s) {
+  // TODO
+  connector->RequestSchemas({&schema_id, 1});
+
+  auto end = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_s);
+  while (std::chrono::steady_clock::now() < end) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    connector->Update();
+    auto schema_ptr = connector->TryGetSchema(schema_id);
+    if (schema_ptr) {
+      return *schema_ptr;
+    }
+
+    if (connector->errors_from_coordinator.size()) {
+      for (const std::string &error : connector->errors_from_coordinator) {
+        std::cerr << "Errors when fetching schema:" << std::endl;
+        std::cerr << error << std::endl;
+      }
+      return {};
+    }
+  }
+
+  std::cerr << "Timed out while fetching schema [" << schema_id << "]" << std::endl;
+
+  return {};
+}
+
+void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorConnector *connector,
                 std::optional<size_t> max_num_messages) {
+
+  auto *info = connector->GetLastNetworkInfo();
+
+  auto it = info->publishers_by_topic().find(topic);
+  if (it == info->publishers_by_topic().end()) {
+    std::cerr << "No publishers for topic " << topic << std::endl;
+    return;
+  }
+
+  std::string schema_id = it->second.publishers()[0].schema_id();
+  std::optional<basis::core::transport::proto::MessageSchema> maybe_schema = FetchSchema(schema_id, connector, 5);
+  if (!maybe_schema) {
+    return;
+  }
+
+  auto to_string_it = string_dumpers.find(maybe_schema->serializer());
+  if(to_string_it == string_dumpers.end()) {
+    // Note: theoretically we could do this string dumping on the publisher side, instead
+    std::cerr << "Unknown serializer " << maybe_schema->serializer() << " please recompile basis_cli with support" << std::endl;
+    return;
+  }
+
+  schema_loaders[maybe_schema->serializer()](maybe_schema->name(), maybe_schema->schema());
+
   auto thread_pool_manager = std::make_shared<basis::core::transport::ThreadPoolManager>();
 
   basis::core::transport::TransportManager transport_manager(
@@ -26,8 +87,11 @@ void PrintTopic(std::string_view topic, basis::core::transport::CoordinatorConne
       topic,
       [&]([[maybe_unused]] auto msg) {
         num_messages++;
-        spdlog::info("Got message number {} of size {}", (size_t)num_messages, msg->GetPayload().size());
-        spdlog::info("print functionality requires schema support over network");
+        //spdlog::info("Got message number {} of size {}", (size_t)num_messages, msg->GetPayload().size());
+        auto maybe_string = to_string_it->second(msg->GetPayload(), maybe_schema->name());
+        if(maybe_string) {
+          std::cout << *maybe_string << std::endl;
+        }
       },
       nullptr, {});
 
@@ -42,19 +106,13 @@ void PrintTopic(std::string_view topic, basis::core::transport::CoordinatorConne
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 }
-basis::core::transport::proto::MessageSchema FetchSchema(std::string_view schema, basis::core::transport::CoordinatorConnector *connector) {
-  // TODO
-  (void)schema;
-  (void)connector;
-  // 1. Enforce topic types being created on advertise
-  // 2. Make connector keep track of all schemas on advertise
-  // 3. 
-  return {};
 
-}
-
-void PrintSchema(std::string_view schema_name, basis::core::transport::CoordinatorConnector *connector) {
-  FetchSchema(schema_name, connector);
+void PrintSchema(const std::string &schema_name, basis::core::transport::CoordinatorConnector *connector) {
+  std::optional<basis::core::transport::proto::MessageSchema> maybe_schema = FetchSchema(schema_name, connector, 5);
+  if (maybe_schema) {
+    std::cout << maybe_schema->serializer() << ":" << maybe_schema->name() << std::endl;
+    std::cout << maybe_schema->schema() << std::endl;
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -72,7 +130,7 @@ int main(int argc, char *argv[]) {
   argparse::ArgumentParser topic_ls_command("ls");
   topic_ls_command.add_description("list the available topics");
   topic_command.add_subparser(topic_ls_command);
-  // basis topic ls
+  // basis topic info
   argparse::ArgumentParser topic_info_command("info");
   topic_info_command.add_description("get a topic's information");
   topic_info_command.add_argument("topic");
@@ -130,14 +188,15 @@ int main(int argc, char *argv[]) {
     if (topic_command.is_subcommand_used("ls")) {
       std::cout << "topics:" << std::endl;
       for (auto &[topic, pubs] : info->publishers_by_topic()) {
-        std::cout << "  " << topic << " (" << pubs.publishers().size() << ")" << std::endl;
+        std::cout << "  " << topic << " [" << pubs.publishers()[0].schema_id() << "] (" << pubs.publishers().size()
+                  << " publisher)" << std::endl;
       }
     } else if (topic_command.is_subcommand_used("info")) {
       auto topic = topic_info_command.get("topic");
 
       auto it = info->publishers_by_topic().find(topic);
       if (it == info->publishers_by_topic().end()) {
-        std::cout << "No publishers for topic " << topic << std::endl;
+        std::cerr << "No publishers for topic " << topic << std::endl;
         return 1;
       }
       std::cout << "topic: " << topic << std::endl;

@@ -130,8 +130,8 @@ public:
    * Mostly intended for utility use, for now. There's no infrastructure around knowing when your requested schema has
    * arrived.
    */
-  proto::MessageSchema *TryGetSchema(std::string schema_id) {
-    auto it = network_schemas.find(schema_id);
+  proto::MessageSchema *TryGetSchema(std::string_view schema_id) {
+    auto it = network_schemas.find(std::string(schema_id));
     if (it == network_schemas.end()) {
       return nullptr;
     }

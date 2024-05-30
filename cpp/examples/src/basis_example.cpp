@@ -48,6 +48,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     transport_manager.Update();
     // send it off to the coordinator
     if(connector) {
+      std::vector<basis::core::serialization::MessageSchema> new_schemas = transport_manager.GetSchemaManager().ConsumeSchemasToSend();
+      if(new_schemas.size()) {
+        connector->SendSchemas(new_schemas);
+      }
       connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
       connector->Update();
 

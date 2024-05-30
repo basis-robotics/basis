@@ -25,8 +25,6 @@ struct MessageSchema {
 /**
  * Base interface, used by all serializers. Will later contain ToJSON and other utilities.
  *
- * @todo ToJSON
- * @todo ToDebugString
  * @todo Capabilities per message type - such as ability to be transported over network at all
  */
 class Serializer {
