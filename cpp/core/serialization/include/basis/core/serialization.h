@@ -14,6 +14,7 @@ namespace basis {
 namespace core::serialization {
 
 struct MessageSchema {
+  std::string serializer;
   std::string name;
   std::string schema;
   std::string hash_id;

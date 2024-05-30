@@ -47,6 +47,12 @@ public:
     auto parsed_message = std::make_unique<T_MSG>();
 
     if (!parsed_message->ParseFromArray(bytes.data(), bytes.size())) {
+      // note: this is pretty liberal in what it accepts
+      spdlog::error("Unable to parse a message");
+      return nullptr;
+    }
+
+    if(!parsed_message->IsInitialized()) {
       return nullptr;
     }
 
@@ -77,17 +83,6 @@ public:
       }
     }
   */
-  template <typename T_MSG> static basis::core::serialization::MessageSchema DumpSchema() {
-    const google::protobuf::Descriptor *descriptor = T_MSG::descriptor();
-    basis::core::serialization::MessageSchema schema;
-    schema.name = descriptor->full_name();
-    auto msg = fdSet(descriptor);
-    // schema.schema = msg.SerializeAsString();
-
-    google::protobuf::TextFormat::PrintToString(msg, &schema.schema);
-    // schema.human_readable = msg.DebugString();
-    return schema;
-  }
 
   static std::unique_ptr<google::protobuf::Message> LoadMessageFromSchema(std::span<const std::byte> span, std::string_view schema_name) {
     auto descriptor = protoPool.FindMessageTypeByName(std::string(schema_name));
@@ -126,6 +121,18 @@ public:
     return {};
   }
 
+  template <typename T_MSG> static basis::core::serialization::MessageSchema DumpSchema() {
+    const google::protobuf::Descriptor *descriptor = T_MSG::descriptor();
+    basis::core::serialization::MessageSchema schema;
+    schema.name = descriptor->full_name();
+    auto msg = fdSet(descriptor);
+    // schema.schema = msg.SerializeAsString();
+
+    google::protobuf::TextFormat::PrintToString(msg, &schema.schema);
+    // schema.human_readable = msg.DebugString();
+    return schema;
+  }
+  
   static bool LoadSchema(std::string_view schema_name, std::string_view schema) {
     const std::string schema_name_str(schema_name);
     if (known_schemas.contains(schema_name_str)) {

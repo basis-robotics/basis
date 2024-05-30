@@ -22,6 +22,7 @@ namespace basis::core::transport {
  */
 class CoordinatorConnector : basis::plugins::transport::TcpSender {
   using TcpSender::TcpSender;
+
 public:
   static std::unique_ptr<CoordinatorConnector> Create(uint16_t port = BASIS_PUBLISH_INFO_PORT) {
     auto maybe_socket = networking::TcpSocket::Connect("127.0.0.1", port);
@@ -30,14 +31,39 @@ public:
     }
     return {};
   }
-  
+
   void SendTransportManagerInfo(const proto::TransportManagerInfo &info) {
-    using Serializer = SerializationHandler<proto::TransportManagerInfo>::type;
-    const size_t size = Serializer::GetSerializedSize(info);
+    proto::ClientToCoordinatorMessage message;
+    *message.mutable_transport_manager_info() = info;
+    using Serializer = SerializationHandler<proto::ClientToCoordinatorMessage>::type;
+    const size_t size = Serializer::GetSerializedSize(message);
 
     auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
         basis::core::transport::MessageHeader::DataType::MESSAGE, size);
-    Serializer::SerializeToSpan(info, shared_message->GetMutablePayload());
+    Serializer::SerializeToSpan(message, shared_message->GetMutablePayload());
+
+    SendMessage(shared_message);
+  }
+
+  void SendSchemas(const std::vector<basis::core::serialization::MessageSchema> &schemas) {
+    proto::ClientToCoordinatorMessage message;
+    auto *schemas_msg = message.mutable_schemas();
+
+    auto& schemas_buffer = *schemas_msg->mutable_schemas();
+    for(auto& schema : schemas) {
+      auto* schema_msg = schemas_buffer.Add();
+      schema_msg->set_serializer(schema.serializer);
+      schema_msg->set_name(schema.name);
+      schema_msg->set_schema(schema.schema);
+      schema_msg->set_hash_id(schema.hash_id);
+    }
+
+    using Serializer = SerializationHandler<proto::ClientToCoordinatorMessage>::type;
+    const size_t size = Serializer::GetSerializedSize(message);
+
+    auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
+        basis::core::transport::MessageHeader::DataType::MESSAGE, size);
+    Serializer::SerializeToSpan(message, shared_message->GetMutablePayload());
 
     SendMessage(shared_message);
   }
@@ -68,9 +94,7 @@ public:
     }
   }
 
-  proto::NetworkInfo* GetLastNetworkInfo() {
-    return last_network_info.get();
-  }
+  proto::NetworkInfo *GetLastNetworkInfo() { return last_network_info.get(); }
 
 protected:
   std::unique_ptr<proto::NetworkInfo> last_network_info;

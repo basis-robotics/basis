@@ -36,6 +36,20 @@ TEST(TestCoordinator, BasicTest) {
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   coordinator.Update();
+
+    
+  using Serializer = basis::SerializationHandler<basis::core::transport::proto::TransportManagerInfo>::type;
+  // Dump a few schemas
+  std::vector<basis::core::serialization::MessageSchema> schemas = {
+    Serializer::DumpSchema<basis::core::transport::proto::TransportManagerInfo>(),
+    Serializer::DumpSchema<basis::core::transport::proto::MessageSchema>()
+  };
+
+  connector->SendSchemas(schemas);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  coordinator.Update();
+
+  ASSERT_EQ(coordinator.GetKnownSchemas().size(), 2);
 }
 
 struct TestRawStruct {

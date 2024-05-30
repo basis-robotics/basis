@@ -5,9 +5,10 @@ package basis.core.transport.proto;
 // Common
  
 message MessageSchema {
-  string name = 1;
-  string schema = 2;
-  string hash_id = 3;
+  string serializer = 1;
+  string name = 2;
+  string schema = 3;
+  string hash_id = 4;
 }
 
 message PublisherInfo {
@@ -41,12 +42,23 @@ message NetworkInfo {
     map<string, RepeatedPublisherInfo> publishers_by_topic = 1;
 }
 
-/*
-// todo not implemented in Coordinator
+message MessageSchemas {
+    repeated MessageSchema schemas = 1;
+}
+
+message RequestSchemas {
+    repeated string schema_ids = 1;
+}
+
+message ClientToCoordinatorMessage {
+    oneof PossibleMessages {
+        TransportManagerInfo transport_manager_info = 1;
+        MessageSchemas schemas = 2;
+    }
+}
 message CoordinatorMessage {
     oneof PossibleMessages {
         NetworkInfo network_info = 1;
-        PublishersDelta publishers_delta = 2;
+        MessageSchemas schemas = 2;
     }
 }
-*/

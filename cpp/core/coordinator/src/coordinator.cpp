@@ -24,6 +24,8 @@ proto::NetworkInfo Coordinator::GenerateNetworkInfo() {
   return out;
 }
 
+
+
 void Coordinator::Update() {
   // Look for new clients
   while (auto maybe_socket = listen_socket.Accept(0)) {
@@ -36,7 +38,23 @@ void Coordinator::Update() {
     switch (client.ReceiveMessage(client.in_progress_packet)) {
     case plugins::transport::TcpConnection::ReceiveStatus::DONE: {
       auto complete = client.in_progress_packet.GetCompletedMessage();
-      client.info = basis::DeserializeFromSpan<proto::TransportManagerInfo>(complete->GetPayload());
+      auto msg = basis::DeserializeFromSpan<proto::ClientToCoordinatorMessage>(complete->GetPayload());
+      if(!msg) {
+        spdlog::error("Coordinator: failed to deserialize a message");
+      }
+      else {
+        if(msg->has_transport_manager_info()) {
+          client.info = std::unique_ptr<proto::TransportManagerInfo>(msg->release_transport_manager_info());
+        }
+        else if (msg->has_schemas()) {
+          for(auto & schema : msg->schemas().schemas()) {
+            std::string key = schema.serializer() + ":" + schema.name();
+            if(!known_schemas.contains(key)) {
+              known_schemas.emplace(std::move(key), std::move(schema));
+            }
+          }
+        }
+      }
       spdlog::debug("Got completed message {}", client.info->DebugString());
       [[fallthrough]];
     }

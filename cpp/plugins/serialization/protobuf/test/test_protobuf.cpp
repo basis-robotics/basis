@@ -46,7 +46,6 @@ TEST(TestProto, TestSerializer) {
 
 TEST(TestProto, Schema) {
   using namespace basis::plugins::serialization;
-  // std::string schema = ProtobufSerializer::GetSchema<SchemaTestMessage>();
 
   basis::core::serialization::MessageSchema schema = ProtobufSerializer::DumpSchema<SchemaTestMessage>();
 
@@ -76,8 +75,6 @@ TEST(TestProto, Schema) {
   SchemaTestMessage msg_from_json;
   ASSERT_TRUE(google::protobuf::util::JsonStringToMessage(*json_str, &msg_from_json, {}).ok());
   ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(written_message, msg_from_json));
-
-
 }
 
 /**
