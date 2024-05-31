@@ -75,7 +75,11 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     apt update
     apt install --no-install-recommends -y \
         ros-noetic-roscpp-serialization \
-        ros-noetic-std-msgs
+        ros-noetic-std-msgs \
+        # For tests
+        ros-noetic-sensor-msgs \
+        # For rosx_introspection
+        rapidjson 
 EOF
 
 USER basis

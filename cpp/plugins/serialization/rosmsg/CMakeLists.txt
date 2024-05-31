@@ -15,8 +15,8 @@ find_package(roscpp_traits REQUIRED PATHS ${BASIS_ROS_ROOT}/share/roscpp_traits/
 find_package(roscpp_serialization REQUIRED PATHS ${BASIS_ROS_ROOT}/share/roscpp_serialization/cmake)
 find_package(message_runtime REQUIRED PATHS ${BASIS_ROS_ROOT}/share/message_runtime/cmake)
 
-# TODO: maybe tot strictly required
-find_package(std_msgs REQUIRED PATHS ${BASIS_ROS_ROOT}/share/std_msgs/cmake)
+# TODO: maybe not strictly required
+# find_package(std_msgs REQUIRED PATHS ${BASIS_ROS_ROOT}/share/std_msgs/cmake)
 
 add_library(basis_plugins_serialization_rosmsg SHARED src/rosmsg.cpp)
 
@@ -27,7 +27,7 @@ target_include_directories(basis_plugins_serialization_rosmsg PUBLIC include)
 
 target_link_directories(basis_plugins_serialization_rosmsg PUBLIC ${BASIS_ROS_ROOT}/lib)
 
-target_link_libraries(basis_plugins_serialization_rosmsg basis_core_serialization roscpp_serialization ros_std_msgs)
+target_link_libraries(basis_plugins_serialization_rosmsg PUBLIC basis_core_serialization roscpp_serialization ros_std_msgs rosx_introspection)
 
 add_library(basis::plugins::serialization::rosmsg ALIAS basis_plugins_serialization_rosmsg)
 
