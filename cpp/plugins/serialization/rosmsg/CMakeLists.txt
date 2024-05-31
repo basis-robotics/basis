@@ -15,9 +15,6 @@ find_package(roscpp_traits REQUIRED PATHS ${BASIS_ROS_ROOT}/share/roscpp_traits/
 find_package(roscpp_serialization REQUIRED PATHS ${BASIS_ROS_ROOT}/share/roscpp_serialization/cmake)
 find_package(message_runtime REQUIRED PATHS ${BASIS_ROS_ROOT}/share/message_runtime/cmake)
 
-# TODO: maybe not strictly required
-# find_package(std_msgs REQUIRED PATHS ${BASIS_ROS_ROOT}/share/std_msgs/cmake)
-
 add_library(basis_plugins_serialization_rosmsg SHARED src/rosmsg.cpp)
 
 add_library(ros_std_msgs INTERFACE)

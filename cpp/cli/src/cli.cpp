@@ -13,16 +13,33 @@
 // todo: load via plugin
 #include <basis/plugins/serialization/protobuf.h>
 
+#ifdef BASIS_ENABLE_ROS
+#include <basis/plugins/serialization/rosmsg.h>
+
+#endif
+
 // todo: one map :)
 using StringDumpCallback = std::function<std::optional<std::string>(std::span<const std::byte>, std::string_view)>;
-std::unordered_map<std::string, StringDumpCallback>
-    string_dumpers = {{"protobuf", basis::plugins::serialization::ProtobufSerializer::DumpMessageString}};
+std::unordered_map<std::string, StringDumpCallback> string_dumpers = {
+    {"protobuf", basis::plugins::serialization::ProtobufSerializer::DumpMessageString},
+#ifdef BASIS_ENABLE_ROS
+    {"rosmsg", basis::plugins::serialization::RosmsgSerializer::DumpMessageString},
+#endif
+};
 
-std::unordered_map<std::string, StringDumpCallback>
-    json_dumpers = {{"protobuf", basis::plugins::serialization::ProtobufSerializer::DumpMessageJSONString}};
+std::unordered_map<std::string, StringDumpCallback> json_dumpers = {
+    {"protobuf", basis::plugins::serialization::ProtobufSerializer::DumpMessageJSONString},
+#ifdef BASIS_ENABLE_ROS
+    {"rosmsg", basis::plugins::serialization::RosmsgSerializer::DumpMessageJSONString},
+#endif
+};
 
-std::unordered_map<std::string, std::function<bool(std::string_view, std::string_view)>>
-    schema_loaders = {{"protobuf", basis::plugins::serialization::ProtobufSerializer::LoadSchema}};
+std::unordered_map<std::string, std::function<bool(std::string_view, std::string_view)>> schema_loaders = {
+    {"protobuf", basis::plugins::serialization::ProtobufSerializer::LoadSchema},
+#ifdef BASIS_ENABLE_ROS
+    {"rosmsg", basis::plugins::serialization::RosmsgSerializer::LoadSchema},
+#endif
+};
 
 std::optional<basis::core::transport::proto::MessageSchema>
 FetchSchema(const std::string &schema_id, basis::core::transport::CoordinatorConnector *connector, int timeout_s) {
@@ -70,12 +87,13 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
   }
 
   StringDumpCallback to_string;
-  auto* callback_map = json ? &json_dumpers : &string_dumpers;
+  auto *callback_map = json ? &json_dumpers : &string_dumpers;
 
   auto to_string_it = callback_map->find(maybe_schema->serializer());
-  if(to_string_it == callback_map->end()) {
+  if (to_string_it == callback_map->end()) {
     // Note: theoretically we could do this string dumping on the publisher side, instead
-    std::cerr << "Unknown serializer " << maybe_schema->serializer() << " please recompile basis_cli with support" << std::endl;
+    std::cerr << "Unknown serializer " << maybe_schema->serializer() << " please recompile basis_cli with support"
+              << std::endl;
     return;
   }
 
@@ -91,17 +109,18 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
   // This looks dangerous to take as a reference but is actually safe -
   // the subscriber destructor will wait until the callback exits before the atomic goes out of scope
   std::atomic<size_t> num_messages;
-  auto time_test_sub = transport_manager.SubscribeRaw(
-      topic,
-      [&]([[maybe_unused]] auto msg) {
-        num_messages++;
-        //spdlog::info("Got message number {} of size {}", (size_t)num_messages, msg->GetPayload().size());
-        auto maybe_string = to_string_it->second(msg->GetPayload(), maybe_schema->name());
-        if(maybe_string) {
-          std::cout << *maybe_string << std::endl;
-        }
-      },
-      nullptr, {});
+  auto time_test_sub = transport_manager.SubscribeRaw(topic,
+                                                      [&]([[maybe_unused]] auto msg) {
+                                                        num_messages++;
+                                                        // spdlog::info("Got message number {} of size {}",
+                                                        // (size_t)num_messages, msg->GetPayload().size());
+                                                        auto maybe_string = to_string_it->second(msg->GetPayload(),
+                                                                                                 maybe_schema->name());
+                                                        if (maybe_string) {
+                                                          std::cout << *maybe_string << std::endl;
+                                                        }
+                                                      },
+                                                      nullptr, {});
 
   while (!max_num_messages || max_num_messages > num_messages) {
     // todo: move this out into "unit"
@@ -221,7 +240,8 @@ int main(int argc, char *argv[]) {
       }
     } else if (topic_command.is_subcommand_used("print")) {
       auto topic = topic_print_command.get("topic");
-      PrintTopic(topic, connection.get(), topic_print_command.present<size_t>("-n"), topic_print_command["--json"] == true);
+      PrintTopic(topic, connection.get(), topic_print_command.present<size_t>("-n"),
+                 topic_print_command["--json"] == true);
     }
   } else if (parser.is_subcommand_used("schema")) {
     auto topic = schema_print_command.get("schema");

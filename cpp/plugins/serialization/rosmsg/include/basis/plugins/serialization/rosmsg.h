@@ -80,13 +80,17 @@ public:
     return true; 
   }
 
+  template <typename T_MSG>
+  static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
+    return {SERIALIZER_ID, ros::message_traits::DataType<T_MSG>::value()};
+  };
 protected:
   static RosMsgParser::ParsersCollection<RosMsgParser::ROS_Deserializer> parser_collection;
 };
 } // namespace plugins::serialization
 
 /**
- * Helper to enable protobuf serializer by default for all `protobuf::Message`.
+ * Helper to enable rosmsg serializer by default for all `ros::Message`.
  */
 
 template <typename T_MSG>
