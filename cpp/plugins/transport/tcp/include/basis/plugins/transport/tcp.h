@@ -115,12 +115,12 @@ public:
       : core::transport::Transport(thread_pool_manager) {}
 
   virtual std::shared_ptr<basis::core::transport::TransportPublisher>
-  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info) override {
+  Advertise(std::string_view topic, [[maybe_unused]] core::serialization::MessageTypeInfo type_info) override {
     return Advertise(topic, type_info, 0);
   }
 
   std::shared_ptr<TcpPublisher>
-  Advertise(std::string_view topic, [[maybe_unused]] core::transport::MessageTypeInfo type_info, uint16_t port) {
+  Advertise(std::string_view topic, [[maybe_unused]] core::serialization::MessageTypeInfo type_info, uint16_t port) {
     std::shared_ptr<TcpPublisher> publisher = *TcpPublisher::Create(port);
     {
       std::lock_guard lock(publishers_mutex);
@@ -131,7 +131,7 @@ public:
 
   virtual std::shared_ptr<basis::core::transport::TransportSubscriber>
   Subscribe(std::string_view topic, core::transport::TypeErasedSubscriberCallback callback,
-            core::transport::OutputQueue *output_queue, [[maybe_unused]] core::transport::MessageTypeInfo type_info) override {
+            core::transport::OutputQueue *output_queue, [[maybe_unused]] core::serialization::MessageTypeInfo type_info) override {
     // TODO: specify thread pool name
     // TODO: pass in the thread pool every time
     // TODO: error handling

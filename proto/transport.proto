@@ -3,13 +3,22 @@ syntax= "proto3";
 package basis.core.transport.proto;
 
 // Common
+ 
+message MessageSchema {
+  string serializer = 1;
+  string name = 2;
+  string schema = 3;
+  string hash_id = 4;
+}
+
 message PublisherInfo {
     uint64 publisher_id_high = 1;
     uint64 publisher_id_low = 2;
     // TODO: type
     // TODO: this results in a lot of duplication of topic names, but its probably ok - topic names are mostly unique
     string topic = 3;
-    map<string, string> transport_info = 4;
+    string schema_id = 4;
+    map<string, string> transport_info = 5;
 }
 
 // TransportManager -> Coordinator
@@ -34,12 +43,26 @@ message NetworkInfo {
     map<string, RepeatedPublisherInfo> publishers_by_topic = 1;
 }
 
-/*
-// todo not implemented in Coordinator
-message CoordinatorMessage {
+message MessageSchemas {
+    repeated MessageSchema schemas = 1;
+}
+
+message RequestSchemas {
+    repeated string schema_ids = 1;
+}
+
+message ClientToCoordinatorMessage {
     oneof PossibleMessages {
-        NetworkInfo network_info = 1;
-        PublishersDelta publishers_delta = 2;
+        //string error = 1;
+        TransportManagerInfo transport_manager_info = 2;
+        MessageSchemas schemas = 3;
+        RequestSchemas request_schemas = 4;
     }
 }
-*/
+message CoordinatorMessage {
+    oneof PossibleMessages {
+        string error = 1;
+        NetworkInfo network_info = 2;
+        MessageSchemas schemas = 3;
+    }
+}

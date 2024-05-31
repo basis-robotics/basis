@@ -5,11 +5,12 @@
 namespace basis::core::transport {
 
 struct MessageHeader {
+  // TODO: I haven't actually been using these
   enum DataType : uint8_t {
     INVALID = 0,
     HELLO,      // Initial connection packet, specifying data type, any transport specific options
     DISCONNECT, // Disconnect warning, with reason for disconnect
-    SCHEMA,     // A schema, transport specific but human readable
+    //SCHEMA,     // A schema, transport specific but human readable
     MESSAGE,    // A message, transport specific
                 /*
                     MESSAGE_JSON = 3; // A message file, converted to human readable format

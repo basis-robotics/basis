@@ -32,12 +32,16 @@ TcpConnection::ReceiveStatus TcpConnection::ReceiveMessage(core::transport::Inco
     std::span<std::byte> buffer = incomplete.GetCurrentBuffer();
 
     // Download some bytes
+    spdlog::trace("RecvInto {}", buffer.size());
     count = socket.RecvInto((char *)buffer.data(), buffer.size());
 
     if (count < 0) {
       if (errno != EAGAIN && errno != EWOULDBLOCK) {
         spdlog::error("ReceiveMessage failed due to {} {}", errno, strerror(errno));
         return ReceiveStatus::ERROR;
+      }
+      else {
+        spdlog::trace("ReceiveMessage EWOULDBLOCK");
       }
       return ReceiveStatus::DOWNLOADING;
     }
@@ -84,6 +88,7 @@ bool TcpConnection::Send(const std::byte *data, size_t len) {
   // TODO: this loop should go on a helper on Socket(?)
   while (len) {
     int sent_size = socket.Send(data, len);
+    spdlog::trace("Sent {} bytes", sent_size);
     if (sent_size < 0) {
       return false;
     }

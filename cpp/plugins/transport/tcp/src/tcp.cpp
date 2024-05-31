@@ -23,6 +23,7 @@ void TcpSender::StartThread() {
       }
 
       for (auto &message : buffer) {
+        spdlog::trace("Sending a message of size {}", message->GetPacket().size());
         std::span<const std::byte> packet = message->GetPacket();
         if (!Send(packet.data(), packet.size())) {
           spdlog::trace("Stopping send thread due to {}: {}", errno, strerror(errno));
@@ -39,6 +40,8 @@ void TcpSender::StartThread() {
 }
 
 void TcpSender::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
+          spdlog::trace("Queueing a message of size {}", message->GetPacket().size());
+
   std::lock_guard lock(send_mutex);
   send_buffer.emplace_back(std::move(message));
   send_cv.notify_one();

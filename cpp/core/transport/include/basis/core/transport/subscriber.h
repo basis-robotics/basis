@@ -3,7 +3,7 @@
 #include "inproc.h"
 #include "message_event.h"
 #include "message_packet.h"
-#include "message_type_info.h"
+#include <basis/core/serialization/message_type_info.h>
 #include "publisher_info.h"
 
 #include <basis/core/time.h>
@@ -41,7 +41,7 @@ public:
 class SubscriberBase {
 public:
   SubscriberBase(
-    std::string_view topic, MessageTypeInfo type_info,
+    std::string_view topic, serialization::MessageTypeInfo type_info,
              std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers, bool has_inproc) :
                topic(topic), type_info(std::move(type_info)), has_inproc(has_inproc), transport_subscribers(std::move(transport_subscribers)) {
 
@@ -60,7 +60,7 @@ public:
 protected:
   friend class ::TestTcpTransport;
   const std::string topic;
-  const MessageTypeInfo type_info;
+  const serialization::MessageTypeInfo type_info;
 
   const bool has_inproc;
 
@@ -76,7 +76,7 @@ protected:
 
 template <typename T_MSG> class Subscriber : public SubscriberBase {
 public:
-  Subscriber(std::string_view topic, MessageTypeInfo type_info,
+  Subscriber(std::string_view topic, serialization::MessageTypeInfo type_info,
              std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers,
              std::shared_ptr<InprocSubscriber<T_MSG>> inproc)
       : SubscriberBase(topic, std::move(type_info), std::move(transport_subscribers), inproc != nullptr),

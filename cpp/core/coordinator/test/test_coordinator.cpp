@@ -1,6 +1,7 @@
 #include <basis/core/coordinator.h>
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/transport/transport_manager.h>
+#include <spdlog/cfg/env.h>
 
 #include <gtest/gtest.h>
 
@@ -18,6 +19,8 @@ struct TestTransportManager : public basis::core::transport::TransportManager {
 };
 
 TEST(TestCoordinator, BasicTest) {
+  spdlog::cfg::load_env_levels();
+
   basis::core::transport::Coordinator coordinator = *basis::core::transport::Coordinator::Create();
 
   auto connector = basis::core::transport::CoordinatorConnector::Create();
@@ -36,7 +39,46 @@ TEST(TestCoordinator, BasicTest) {
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   coordinator.Update();
+
+  using Serializer = basis::SerializationHandler<basis::core::transport::proto::TransportManagerInfo>::type;
+  // Dump a few schemas
+  std::vector<basis::core::serialization::MessageSchema> schemas = {
+      Serializer::DumpSchema<basis::core::transport::proto::TransportManagerInfo>(),
+      Serializer::DumpSchema<basis::core::transport::proto::MessageSchema>()};
+
+  connector->SendSchemas(schemas);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  coordinator.Update();
+
+  ASSERT_EQ(coordinator.GetKnownSchemas().size(), 2);
+
+  std::string proto = Serializer::SERIALIZER_ID;
+  std::array<std::string, 3> invalids = {proto + ":foo", proto + ":bar", proto + ":baz"};
+
+  connector->RequestSchemas(invalids);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  coordinator.Update();
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  connector->Update();
+
+  ASSERT_EQ(connector->errors_from_coordinator.size(), 1);
+
+  connector->errors_from_coordinator.clear();
+
+  std::string request = proto + ":" + schemas[0].name;
+  connector->RequestSchemas({&request, 1});
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  coordinator.Update();
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+  connector->Update();
+  spdlog::error("{}", connector->errors_from_coordinator[0]);
+  ASSERT_EQ(connector->errors_from_coordinator.size(), 0);
+
+  ASSERT_NE(connector->TryGetSchema(request), nullptr);
 }
+
+// todo: explicitly check that connector and coordinator can consume multiple messages at once
 
 struct TestRawStruct {
   uint32_t foo = 3;

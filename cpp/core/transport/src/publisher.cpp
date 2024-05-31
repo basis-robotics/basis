@@ -21,6 +21,7 @@ std::atomic<uint32_t> publisher_id_counter;
     PublisherInfo out;
     out.publisher_id = publisher_id;
     out.topic = topic;
+    out.schema_id = type_info.SchemaId();
 
     if(has_inproc) {
         out.transport_info["inproc"] = std::to_string(getpid());

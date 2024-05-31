@@ -6,7 +6,6 @@
 #include <spdlog/spdlog.h>
 
 #include "inproc.h"
-#include "message_type_info.h"
 #include "publisher.h"
 #include "publisher_info.h"
 #include "subscriber.h"
@@ -18,6 +17,38 @@
 
 namespace basis::core::transport {
 
+class SchemaManager {
+public:
+  SchemaManager() {}
+
+  template <typename T_MSG, typename T_Serializer> void RegisterType(const serialization::MessageTypeInfo &type_info) {
+    const std::string schema_id = type_info.SchemaId();
+    if (!known_schemas.contains(schema_id)) {
+      known_schemas.insert(schema_id);
+
+      if constexpr (!std::is_same_v<T_Serializer, serialization::RawSerializer>) {
+        /*
+        serialization::MessageSchema schema = T_Serializer::template DumpSchema<T_MSG>();
+         proto::MessageSchema proto_schema;
+          proto_schema.set_name(schema.name);
+          proto_schema.set_serializer(schema.serializer);
+          proto_schema.set_schema(schema.schema);
+          proto_schema.set_hash_id(schema.hash_id);
+          schemas_to_send.push_back(proto_schema);
+        */
+        schemas_to_send.push_back(T_Serializer::template DumpSchema<T_MSG>());
+      }
+    }
+  }
+
+  std::vector<serialization::MessageSchema> &&ConsumeSchemasToSend() { return std::move(schemas_to_send); }
+
+protected:
+  std::unordered_set<std::string> known_schemas;
+
+  std::vector<serialization::MessageSchema> schemas_to_send;
+};
+
 /**
  * Class responsible for creating publishers/subscribers and accumulating data to send to the Coordinator
  */
@@ -27,7 +58,9 @@ public:
   // todo: deducing a raw type should be an error unless requested
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<Publisher<T_MSG>>
-  Advertise(std::string_view topic, MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+  Advertise(std::string_view topic,
+            serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
+    schema_manager.RegisterType<T_MSG, T_Serializer>(message_type);
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     if (inproc) {
@@ -49,13 +82,14 @@ public:
 
   /**
    * Subscribe to a topic, without attempting to deserialize.
-   * 
-   * @warning This will not subscribe to messages sent over the `inproc` transport, as they are not serialized in the first place.
+   *
+   * @warning This will not subscribe to messages sent over the `inproc` transport, as they are not serialized in the
+   * first place.
    */
   [[nodiscard]] std::shared_ptr<SubscriberBase> SubscribeRaw(std::string_view topic,
                                                              TypeErasedSubscriberCallback callback,
                                                              core::transport::OutputQueue *output_queue,
-                                                             MessageTypeInfo message_type) {
+                                                             serialization::MessageTypeInfo message_type) {
     return SubscribeInternal<SubscriberBase>(topic, callback, output_queue, message_type, {});
   }
 
@@ -63,7 +97,7 @@ public:
   [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
   Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
             core::transport::OutputQueue *output_queue = nullptr,
-            MessageTypeInfo message_type = DeduceMessageTypeInfo<T_MSG>()) {
+            serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
     TypeErasedSubscriberCallback outer_callback = [topic, callback](std::shared_ptr<MessagePacket> packet) {
@@ -146,23 +180,25 @@ public:
     }
   }
 
+  SchemaManager &GetSchemaManager() { return schema_manager; }
+
 protected:
- /**
-  * Internal helper used to allow subscribing with a number of different callback signatures.
-  * 
-  * @tparam T_SUBSCRIBER the subscriber type in use - typically Subscriber<MyMessageType> or SubscriberBase for raw
-  * @tparam T_INPROC_SUBSCRIBER 
-  * @param topic the topic to subscribe to
-  * @param callback type independent callback
-  * @param output_queue 
-  * @param message_type 
-  * @param inproc_subscriber can be nullptr for SubscriberBase
-  * @return std::shared_ptr<T_SUBSCRIBER>
-  */
+  /**
+   * Internal helper used to allow subscribing with a number of different callback signatures.
+   *
+   * @tparam T_SUBSCRIBER the subscriber type in use - typically Subscriber<MyMessageType> or SubscriberBase for raw
+   * @tparam T_INPROC_SUBSCRIBER
+   * @param topic the topic to subscribe to
+   * @param callback type independent callback
+   * @param output_queue
+   * @param message_type
+   * @param inproc_subscriber can be nullptr for SubscriberBase
+   * @return std::shared_ptr<T_SUBSCRIBER>
+   */
   template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
   [[nodiscard]] std::shared_ptr<T_SUBSCRIBER>
   SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback,
-                    core::transport::OutputQueue *output_queue, MessageTypeInfo message_type,
+                    core::transport::OutputQueue *output_queue, serialization::MessageTypeInfo message_type,
                     std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
@@ -222,6 +258,8 @@ protected:
    * @todo: it may be wise to make this a unnordered_map<string, vector<subscriber>> instead
    */
   std::unordered_multimap<std::string, std::weak_ptr<SubscriberBase>> subscribers;
+
+  SchemaManager schema_manager;
 
   /**
    * For testing only - set to false to disable using known subscribers and force a coordinator connection

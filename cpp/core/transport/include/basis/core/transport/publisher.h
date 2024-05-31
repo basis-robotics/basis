@@ -1,7 +1,7 @@
 #pragma once
+#include <atomic>
 #include <cassert>
 #include <cstdint>
-#include <atomic>
 #include <memory>
 #include <string_view>
 
@@ -9,10 +9,11 @@
 
 #include "inproc.h"
 #include "message_packet.h"
-#include "message_type_info.h"
 #include "publisher_info.h"
 
 #include <basis/core/serialization.h>
+#include <basis/core/serialization/message_type_info.h>
+
 namespace basis::core::transport {
 
 extern std::atomic<uint32_t> publisher_id_counter;
@@ -40,8 +41,10 @@ public:
  */
 class PublisherBase {
 protected:
-  PublisherBase(std::string_view topic, MessageTypeInfo type_info, bool has_inproc,
-            std::vector<std::shared_ptr<TransportPublisher>> transport_publishers) : topic(topic), type_info(type_info), has_inproc(has_inproc), transport_publishers(transport_publishers) {}
+  PublisherBase(std::string_view topic, serialization::MessageTypeInfo type_info, bool has_inproc,
+                std::vector<std::shared_ptr<TransportPublisher>> transport_publishers)
+      : topic(topic), type_info(type_info), has_inproc(has_inproc), transport_publishers(transport_publishers) {}
+
 public:
   virtual ~PublisherBase() = default;
 
@@ -50,22 +53,20 @@ public:
 protected:
   const __uint128_t publisher_id = CreatePublisherId();
   const std::string topic;
-  const MessageTypeInfo type_info;
+  const serialization::MessageTypeInfo type_info;
   const bool has_inproc;
-    // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
+  // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
   std::vector<std::shared_ptr<TransportPublisher>> transport_publishers;
 };
 
-
 template <typename T_MSG> class Publisher : public PublisherBase {
 public:
-  Publisher(std::string_view topic, MessageTypeInfo type_info,
+  Publisher(std::string_view topic, serialization::MessageTypeInfo type_info,
             std::vector<std::shared_ptr<TransportPublisher>> transport_publishers,
             std::shared_ptr<InprocPublisher<T_MSG>> inproc, SerializeGetSizeCallback<T_MSG> get_message_size_cb,
             SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb)
 
-      :
-      PublisherBase(topic,type_info, inproc != nullptr, transport_publishers), inproc(inproc),
+      : PublisherBase(topic, type_info, inproc != nullptr, transport_publishers), inproc(inproc),
         get_message_size_cb(std::move(get_message_size_cb)),
         write_message_to_span_cb(std::move(write_message_to_span_cb)) {}
 
@@ -103,6 +104,7 @@ public:
       pub->SendMessage(packet);
     }
   }
+
 private:
   std::shared_ptr<InprocPublisher<T_MSG>> inproc;
 

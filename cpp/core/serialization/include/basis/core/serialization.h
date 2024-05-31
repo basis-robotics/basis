@@ -10,13 +10,21 @@
 #include <span>
 #include <memory>
 
+#include "serialization/message_type_info.h"
+
 namespace basis {
 namespace core::serialization {
+
+struct MessageSchema {
+  std::string serializer;
+  std::string name;
+  std::string schema;
+  std::string hash_id;
+};
+
 /**
  * Base interface, used by all serializers. Will later contain ToJSON and other utilities.
  *
- * @todo ToJSON
- * @todo ToDebugString
  * @todo Capabilities per message type - such as ability to be transported over network at all
  */
 class Serializer {
@@ -69,6 +77,11 @@ private:
  */
 class RawSerializer : public Serializer {
 public:
+  template <typename T_MSG> static serialization::MessageTypeInfo DeduceMessageTypeInfo() {
+    // todo: deprecate
+    return {"raw", "unknown"};
+  }
+
   template <typename T_MSG> static size_t GetSerializedSize(const T_MSG &message) { return sizeof(message); }
 
   template <typename T_MSG> static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> span) {

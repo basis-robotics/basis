@@ -11,7 +11,6 @@
 #include <basis/plugins/serialization/protobuf.h>
 #include <basis/plugins/transport/tcp.h>
 
-
 #include "coordinator_default_port.h"
 
 /**
@@ -44,11 +43,11 @@
 namespace basis::core::transport {
 /**
  * A utility class for communicating the topic network state between TransportManagers (typically one per process)
- * 
+ *
  * Implemented single threaded for safety - latency isn't a huge concern here.
  *
  * @todo track publishers and add a delta message
- * @todo on connection, send the last message again (can we just implement latching?) 
+ * @todo on connection, send the last message again (can we just implement latching?)
  */
 class Coordinator {
   /**
@@ -81,16 +80,26 @@ public:
   proto::NetworkInfo GenerateNetworkInfo();
 
   /**
-   * Should be called on a regular basis, from the main thread.
+   * Update the coordinator. Should be called on a regular basis, from the main thread.
    *
    * Accept new clients
    * Compiles data about the subscription networks
    * Sends the data to each client
-   *
    */
   void Update();
 
+  const std::unordered_map<std::string, proto::MessageSchema> &GetKnownSchemas() const { return known_schemas; }
+
 protected:
+  std::shared_ptr<basis::core::transport::MessagePacket> SerializeMessagePacket(const proto::CoordinatorMessage& message) {
+    using Serializer = SerializationHandler<proto::CoordinatorMessage>::type;
+    const size_t size = Serializer::GetSerializedSize(message);
+
+    auto shared_message = std::make_shared<basis::core::transport::MessagePacket>(
+        basis::core::transport::MessageHeader::DataType::MESSAGE, size);
+    Serializer::SerializeToSpan(message, shared_message->GetMutablePayload());
+    return shared_message;
+  }
   /**
    * The TCP listen socket.
    */
@@ -100,6 +109,11 @@ protected:
    * The clients we should send information to. On disconnection, will be removed by Update()
    */
   std::list<Connection> clients;
+
+  /**
+   * All known schemas, indexed by "encoder_name:schema_name"
+   */
+  std::unordered_map<std::string, proto::MessageSchema> known_schemas;
 };
 
 } // namespace basis::core::transport
