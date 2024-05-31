@@ -81,7 +81,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
         ros-noetic-sensor-msgs
         # For rosx_introspection
     apt install --no-install-recommends -y \
-        rapidjson 
+    rapidjson-dev 
 EOF
 
 USER basis
