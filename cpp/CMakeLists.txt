@@ -61,6 +61,14 @@ FetchContent_MakeAvailable(rosx_introspection)
 target_compile_options(rosx_introspection PRIVATE -Wno-implicit-const-int-float-conversion)
 target_link_libraries(rosx_introspection fastcdr)
 
+
+find_package(cpp_common REQUIRED PATHS ${BASIS_ROS_ROOT}/share/cpp_common/cmake)
+find_package(rostime REQUIRED PATHS ${BASIS_ROS_ROOT}/share/rostime/cmake)
+find_package(roscpp_traits REQUIRED PATHS ${BASIS_ROS_ROOT}/share/roscpp_traits/cmake)
+find_package(roscpp_serialization REQUIRED PATHS ${BASIS_ROS_ROOT}/share/roscpp_serialization/cmake)
+find_package(message_runtime REQUIRED PATHS ${BASIS_ROS_ROOT}/share/message_runtime/cmake)
+
+
 endif()
 
 

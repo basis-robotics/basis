@@ -9,22 +9,14 @@ project(basis_plugins_serialization_rosmsg)
 
 message("using BASIS_ROS_ROOT=${BASIS_ROS_ROOT}")
 
-find_package(cpp_common REQUIRED PATHS ${BASIS_ROS_ROOT}/share/cpp_common/cmake)
-find_package(rostime REQUIRED PATHS ${BASIS_ROS_ROOT}/share/rostime/cmake)
-find_package(roscpp_traits REQUIRED PATHS ${BASIS_ROS_ROOT}/share/roscpp_traits/cmake)
-find_package(roscpp_serialization REQUIRED PATHS ${BASIS_ROS_ROOT}/share/roscpp_serialization/cmake)
-find_package(message_runtime REQUIRED PATHS ${BASIS_ROS_ROOT}/share/message_runtime/cmake)
-
 add_library(basis_plugins_serialization_rosmsg SHARED src/rosmsg.cpp)
 
-add_library(ros_std_msgs INTERFACE)
-target_include_directories(ros_std_msgs INTERFACE ${BASIS_ROS_ROOT}/include/)
-
 target_include_directories(basis_plugins_serialization_rosmsg PUBLIC include)
+target_include_directories(basis_plugins_serialization_rosmsg PUBLIC ${BASIS_ROS_ROOT}/include/)
 
 target_link_directories(basis_plugins_serialization_rosmsg PUBLIC ${BASIS_ROS_ROOT}/lib)
 
-target_link_libraries(basis_plugins_serialization_rosmsg PUBLIC basis_core_serialization roscpp_serialization ros_std_msgs rosx_introspection)
+target_link_libraries(basis_plugins_serialization_rosmsg PUBLIC basis_core_serialization roscpp_serialization rosx_introspection)
 
 add_library(basis::plugins::serialization::rosmsg ALIAS basis_plugins_serialization_rosmsg)
 

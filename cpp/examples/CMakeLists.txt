@@ -13,6 +13,7 @@ target_link_libraries(
 
 if(BASIS_ENABLE_ROS)
 
+find_package(std_msgs REQUIRED PATHS ${BASIS_ROS_ROOT}/share/std_msgs/cmake)
 find_package(geometry_msgs REQUIRED PATHS ${BASIS_ROS_ROOT}/share/geometry_msgs/cmake)
 find_package(sensor_msgs REQUIRED PATHS ${BASIS_ROS_ROOT}/share/sensor_msgs/cmake)
 
