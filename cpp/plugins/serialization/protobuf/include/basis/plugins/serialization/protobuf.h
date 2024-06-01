@@ -177,6 +177,9 @@ protected:
   static google::protobuf::DynamicMessageFactory protoFactory;
   static std::unordered_set<std::string> known_schemas;
 };
+
+using ProtobufPlugin = core::serialization::AutoSerializationPlugin<ProtobufSerializer>;
+
 } // namespace plugins::serialization
 
 /**
@@ -186,5 +189,7 @@ template <typename T_MSG>
 struct SerializationHandler<T_MSG, std::enable_if_t<std::is_base_of_v<google::protobuf::Message, T_MSG>>> {
   using type = plugins::serialization::ProtobufSerializer;
 };
+
+
 
 } // namespace basis

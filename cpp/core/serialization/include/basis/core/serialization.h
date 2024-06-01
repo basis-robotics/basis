@@ -68,6 +68,41 @@ private:
 
 };
 
+class SerializationPlugin {
+public:
+  virtual ~SerializationPlugin() = default;
+  
+  virtual std::string_view GetSerializerName() = 0;
+
+
+  virtual bool LoadSchema(std::string_view schema_name, std::string_view schema) = 0;
+
+  virtual std::optional<std::string> DumpMessageString(std::span<const std::byte> span, std::string_view schema_name) = 0;
+
+  virtual std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span, std::string_view schema_name) = 0;
+};
+
+template<typename T_Serializer>
+class AutoSerializationPlugin : public SerializationPlugin {
+  public:
+    AutoSerializationPlugin() = default;
+    
+    std::string_view GetSerializerName() override {
+      return T_Serializer::SERIALIZER_ID;
+    }
+
+    virtual bool LoadSchema(std::string_view schema_name, std::string_view schema) override {
+      return T_Serializer::LoadSchema(schema_name, schema);
+    }
+
+    virtual std::optional<std::string> DumpMessageString(std::span<const std::byte> span, std::string_view schema_name) override {
+      return T_Serializer::DumpMessageString(span, schema_name);
+    }
+
+    virtual std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span, std::string_view schema_name) override {
+      return T_Serializer::DumpMessageJSONString(span, schema_name);
+    }
+};
 
 /**
  * Serializer that simply uses the message passed in as a raw byte buffer.

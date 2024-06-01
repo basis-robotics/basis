@@ -18,6 +18,20 @@
 
 #endif
 
+using namespace basis;
+
+auto protobuf_plugin = std::make_unique<basis::plugins::serialization::ProtobufPlugin>();
+#ifdef BASIS_ENABLE_ROS
+auto rosmsg_plugins = std::make_unique<basis::plugins::serialization::RosmsgPlugin>();
+#endif
+
+std::unordered_map<std::string, core::serialization::SerializationPlugin *> serialization_plugins = {
+    {(std::string)protobuf_plugin->GetSerializerName(), protobuf_plugin.get()},
+#ifdef BASIS_ENABLE_ROS
+    {(std::string)rosmsg_plugins->GetSerializerName(), rosmsg_plugins.get()},
+#endif
+};
+
 // todo: one map :)
 using StringDumpCallback = std::function<std::optional<std::string>(std::span<const std::byte>, std::string_view)>;
 std::unordered_map<std::string, StringDumpCallback> string_dumpers = {
@@ -86,16 +100,13 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
     return;
   }
 
-  StringDumpCallback to_string;
-  auto *callback_map = json ? &json_dumpers : &string_dumpers;
-
-  auto to_string_it = callback_map->find(maybe_schema->serializer());
-  if (to_string_it == callback_map->end()) {
-    // Note: theoretically we could do this string dumping on the publisher side, instead
-    std::cerr << "Unknown serializer " << maybe_schema->serializer() << " please recompile basis_cli with support"
+  auto plugin_it = serialization_plugins.find(maybe_schema->serializer());
+  if(plugin_it == serialization_plugins.end()) {
+      std::cerr << "Unknown serializer " << maybe_schema->serializer() << " please recompile basis_cli with support"
               << std::endl;
     return;
   }
+  core::serialization::SerializationPlugin* plugin = plugin_it->second;
 
   schema_loaders[maybe_schema->serializer()](maybe_schema->name(), maybe_schema->schema());
 
@@ -112,9 +123,11 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
   auto time_test_sub = transport_manager.SubscribeRaw(topic,
                                                       [&]([[maybe_unused]] auto msg) {
                                                         num_messages++;
-                                                        // spdlog::info("Got message number {} of size {}",
-                                                        // (size_t)num_messages, msg->GetPayload().size());
-                                                        auto maybe_string = to_string_it->second(msg->GetPayload(),
+
+                                                        auto to_string = json ? &core::serialization::SerializationPlugin::DumpMessageJSONString :  &core::serialization::SerializationPlugin::DumpMessageString;
+
+                                                        
+                                                        auto maybe_string = (plugin->*to_string)(msg->GetPayload(),
                                                                                                  maybe_schema->name());
                                                         if (maybe_string) {
                                                           std::cout << *maybe_string << std::endl;
