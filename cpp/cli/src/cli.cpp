@@ -6,12 +6,34 @@
  */
 #include <argparse/argparse.hpp>
 #include <spdlog/spdlog.h>
-
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/transport/transport_manager.h>
-
 // todo: load via plugin
 #include <basis/plugins/serialization/protobuf.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <transport.pb.h>
+#include <atomic>
+#include <chrono>
+#include <compare>
+#include <exception>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "basis/core/coordinator_default_port.h"
+#include "basis/core/serialization.h"
+#include "basis/core/transport/inproc.h"
+#include "basis/core/transport/thread_pool_manager.h"
+#include "basis/core/transport/transport.h"
+#include "basis/plugins/transport/tcp.h"
+#include "spdlog/fmt/bundled/core.h"
 
 #ifdef BASIS_ENABLE_ROS
 #include <basis/plugins/serialization/rosmsg.h>

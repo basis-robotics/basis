@@ -1,8 +1,8 @@
 #include <basis/core/transport/subscriber.h>
-
 #include <spdlog/spdlog.h>
-
 #include <unistd.h>
+
+#include "basis/core/transport/publisher_info.h"
 
 namespace basis::core::transport {
 void SubscriberBase::HandlePublisherInfo(const std::vector<PublisherInfo> &info) {

@@ -1,11 +1,13 @@
 #pragma once
 
+#include <sys/time.h>
+#include <time.h>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <ratio>
-#include <sys/time.h>
 #include <utility>
+#include <type_traits>
 
 /**
  * Time

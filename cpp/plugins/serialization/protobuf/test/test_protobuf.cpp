@@ -1,5 +1,7 @@
 #include <google/protobuf/util/message_differencer.h>
 #include <gtest/gtest.h>
+#include <google/protobuf/stubs/status.h>
+#include <google/protobuf/util/json_util.h>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -7,8 +9,18 @@
 #pragma clang diagnostic pop
 
 #include <basis/plugins/serialization/protobuf.h>
-
 #include <spdlog/spdlog.h>
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <type_traits>
+
+#include "basis/core/serialization.h"
+#include "gtest/gtest.h"
+#include "spdlog/fmt/bundled/core.h"
+
 /**
  * Test basic protobuf integration - just ensure that we've linked the library properly
  */

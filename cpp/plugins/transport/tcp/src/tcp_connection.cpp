@@ -1,6 +1,14 @@
 #include <basis/plugins/transport/tcp_connection.h>
-
 #include <spdlog/spdlog.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <optional>
+#include <span>
+
+#include "basis/core/networking/socket.h"
+#include "basis/core/transport/transport.h"
+#include "spdlog/fmt/bundled/core.h"
 
 namespace basis::plugins::transport {
 

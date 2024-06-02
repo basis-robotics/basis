@@ -1,20 +1,28 @@
 #pragma once
 
+#include <basis/core/serialization/message_type_info.h>
+#include <basis/core/time.h>
+#include <stddef.h>
+#include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "inproc.h"
 #include "message_event.h"
 #include "message_packet.h"
-#include <basis/core/serialization/message_type_info.h>
 #include "publisher_info.h"
-
-#include <basis/core/time.h>
-#include <functional>
-#include <memory>
 
 class TestTcpTransport;
 
 namespace basis {
 namespace core {
 namespace transport {
+struct PublisherInfo;
+template <typename T_MSG> class InprocSubscriber;
 
 template <typename T_MSG> using SubscriberCallback = std::function<void(std::shared_ptr<const T_MSG>)>;
 using TypeErasedSubscriberCallback = std::function<void(std::unique_ptr<MessagePacket>)>;

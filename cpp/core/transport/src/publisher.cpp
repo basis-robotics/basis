@@ -1,7 +1,15 @@
 #include <unistd.h>
-
 #include <basis/core/transport/publisher.h>
 #include <uuid/uuid.h>
+#include <stdint.h>
+#include <atomic>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "basis/core/serialization/message_type_info.h"
+#include "basis/core/transport/publisher_info.h"
 
 namespace basis::core::transport {
 

@@ -2,8 +2,35 @@
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/transport/transport_manager.h>
 #include <spdlog/cfg/env.h>
-
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <transport.pb.h>
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "basis/core/networking/socket.h"
+#include "basis/core/serialization.h"
+#include "basis/core/threading/thread_pool.h"
+#include "basis/core/transport/inproc.h"
+#include "basis/core/transport/publisher.h"
+#include "basis/core/transport/publisher_info.h"
+#include "basis/core/transport/subscriber.h"
+#include "basis/core/transport/thread_pool_manager.h"
+#include "basis/core/transport/transport.h"
+#include "basis/plugins/serialization/protobuf.h"
+#include "basis/plugins/transport/tcp.h"
+#include "gtest/gtest.h"
+#include "spdlog/fmt/bundled/core.h"
+#include "spdlog/spdlog.h"
 
 struct TestTransportManager : public basis::core::transport::TransportManager {
   TestTransportManager() : TransportManager(nullptr) {

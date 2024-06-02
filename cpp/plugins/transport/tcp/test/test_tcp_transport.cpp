@@ -1,27 +1,51 @@
-#include <memory>
-#include <span>
-#include <thread>
-
-#include "spdlog/cfg/env.h"
 #include <basis/core/transport/transport_manager.h>
 #include <basis/plugins/transport/epoll.h>
 #include <basis/plugins/transport/tcp.h>
 #include <gtest/gtest.h>
+#include <errno.h>
+#include <stdint.h>
+#include <string.h>
+#include <memory>
+#include <span>
+#include <thread>
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cstddef>
+#include <functional>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include "spdlog/async.h"
 #include "spdlog/fmt/bin_to_hex.h"
-#include "spdlog/sinks/basic_file_sink.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
-
-#include <queue>
+#include "basis/core/networking/socket.h"
+#include "basis/core/serialization.h"
+#include "basis/core/threading/thread_pool.h"
+#include "basis/core/transport/inproc.h"
+#include "basis/core/transport/message_packet.h"
+#include "basis/core/transport/publisher.h"
+#include "basis/core/transport/publisher_info.h"
+#include "basis/core/transport/simple_mpsc.h"
+#include "basis/core/transport/subscriber.h"
+#include "basis/core/transport/thread_pool_manager.h"
+#include "basis/core/transport/transport.h"
+#include "basis/plugins/transport/tcp_subscriber.h"
+#include "basis/plugins/transport/tcp_transport_name.h"
+#include "gtest/gtest.h"
+#include "nonstd/expected.hpp"
+#include "spdlog/common.h"
+#include "spdlog/fmt/bundled/core.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include <test.pb.h>
 #pragma clang diagnostic pop
-
-#include <basis/plugins/serialization/protobuf.h>
 
 #include <google/protobuf/util/message_differencer.h>
 

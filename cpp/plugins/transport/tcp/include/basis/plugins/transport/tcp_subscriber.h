@@ -1,15 +1,33 @@
 #pragma once
 
-#include <cstdint>
-#include <string_view>
-#include <unordered_map>
-
-#include "epoll.h"
 #include <basis/core/networking/socket.h>
 #include <basis/core/transport/subscriber.h>
 #include <basis/core/transport/transport.h>
+#include <stddef.h>
+#include <cstdint>
+#include <string_view>
+#include <unordered_map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "epoll.h"
 #include "tcp_connection.h"
+#include "nonstd/expected.hpp"
+
+namespace basis {
+namespace core {
+namespace threading {
+class ThreadPool;
+}  // namespace threading
+}  // namespace core
+namespace plugins {
+namespace transport {
+struct Epoll;
+}  // namespace transport
+}  // namespace plugins
+}  // namespace basis
 
 namespace basis::plugins::transport {
 

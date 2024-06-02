@@ -1,10 +1,20 @@
 #pragma once
 
 #include <basis/core/networking/socket.h>
-
 #include <basis/core/transport/transport.h>
-
 #include <memory>
+#include <cstddef>
+#include <utility>
+
+#include "basis/core/transport/message_packet.h"
+
+namespace basis {
+namespace core {
+namespace transport {
+class IncompleteMessagePacket;
+}  // namespace transport
+}  // namespace core
+}  // namespace basis
 
 namespace basis::plugins::transport {
 

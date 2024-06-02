@@ -1,6 +1,17 @@
 #include <unistd.h>
-
 #include <basis/plugins/transport/epoll.h>
+#include <assert.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
+#include <atomic>
+#include <functional>
+#include <mutex>
+#include <thread>
+#include <unordered_map>
+#include <utility>
+
+#include "spdlog/fmt/bundled/core.h"
+#include "spdlog/spdlog.h"
 
 namespace basis::plugins::transport {
 

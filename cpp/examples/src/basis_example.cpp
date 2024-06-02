@@ -6,11 +6,22 @@
  */
 #include <spdlog/cfg/env.h>
 #include <spdlog/spdlog.h>
-
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/transport/transport_manager.h>
-
 #include <test.pb.h>
+#include <chrono>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "basis/core/serialization.h"
+#include "basis/core/transport/inproc.h"
+#include "basis/core/transport/publisher.h"
+#include "basis/core/transport/thread_pool_manager.h"
+#include "basis/core/transport/transport.h"
+#include "basis/plugins/transport/tcp.h"
+#include "spdlog/fmt/bundled/core.h"
 
 #ifdef BASIS_ENABLE_ROS
 #include <basis/plugins/serialization/rosmsg.h>

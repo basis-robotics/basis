@@ -8,8 +8,19 @@
 #include <spdlog/spdlog.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
+#include <netinet/in.h>
+#include <stdint.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <cstddef>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+
+#include "nonstd/expected.hpp"
+
 namespace basis {
 namespace core {
 namespace networking {

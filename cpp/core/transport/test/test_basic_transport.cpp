@@ -1,8 +1,21 @@
 #include <basis/core/transport/inproc.h>
 #include <basis/core/transport/transport_manager.h>
-
 #include <gtest/gtest.h>
+#include <stdint.h>
 #include <thread>
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
+
+#include "basis/core/serialization.h"
+#include "basis/core/transport/message_event.h"
+#include "basis/core/transport/publisher.h"
+#include "basis/core/transport/thread_pool_manager.h"
+#include "gtest/gtest.h"
+#include "spdlog/fmt/bundled/core.h"
+
 using namespace basis::core::transport;
 
 TEST(Inproc, PubSub) {
