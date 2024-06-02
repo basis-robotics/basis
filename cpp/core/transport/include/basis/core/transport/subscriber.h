@@ -82,8 +82,6 @@ public:
       : SubscriberBase(topic, std::move(type_info), std::move(transport_subscribers), inproc != nullptr),
         inproc(std::move(inproc)) {}
   
-
-
 protected:
   std::shared_ptr<InprocSubscriber<T_MSG>> inproc;
 };
