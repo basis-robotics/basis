@@ -58,7 +58,7 @@ void Epoll::MainThread() {
  * @todo need to ensure that we remove the handle from epoll before we close it. This means a two way reference
  * @todo a careful reading of the epoll spec implies that one should read from the socket once after adding here
  * @todo error handling
- * @todo return a handle that can reactivate itself? 
+ * @todo return a handle that can reactivate itself?
  */
 bool Epoll::AddFd(int fd, Epoll::CallbackType callback) {
   assert(callbacks.count(fd) == 0);

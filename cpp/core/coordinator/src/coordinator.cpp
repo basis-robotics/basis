@@ -88,7 +88,7 @@ void Coordinator::Update() {
           spdlog::error("Unknown message from client!");
         }
       }
-      //spdlog::debug("Got completed message {}", client.info->DebugString());
+      // spdlog::debug("Got completed message {}", client.info->DebugString());
       [[fallthrough]];
     }
     case plugins::transport::TcpConnection::ReceiveStatus::DOWNLOADING: {

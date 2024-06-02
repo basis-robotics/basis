@@ -73,7 +73,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     const auto current_time = std::chrono::system_clock::now();
     const auto duration_in_seconds = std::chrono::duration<double>(current_time.time_since_epoch());
     const double num_seconds = duration_in_seconds.count();
-    
+
     // Publish time message
     auto msg = std::make_shared<TimeTest>();
     msg->set_time(num_seconds);
@@ -81,16 +81,16 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
 
     time_test_pub->Publish(msg);
 #ifdef BASIS_ENABLE_ROS
-  auto pc2_message = std::make_shared<sensor_msgs::PointCloud2>();
-  pc2_message->header.stamp = ros::Time(num_seconds);
-  pc2_message->height = 2;
-  pc2_message->width = 16;
-  pc2_message->data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-                          pc2_pub->Publish(pc2_message);
+    auto pc2_message = std::make_shared<sensor_msgs::PointCloud2>();
+    pc2_message->header.stamp = ros::Time(num_seconds);
+    pc2_message->height = 2;
+    pc2_message->width = 16;
+    pc2_message->data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    pc2_pub->Publish(pc2_message);
 
-  std::stringstream ss;
-  ss << *pc2_message;
+    std::stringstream ss;
+    ss << *pc2_message;
     spdlog::info("Publishing message [\n{}]", ss.str());
 
 #endif

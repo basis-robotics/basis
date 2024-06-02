@@ -2,7 +2,6 @@
 
 #include <spdlog/spdlog.h>
 
-
 namespace basis::plugins::transport {
 
 std::unique_ptr<const basis::core::transport::MessagePacket> TcpConnection::ReceiveMessage(int timeout_s) {
@@ -39,8 +38,7 @@ TcpConnection::ReceiveStatus TcpConnection::ReceiveMessage(core::transport::Inco
       if (errno != EAGAIN && errno != EWOULDBLOCK) {
         spdlog::error("ReceiveMessage failed due to {} {}", errno, strerror(errno));
         return ReceiveStatus::ERROR;
-      }
-      else {
+      } else {
         spdlog::trace("ReceiveMessage EWOULDBLOCK");
       }
       return ReceiveStatus::DOWNLOADING;
@@ -60,9 +58,9 @@ TcpConnection::ReceiveStatus TcpConnection::ReceiveMessage(core::transport::Inco
 
 bool TcpConnection::Receive(std::byte *buffer, size_t buffer_len, int timeout_s) {
   while (buffer_len) {
-    if(timeout_s >= 0) {
+    if (timeout_s >= 0) {
       // todo: error handling
-      if(socket.Select(timeout_s, 0)) {
+      if (socket.Select(timeout_s, 0)) {
         return false;
       }
     }
@@ -83,7 +81,6 @@ bool TcpConnection::Receive(std::byte *buffer, size_t buffer_len, int timeout_s)
   return true;
 }
 
-
 bool TcpConnection::Send(const std::byte *data, size_t len) {
   // TODO: this loop should go on a helper on Socket(?)
   while (len) {
@@ -99,4 +96,4 @@ bool TcpConnection::Send(const std::byte *data, size_t len) {
   return true;
 }
 
-}
+} // namespace basis::plugins::transport

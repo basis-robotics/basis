@@ -40,7 +40,7 @@ void TcpSender::StartThread() {
 }
 
 void TcpSender::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
-          spdlog::trace("Queueing a message of size {}", message->GetPacket().size());
+  spdlog::trace("Queueing a message of size {}", message->GetPacket().size());
 
   std::lock_guard lock(send_mutex);
   send_buffer.emplace_back(std::move(message));

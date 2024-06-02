@@ -735,11 +735,11 @@ TEST(TestIntegration, TcpAndInproc) {
 
   std::atomic<int> num_recv = 0;
   auto subscriber = transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>(
-      "test_tcp_inproc", [&num_recv, &send_msg](std::shared_ptr<const TestStruct> recv_msg) { 
+      "test_tcp_inproc", [&num_recv, &send_msg](std::shared_ptr<const TestStruct> recv_msg) {
         // Ensure this came over the shared transport
         ASSERT_EQ(send_msg.get(), recv_msg.get());
-        num_recv++; 
-    });
+        num_recv++;
+      });
   transport_manager.Update();
 
   publisher->Publish(send_msg);

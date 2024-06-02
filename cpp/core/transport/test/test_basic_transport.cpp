@@ -66,5 +66,4 @@ TEST(TransportManager, Basic) {
 
   publisher->Publish(std::make_shared<TestStruct>());
   ASSERT_EQ(num_recv, 1);
-  
 }
