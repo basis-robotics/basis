@@ -8,9 +8,9 @@ namespace basis::core::transport {
 struct TopicInfo {
   // TODO: a bunch of allocations here
   std::string topic;
-  std::string type;
-  std::string publisher_unit;
-  std::string publisher_host;
+  // std::string type;
+  // std::string publisher_unit;
+  // std::string publisher_host;
 };
 
 template <typename T_MSG> struct MessageEvent {

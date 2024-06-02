@@ -27,15 +27,6 @@ public:
       known_schemas.insert(schema_id);
 
       if constexpr (!std::is_same_v<T_Serializer, serialization::RawSerializer>) {
-        /*
-        serialization::MessageSchema schema = T_Serializer::template DumpSchema<T_MSG>();
-         proto::MessageSchema proto_schema;
-          proto_schema.set_name(schema.name);
-          proto_schema.set_serializer(schema.serializer);
-          proto_schema.set_schema(schema.schema);
-          proto_schema.set_hash_id(schema.hash_id);
-          schemas_to_send.push_back(proto_schema);
-        */
         schemas_to_send.push_back(T_Serializer::template DumpSchema<T_MSG>());
       }
     }
@@ -103,6 +94,7 @@ public:
     TypeErasedSubscriberCallback outer_callback = [topic, callback](std::shared_ptr<MessagePacket> packet) {
       std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
       if (!message) {
+        // todo: change the callback to take the topic as well?
         spdlog::error("Unable to deserialize message on topic {}", topic);
         return;
       }
@@ -110,10 +102,19 @@ public:
     };
 
     if (inproc) {
-#if 0
-      inproc_subscriber = inproc->Subscribe<T>(topic, [](MessageEvent<T_MSG>){});
-        // TODO
-#endif
+      inproc_subscriber = inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg){
+        if(output_queue) {
+
+          output_queue->Emplace({msg.topic_info.topic, nullptr, [callback, message = msg.message](std::shared_ptr<MessagePacket>){
+            callback(message);
+            }});
+        }
+        else {
+          callback(std::move(msg.message));
+        }
+
+      });
+
     }
 
     return SubscribeInternal<Subscriber<T_MSG>>(topic, outer_callback, output_queue, message_type, inproc_subscriber);

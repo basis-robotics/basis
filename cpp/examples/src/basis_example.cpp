@@ -27,6 +27,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     spdlog::warn("No connection to the coordinator, running without coordinator");
   }
 
+  // todo why not output queue
+
   auto thread_pool_manager = std::make_shared<basis::core::transport::ThreadPoolManager>();
 
   basis::core::transport::TransportManager transport_manager(

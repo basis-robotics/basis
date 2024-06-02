@@ -177,8 +177,7 @@ TEST_F(TestTcpTransport, TestPublisher) {
 TEST_F(TestTcpTransport, TestTransport) {
   auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
   TcpTransport transport(thread_pool_manager);
-  std::shared_ptr<TransportPublisher> publisher =
-      transport.Advertise("test", {"raw", "int"});
+  std::shared_ptr<TransportPublisher> publisher = transport.Advertise("test", {"raw", "int"});
   ASSERT_NE(publisher, nullptr);
 }
 
@@ -187,7 +186,7 @@ struct TestStruct {
   float bar = 8.5;
   char baz[4] = "baz";
 
-  friend auto operator<=>(const TestStruct&, const TestStruct&) = default;
+  friend auto operator<=>(const TestStruct &, const TestStruct &) = default;
 };
 
 /**
@@ -210,7 +209,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   std::atomic<int> raw_callback_times{0};
   TypeErasedSubscriberCallback raw_callback = [&](std::unique_ptr<MessagePacket> packet) {
-    TestStruct* t = (TestStruct*)packet->GetPayload().data();
+    TestStruct *t = (TestStruct *)packet->GetPayload().data();
     spdlog::warn("Got a raw TestStruct {{ {} {} {} }}", t->foo, t->bar, t->baz);
 
     ASSERT_EQ(*t, *send_msg);
@@ -253,7 +252,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   std::shared_ptr<Subscriber<TestStruct>> queue_subscriber =
       transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
-                                                                                            &output_queue);
+                                                                                         &output_queue);
   std::shared_ptr<Subscriber<TestStruct>> immediate_subscriber =
       transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
 
@@ -302,7 +301,6 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   // Check raw subscriber
   ASSERT_EQ(raw_callback_times, 1);
-
 }
 
 TEST_F(TestTcpTransport, TestWithProtobuf) {
@@ -562,8 +560,8 @@ TEST_F(TestTcpTransport, MPSCQueue) {
   }
   ASSERT_EQ(output_queue.Pop(0), std::nullopt);
 }
-TEST_F(TestTcpTransport, Torture) {
 
+TEST_F(TestTcpTransport, Torture) {
   auto poller = std::make_unique<Epoll>();
   ThreadPool thread_pool(4);
 
@@ -722,4 +720,30 @@ TEST_F(TestTcpTransport, Torture) {
   spdlog::warn("Done removing fds");
   spdlog::warn("queue size is {}", output_queue.Size());
   spdlog::warn("Exiting");
+}
+
+TEST(TestIntegration, TcpAndInproc) {
+  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
+  TransportManager transport_manager(std::make_unique<InprocTransport>());
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+
+  auto publisher =
+      transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("test_tcp_inproc");
+  transport_manager.Update();
+
+  auto send_msg = std::make_shared<TestStruct>();
+
+  std::atomic<int> num_recv = 0;
+  auto subscriber = transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>(
+      "test_tcp_inproc", [&num_recv, &send_msg](std::shared_ptr<const TestStruct> recv_msg) { 
+        // Ensure this came over the shared transport
+        ASSERT_EQ(send_msg.get(), recv_msg.get());
+        num_recv++; 
+    });
+  transport_manager.Update();
+
+  publisher->Publish(send_msg);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  // Ensure that we don't get double subscribed - once for the inproc once for the tcp
+  ASSERT_EQ(num_recv, 1);
 }

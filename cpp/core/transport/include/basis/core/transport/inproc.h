@@ -46,39 +46,21 @@ private:
 template <typename T_MSG> class InprocSubscriber {
   // TODO: buffer size
 public:
-  InprocSubscriber(const std::function<void(const MessageEvent<T_MSG> &message)> callback) : callback(callback) {}
+  InprocSubscriber(std::string_view topic_name, const std::function<void(const MessageEvent<T_MSG> &message)> callback) : callback(callback), topic_name(topic_name) {}
 
   void OnMessage(std::shared_ptr<const T_MSG> msg) {
-    std::lock_guard lock(buffer_mutex);
+
     MessageEvent<T_MSG> event;
+    event.topic_info.topic = topic_name;
     event.message = msg;
-    buffer.emplace_back(std::move(event));
-    buffer_cv.notify_one();
+
+    callback(event);
+
+
   }
 
-  // TODO: if done this way, no cb needed
-  // TODO: wait timeout
-  // TODO: put into the work queue instead
-  void ConsumeMessages(const bool wait = false) {
-    std::vector<MessageEvent<T_MSG>> messages_out;
-    {
-      std::unique_lock lock(buffer_mutex);
-      if (wait && buffer.empty()) {
-        buffer_cv.wait(lock, [this] { return !buffer.empty(); });
-      }
-
-      std::swap(messages_out, buffer);
-    }
-    for (auto &message : messages_out) {
-      this->callback(message);
-    }
-  }
-
-  std::mutex buffer_mutex;
-  std::vector<MessageEvent<T_MSG>> buffer;
-  std::condition_variable buffer_cv;
-
-  std::function<void(MessageEvent<T_MSG> message)> callback;
+  const std::function<void(MessageEvent<T_MSG> message)> callback;
+  const std::string topic_name;
 };
 
 // TODO: pass coordinator in, notify on destruction?
@@ -97,7 +79,7 @@ public:
 
   std::shared_ptr<InprocSubscriber<T_MSG>> Subscribe(std::string_view topic,
                                                      std::function<void(MessageEvent<T_MSG> message)> callback) {
-    auto subscriber = std::make_shared<InprocSubscriber<T_MSG>>(callback);
+    auto subscriber = std::make_shared<InprocSubscriber<T_MSG>>(topic, callback);
     subscribers.insert({std::string{topic}, subscriber});
     return subscriber;
   }
@@ -124,9 +106,11 @@ private:
       }
   */
 
+  // todo: weak ptr here...?
+
   std::unordered_map<std::string, std::shared_ptr<InprocPublisher<T_MSG>>> publishers;
   // mutex please
-
+  // todo: weak ptr here...?
   std::unordered_multimap<std::string, std::shared_ptr<InprocSubscriber<T_MSG>>> subscribers;
 
 // WRONG - will lead to differences between compilers
@@ -158,11 +142,11 @@ public:
   template <typename T> std::shared_ptr<InprocPublisher<T>> Advertise(std::string_view topic) {
     return GetConnector<T>()->Advertise(topic);
   }
-#if 0
-    template <typename T> std::shared_ptr<InprocSubscriber<T>> Subscribe(std::string_view topic, std::function<void(MessageEvent<T> message)> callback) {
+  template <typename T>
+  std::shared_ptr<InprocSubscriber<T>> Subscribe(std::string_view topic,
+                                                 std::function<void(MessageEvent<T> message)> callback) {
     return GetConnector<T>()->Subscribe(topic, callback);
   }
-#endif
 };
 
 } // namespace basis::core::transport

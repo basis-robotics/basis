@@ -11,7 +11,7 @@ TEST(Inproc, PubSub) {
   // Create a publisher
   auto publisher = coordinator.Advertise("topic");
 
-  int num_recv = 0;
+  std::atomic<int> num_recv = 0;
 
   auto subscriber = coordinator.Subscribe(
       "topic", [&num_recv](const MessageEvent<int> &message) { GTEST_ASSERT_EQ(*message.message, num_recv++); });
@@ -20,7 +20,6 @@ TEST(Inproc, PubSub) {
     publisher->Publish(std::make_shared<int>(i));
   }
 
-  subscriber->ConsumeMessages();
   GTEST_ASSERT_EQ(num_recv, 10);
 }
 
@@ -30,7 +29,7 @@ TEST(Inproc, PubSubWait) {
   // Create a publisher
   auto publisher = coordinator.Advertise("topic");
 
-  int num_recv = 0;
+  std::atomic<int> num_recv = 0;
 
   auto subscriber = coordinator.Subscribe(
       "topic", [&num_recv](const MessageEvent<int> &message) { ASSERT_EQ(*message.message, num_recv++); });
@@ -42,10 +41,8 @@ TEST(Inproc, PubSubWait) {
     }
   });
 
-  subscriber->ConsumeMessages(true);
-  GTEST_ASSERT_GT(num_recv, 0);
   pub_thread.join();
-  subscriber->ConsumeMessages();
+
   GTEST_ASSERT_EQ(num_recv, 10);
 }
 
@@ -57,9 +54,17 @@ struct TestStruct {
 
 TEST(TransportManager, Basic) {
   auto thread_pool = std::make_shared<ThreadPoolManager>();
-  TransportManager transport_manager;
 
-  //  transport_manager.RegisterTransport("inproc", std::make_unique<InprocTransport>(thread_pool));
+  TransportManager transport_manager(std::make_unique<InprocTransport>());
 
-  //  auto publisher = transport_manager.Advertise<TestStruct>("test_topic");
+  auto publisher =
+      transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("InprocTransport");
+
+  std::atomic<int> num_recv = 0;
+  auto subscriber = transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>(
+      "InprocTransport", [&num_recv](std::shared_ptr<const TestStruct>) { num_recv++; });
+
+  publisher->Publish(std::make_shared<TestStruct>());
+  ASSERT_EQ(num_recv, 1);
+  
 }
