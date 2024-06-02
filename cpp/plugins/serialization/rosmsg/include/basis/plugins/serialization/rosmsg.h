@@ -87,6 +87,9 @@ public:
 protected:
   static RosMsgParser::ParsersCollection<RosMsgParser::ROS_Deserializer> parser_collection;
 };
+
+using RosmsgPlugin = core::serialization::AutoSerializationPlugin<RosmsgSerializer>;
+
 } // namespace plugins::serialization
 
 /**
