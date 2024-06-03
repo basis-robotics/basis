@@ -24,13 +24,15 @@ public:
   void Initialize() {
     time_test_pub = Advertise<TimeTest>("/time_test");
 
-    time_test_sub =
-        Subscribe<TimeTest>("/time_test", [](auto msg) { spdlog::info("Got message [\n{}]", msg->DebugString()); });
+    //time_test_sub = Subscribe<TimeTest>("/time_test", std::function<void(std::shared_ptr<const TimeTest>)>(std::bind(this, &ExampleUnit::OnTimeTest)));
+    time_test_sub = Subscribe<TimeTest>("/time_test", [this](auto msg){OnTimeTest(msg); });
 
 #ifdef BASIS_ENABLE_ROS
     pc2_pub = Advertise<sensor_msgs::PointCloud2>("/point_cloud");
 #endif
   }
+
+  void OnTimeTest(std::shared_ptr<const TimeTest> msg) { spdlog::info("Got message [\n{}]", msg->DebugString()); }
   std::shared_ptr<basis::core::transport::Publisher<TimeTest>> time_test_pub;
   std::shared_ptr<basis::core::transport::Subscriber<TimeTest>> time_test_sub;
 #ifdef BASIS_ENABLE_ROS
@@ -45,7 +47,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   example_unit.Initialize();
 
   while (true) {
-    example_unit.Update();
+    example_unit.Update(1);
 
     // TODO: need to have a way of marking up nodes to have a fixed update
 
@@ -68,13 +70,13 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
                          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     example_unit.pc2_pub->Publish(pc2_message);
 
-    std::stringstream ss;
-    ss << *pc2_message;
-    spdlog::info("Publishing message [\n{}]", ss.str());
-
+    /*
+        std::stringstream ss;
+        ss << *pc2_message;
+        spdlog::info("Publishing message [\n{}]", ss.str());
+    */
+    spdlog::info("Publishing ROS message");
 #endif
-    spdlog::info("Sleep ~1 second", msg->DebugString());
-    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
   return 0;
