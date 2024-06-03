@@ -74,11 +74,10 @@ private:
 class SingleThreadedUnit : Unit {
 private:
   using Unit::Update;
-
 public:
-  using Unit::Advertise;
   using Unit::Initialize;
   using Unit::Unit;
+  using Unit::Advertise;
 
   void Update(int sleep_time_s) {
     Update();

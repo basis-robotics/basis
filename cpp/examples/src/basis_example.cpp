@@ -48,7 +48,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   example_unit.Initialize();
 
   while (true) {
-    //auto sleep_until = std::chrono::steady_clock::now() + std::chrono::seconds(1);
     auto sleep_until = basis::core::MonotonicTime::Now() + basis::core::Duration::FromSecondsNanoseconds(1, 0);
     example_unit.Update(1);
 
