@@ -31,10 +31,15 @@ class ExampleUnit : public basis::SingleThreadedUnit {
 public:
   void Initialize() {
     using namespace std::placeholders;
+
+
     // Subscribe to the /time_test topic, with a protobuf message TimeTest.
-    time_test_pub = Advertise<TimeTest>("/time_test");
-    // Advertise to that same topic - we will get our own subscriptions (via inproc), and any others from the network.
     time_test_sub = Subscribe<TimeTest>("/time_test", std::bind(&ExampleUnit::OnTimeTest, this, _1));
+
+    // Advertise to that same topic - we will get our own subscriptions (via inproc), and any others from the network.    
+    time_test_pub = Advertise<TimeTest>("/time_test");
+    // Advertise to another topic, to demonstrate publishing from a subscription
+    time_test_pub_forwarded = Advertise<TimeTest>("/time_test_forwarded");
 
     // (Optionally) Advertise a ROS message, too.
 #ifdef BASIS_ENABLE_ROS
@@ -91,6 +96,7 @@ protected:
     // Note that latency numbers will vary depending on the transport
     spdlog::info("Got message with {:f}ms latency\n[\n{}]", ((now.ToSeconds() - msg->time()) * 1000),
                  msg->DebugString());
+    time_test_pub_forwarded->Publish(msg);
   }
 
   // Our subscribers
@@ -99,6 +105,7 @@ protected:
 
   // Our publishers
   std::shared_ptr<basis::core::transport::Publisher<TimeTest>> time_test_pub;
+  std::shared_ptr<basis::core::transport::Publisher<TimeTest>> time_test_pub_forwarded;
 #ifdef BASIS_ENABLE_ROS
   std::shared_ptr<basis::core::transport::Publisher<sensor_msgs::PointCloud2>> pc2_pub;
 #endif
