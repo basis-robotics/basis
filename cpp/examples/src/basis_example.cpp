@@ -48,7 +48,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   example_unit.Initialize();
 
   while (true) {
-    auto sleep_until = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    //auto sleep_until = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    auto sleep_until = basis::core::MonotonicTime::Now() + basis::core::Duration::FromSecondsNanoseconds(1, 0);
     example_unit.Update(1);
 
     // TODO: need to have a way of marking up nodes to have a fixed update
@@ -80,7 +81,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     spdlog::info("Publishing ROS message");
 #endif
 
-    std::this_thread::sleep_until(sleep_until);
+    sleep_until.SleepUntil();
   }
 
   return 0;

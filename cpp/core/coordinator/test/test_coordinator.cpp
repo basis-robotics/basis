@@ -93,6 +93,7 @@ TEST(TestCoordinator, TestPubSubOrder) {
   using namespace basis::core::transport;
 
   using namespace basis::plugins::transport;
+  basis::core::threading::ThreadPool work_thread_pool(4);
   basis::core::transport::Coordinator coordinator = *basis::core::transport::Coordinator::Create();
 
   auto connector = basis::core::transport::CoordinatorConnector::Create();
@@ -142,8 +143,10 @@ TEST(TestCoordinator, TestPubSubOrder) {
 
   update(0);
   {
+
     std::shared_ptr<Subscriber<TestRawStruct>> prev_sub =
-        transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
+        transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
+                                                                                              &work_thread_pool);
 
     update(0);
     auto test_publisher =
@@ -156,7 +159,7 @@ TEST(TestCoordinator, TestPubSubOrder) {
     {
       std::shared_ptr<Subscriber<TestRawStruct>> after_sub =
           transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct",
-                                                                                                callback);
+                                                                                                callback, &work_thread_pool);
       update(1);
       ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
       auto send_msg = std::make_shared<const TestRawStruct>();

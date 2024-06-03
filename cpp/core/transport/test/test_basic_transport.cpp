@@ -60,9 +60,11 @@ TEST(TransportManager, Basic) {
   auto publisher =
       transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("InprocTransport");
 
+ basis::core::threading::ThreadPool work_thread_pool(4);
+
   std::atomic<int> num_recv = 0;
   auto subscriber = transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>(
-      "InprocTransport", [&num_recv](std::shared_ptr<const TestStruct>) { num_recv++; });
+      "InprocTransport", [&num_recv](std::shared_ptr<const TestStruct>) { num_recv++; }, &work_thread_pool);
 
   publisher->Publish(std::make_shared<TestStruct>());
   ASSERT_EQ(num_recv, 1);

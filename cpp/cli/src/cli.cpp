@@ -62,6 +62,7 @@ FetchSchema(const std::string &schema_id, basis::core::transport::CoordinatorCon
 
 void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorConnector *connector,
                 std::optional<size_t> max_num_messages, bool json) {
+  basis::core::threading::ThreadPool work_thread_pool(4);
 
   auto *info = connector->GetLastNetworkInfo();
 
@@ -110,7 +111,7 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
           std::cout << *maybe_string << std::endl;
         }
       },
-      nullptr, {});
+      &work_thread_pool, nullptr, {});
 
   while (!max_num_messages || max_num_messages > num_messages) {
     // todo: move this out into "unit"

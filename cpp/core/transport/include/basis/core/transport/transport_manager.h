@@ -9,7 +9,6 @@
 #include "publisher.h"
 #include "publisher_info.h"
 #include "subscriber.h"
-#include "thread_pool_manager.h"
 
 #include <basis/core/serialization.h>
 
@@ -79,14 +78,16 @@ public:
    */
   [[nodiscard]] std::shared_ptr<SubscriberBase> SubscribeRaw(std::string_view topic,
                                                              TypeErasedSubscriberCallback callback,
+                                                             basis::core::threading::ThreadPool *work_thread_pool,
                                                              core::transport::OutputQueue *output_queue,
                                                              serialization::MessageTypeInfo message_type) {
-    return SubscribeInternal<SubscriberBase>(topic, callback, output_queue, message_type, {});
+    return SubscribeInternal<SubscriberBase>(topic, callback, work_thread_pool, output_queue, message_type, {});
   }
 
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
   Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
+            basis::core::threading::ThreadPool *work_thread_pool,
             core::transport::OutputQueue *output_queue = nullptr,
             serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
@@ -117,7 +118,7 @@ public:
 
     }
 
-    return SubscribeInternal<Subscriber<T_MSG>>(topic, outer_callback, output_queue, message_type, inproc_subscriber);
+    return SubscribeInternal<Subscriber<T_MSG>>(topic, outer_callback, work_thread_pool, output_queue, message_type, inproc_subscriber);
   }
 
   /**
@@ -198,14 +199,14 @@ protected:
    */
   template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
   [[nodiscard]] std::shared_ptr<T_SUBSCRIBER>
-  SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback,
+  SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback, basis::core::threading::ThreadPool *work_thread_pool,
                     core::transport::OutputQueue *output_queue, serialization::MessageTypeInfo message_type,
                     std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
 
     for (auto &[transport_name, transport] : transports) {
-      tps.push_back(transport->Subscribe(topic, callback, output_queue, message_type));
+      tps.push_back(transport->Subscribe(topic, callback, work_thread_pool, output_queue, message_type));
     }
 
     std::shared_ptr<T_SUBSCRIBER> subscriber;

@@ -62,9 +62,9 @@ public:
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<core::transport::Subscriber<T_MSG>>
   Subscribe(std::string_view topic, core::transport::SubscriberCallback<T_MSG> callback,
-            core::transport::OutputQueue *output_queue = nullptr,
+            basis::core::threading::ThreadPool *work_thread_pool, core::transport::OutputQueue *output_queue = nullptr,
             core::serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
-    return transport_manager->Subscribe<T_MSG, T_Serializer>(topic, std::move(callback), output_queue,
+    return transport_manager->Subscribe<T_MSG, T_Serializer>(topic, std::move(callback), work_thread_pool, output_queue,
                                                              std::move(message_type));
   }
 
@@ -76,10 +76,11 @@ private:
 class SingleThreadedUnit : Unit {
 private:
   using Unit::Update;
+
 public:
+  using Unit::Advertise;
   using Unit::Initialize;
   using Unit::Unit;
-  using Unit::Advertise;
 
   void Update(int sleep_time_s) {
     Update();
@@ -100,15 +101,16 @@ public:
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
   }
 
-
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<core::transport::Subscriber<T_MSG>>
   Subscribe(std::string_view topic, core::transport::SubscriberCallback<T_MSG> callback,
             core::serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
-    return Unit::Subscribe<T_MSG, T_Serializer>(topic, callback, &output_queue, std::move(message_type));
+    return Unit::Subscribe<T_MSG, T_Serializer>(topic, callback, &thread_pool, &output_queue, std::move(message_type));
   }
 
   basis::core::transport::OutputQueue output_queue;
+  basis::core::threading::ThreadPool thread_pool {4};
+
 };
 
 // todo: interface for multithreaded units
