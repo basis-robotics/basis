@@ -26,8 +26,6 @@ public:
 
     time_test_pub = Advertise<TimeTest>("/time_test");
 
-    // time_test_sub = Subscribe<TimeTest>("/time_test", std::function<void(std::shared_ptr<const
-    // TimeTest>)>(std::bind(this, &ExampleUnit::OnTimeTest)));
     time_test_sub = Subscribe<TimeTest>("/time_test", std::bind(&ExampleUnit::OnTimeTest, this, _1));
 
 #ifdef BASIS_ENABLE_ROS
@@ -67,9 +65,8 @@ public:
   std::shared_ptr<basis::core::transport::Subscriber<TimeTest>> time_test_sub;
 #ifdef BASIS_ENABLE_ROS
   std::shared_ptr<basis::core::transport::Publisher<sensor_msgs::PointCloud2>> pc2_pub;
-
-  std::unique_ptr<basis::core::transport::RateSubscriber> rate_subscriber;
 #endif
+  std::unique_ptr<basis::core::transport::RateSubscriber> rate_subscriber;
 };
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
