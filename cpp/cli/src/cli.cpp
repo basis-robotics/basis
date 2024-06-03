@@ -62,6 +62,7 @@ FetchSchema(const std::string &schema_id, basis::core::transport::CoordinatorCon
 
 void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorConnector *connector,
                 std::optional<size_t> max_num_messages, bool json) {
+  basis::core::threading::ThreadPool work_thread_pool(4);
 
   auto *info = connector->GetLastNetworkInfo();
 
@@ -86,13 +87,10 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
   core::serialization::SerializationPlugin *plugin = plugin_it->second;
 
   plugin->LoadSchema(maybe_schema->name(), maybe_schema->schema());
-
-  auto thread_pool_manager = std::make_shared<basis::core::transport::ThreadPoolManager>();
-
   basis::core::transport::TransportManager transport_manager(
       std::make_unique<basis::core::transport::InprocTransport>());
   transport_manager.RegisterTransport("net_tcp",
-                                      std::make_unique<basis::plugins::transport::TcpTransport>(thread_pool_manager));
+                                      std::make_unique<basis::plugins::transport::TcpTransport>());
 
   // This looks dangerous to take as a reference but is actually safe -
   // the subscriber destructor will wait until the callback exits before the atomic goes out of scope
@@ -110,7 +108,7 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
           std::cout << *maybe_string << std::endl;
         }
       },
-      nullptr, {});
+      &work_thread_pool, nullptr, {});
 
   while (!max_num_messages || max_num_messages > num_messages) {
     // todo: move this out into "unit"

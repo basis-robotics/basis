@@ -1,5 +1,6 @@
 #include <basis/core/transport/inproc.h>
 #include <basis/core/transport/transport_manager.h>
+#include <basis/core/threading/thread_pool.h>
 
 #include <gtest/gtest.h>
 #include <thread>
@@ -53,16 +54,18 @@ struct TestStruct {
 };
 
 TEST(TransportManager, Basic) {
-  auto thread_pool = std::make_shared<ThreadPoolManager>();
+  
 
   TransportManager transport_manager(std::make_unique<InprocTransport>());
 
   auto publisher =
       transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("InprocTransport");
 
+  basis::core::threading::ThreadPool work_thread_pool(4);
+
   std::atomic<int> num_recv = 0;
   auto subscriber = transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>(
-      "InprocTransport", [&num_recv](std::shared_ptr<const TestStruct>) { num_recv++; });
+      "InprocTransport", [&num_recv](std::shared_ptr<const TestStruct>) { num_recv++; }, &work_thread_pool);
 
   publisher->Publish(std::make_shared<TestStruct>());
   ASSERT_EQ(num_recv, 1);

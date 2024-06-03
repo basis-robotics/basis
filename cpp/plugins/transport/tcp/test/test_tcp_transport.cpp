@@ -175,8 +175,7 @@ TEST_F(TestTcpTransport, TestPublisher) {
  * Test creating a transport
  */
 TEST_F(TestTcpTransport, TestTransport) {
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
-  TcpTransport transport(thread_pool_manager);
+  TcpTransport transport;
   std::shared_ptr<TransportPublisher> publisher = transport.Advertise("test", {"raw", "int"});
   ASSERT_NE(publisher, nullptr);
 }
@@ -193,9 +192,9 @@ struct TestStruct {
  * Test full pipeline with transport manager
  */
 TEST_F(TestTcpTransport, TestWithManager) {
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
+
   TransportManager transport_manager;
-  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
   auto send_msg = std::make_shared<TestStruct>(5, 10.3);
   strcpy(send_msg->baz, "bat");
@@ -250,14 +249,17 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   transport_manager.Update();
 
+  basis::core::threading::ThreadPool work_thread_pool(4);
+
   std::shared_ptr<Subscriber<TestStruct>> queue_subscriber =
-      transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
-                                                                                         &output_queue);
+      transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>(
+          "test_struct", callback, &work_thread_pool, &output_queue);
   std::shared_ptr<Subscriber<TestStruct>> immediate_subscriber =
-      transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback);
+      transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
+                                                                                         &work_thread_pool);
 
   std::shared_ptr<SubscriberBase> immediate_raw_subscriber =
-      transport_manager.SubscribeRaw("test_struct", raw_callback, nullptr, {});
+      transport_manager.SubscribeRaw("test_struct", raw_callback, &work_thread_pool, nullptr, {});
 
   auto &pub_info = transport_manager.GetLastPublisherInfo();
   transport_manager.Update();
@@ -304,9 +306,10 @@ TEST_F(TestTcpTransport, TestWithManager) {
 }
 
 TEST_F(TestTcpTransport, TestWithProtobuf) {
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
+  basis::core::threading::ThreadPool work_thread_pool(4);
+
   TransportManager transport_manager;
-  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
   auto test_publisher = transport_manager.Advertise<TestProtoStruct>("test_proto");
   ASSERT_NE(test_publisher, nullptr);
@@ -331,7 +334,7 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
     callback_times++;
   };
 
-  auto subscriber = transport_manager.Subscribe<TestProtoStruct>("test_proto", callback);
+  auto subscriber = transport_manager.Subscribe<TestProtoStruct>("test_proto", callback, &work_thread_pool);
 #if 1
   transport_manager.Update();
   subscriber->HandlePublisherInfo(transport_manager.GetLastPublisherInfo());
@@ -723,9 +726,10 @@ TEST_F(TestTcpTransport, Torture) {
 }
 
 TEST(TestIntegration, TcpAndInproc) {
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
+  basis::core::threading::ThreadPool work_thread_pool(4);
+
   TransportManager transport_manager(std::make_unique<InprocTransport>());
-  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
   auto publisher =
       transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("test_tcp_inproc");
@@ -735,11 +739,13 @@ TEST(TestIntegration, TcpAndInproc) {
 
   std::atomic<int> num_recv = 0;
   auto subscriber = transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>(
-      "test_tcp_inproc", [&num_recv, &send_msg](std::shared_ptr<const TestStruct> recv_msg) {
+      "test_tcp_inproc",
+      [&num_recv, &send_msg](std::shared_ptr<const TestStruct> recv_msg) {
         // Ensure this came over the shared transport
         ASSERT_EQ(send_msg.get(), recv_msg.get());
         num_recv++;
-      });
+      },
+      &work_thread_pool);
   transport_manager.Update();
 
   publisher->Publish(send_msg);

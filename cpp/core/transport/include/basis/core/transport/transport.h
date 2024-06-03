@@ -9,11 +9,11 @@
 #include "publisher.h"
 #include "publisher_info.h"
 #include "subscriber.h"
-#include "thread_pool_manager.h"
 
 #include "simple_mpsc.h"
 
 #include <basis/core/serialization.h>
+#include <basis/core/threading/thread_pool.h>
 
 namespace basis::core::transport {
 
@@ -79,22 +79,20 @@ using OutputQueue = SimpleMPSCQueue<OutputQueueEvent>;
 
 class Transport {
 public:
-  Transport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
-      : thread_pool_manager(thread_pool_manager) {}
+  Transport() = default;
   virtual ~Transport() = default;
-  virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic, serialization::MessageTypeInfo type_info) = 0;
+  virtual std::shared_ptr<TransportPublisher> Advertise(std::string_view topic,
+                                                        serialization::MessageTypeInfo type_info) = 0;
   virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, TypeErasedSubscriberCallback callback,
-                                                         OutputQueue *output_queue, serialization::MessageTypeInfo type_info) = 0;
+                                                         basis::core::threading::ThreadPool *work_thread_pool,
+                                                         OutputQueue *output_queue,
+                                                         serialization::MessageTypeInfo type_info) = 0;
 
   /**
    * Implementations (ie TransportManager) should call this function at a regular rate.
    * @todo: do we want to keep this or enforce each transport taking care of its own update calls?
    */
   virtual void Update() {}
-
-protected:
-  /// Thread pools are shared across transports
-  std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager;
 };
 
 } // namespace basis::core::transport

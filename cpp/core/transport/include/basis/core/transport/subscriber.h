@@ -86,6 +86,13 @@ protected:
   std::shared_ptr<InprocSubscriber<T_MSG>> inproc;
 };
 
+#if 0
+class RateSubscriber {
+
+  std::function<void(MonotonicTime)> callback;
+};
+#endif
+
 } // namespace transport
 } // namespace core
 } // namespace basis
