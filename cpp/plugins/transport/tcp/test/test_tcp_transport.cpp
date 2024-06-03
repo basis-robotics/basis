@@ -175,8 +175,7 @@ TEST_F(TestTcpTransport, TestPublisher) {
  * Test creating a transport
  */
 TEST_F(TestTcpTransport, TestTransport) {
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
-  TcpTransport transport(thread_pool_manager);
+  TcpTransport transport;
   std::shared_ptr<TransportPublisher> publisher = transport.Advertise("test", {"raw", "int"});
   ASSERT_NE(publisher, nullptr);
 }
@@ -193,9 +192,9 @@ struct TestStruct {
  * Test full pipeline with transport manager
  */
 TEST_F(TestTcpTransport, TestWithManager) {
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
+  
   TransportManager transport_manager;
-  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
   auto send_msg = std::make_shared<TestStruct>(5, 10.3);
   strcpy(send_msg->baz, "bat");
@@ -309,9 +308,8 @@ TEST_F(TestTcpTransport, TestWithManager) {
 TEST_F(TestTcpTransport, TestWithProtobuf) {
   basis::core::threading::ThreadPool work_thread_pool(4);
 
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
   TransportManager transport_manager;
-  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
   auto test_publisher = transport_manager.Advertise<TestProtoStruct>("test_proto");
   ASSERT_NE(test_publisher, nullptr);
@@ -730,9 +728,8 @@ TEST_F(TestTcpTransport, Torture) {
 TEST(TestIntegration, TcpAndInproc) {
   basis::core::threading::ThreadPool work_thread_pool(4);
 
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
   TransportManager transport_manager(std::make_unique<InprocTransport>());
-  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
   auto publisher =
       transport_manager.Advertise<TestStruct, basis::core::serialization::RawSerializer>("test_tcp_inproc");

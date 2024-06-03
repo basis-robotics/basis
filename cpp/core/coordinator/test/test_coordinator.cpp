@@ -97,10 +97,8 @@ TEST(TestCoordinator, TestPubSubOrder) {
   basis::core::transport::Coordinator coordinator = *basis::core::transport::Coordinator::Create();
 
   auto connector = basis::core::transport::CoordinatorConnector::Create();
-
-  auto thread_pool_manager = std::make_shared<ThreadPoolManager>();
   TestTransportManager transport_manager;
-  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>(thread_pool_manager));
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
   std::atomic<int> callback_times{0};
   SubscriberCallback<TestRawStruct> callback = [&](std::shared_ptr<const TestRawStruct> t) {

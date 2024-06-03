@@ -111,8 +111,7 @@ protected:
 // todo: need to catch out of order subscribe/publishes
 class TcpTransport : public core::transport::Transport {
 public:
-  TcpTransport(std::shared_ptr<basis::core::transport::ThreadPoolManager> thread_pool_manager)
-      : core::transport::Transport(thread_pool_manager) {}
+  TcpTransport() {}
 
   virtual std::shared_ptr<basis::core::transport::TransportPublisher>
   Advertise(std::string_view topic, [[maybe_unused]] core::serialization::MessageTypeInfo type_info) override {

@@ -20,14 +20,12 @@ public:
       }
     }
 
-    auto thread_pool_manager = std::make_shared<basis::core::transport::ThreadPoolManager>();
-
     transport_manager = std::make_unique<basis::core::transport::TransportManager>(
         std::make_unique<basis::core::transport::InprocTransport>());
 
     transport_manager->RegisterTransport(
         basis::plugins::transport::TCP_TRANSPORT_NAME,
-        std::make_unique<basis::plugins::transport::TcpTransport>(thread_pool_manager));
+        std::make_unique<basis::plugins::transport::TcpTransport>());
   }
 
   virtual void Initialize() {
