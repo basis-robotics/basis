@@ -192,7 +192,7 @@ struct TestStruct {
  * Test full pipeline with transport manager
  */
 TEST_F(TestTcpTransport, TestWithManager) {
-  
+
   TransportManager transport_manager;
   transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
