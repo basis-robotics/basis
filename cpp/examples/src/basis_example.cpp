@@ -24,8 +24,9 @@ public:
   void Initialize() {
     time_test_pub = Advertise<TimeTest>("/time_test");
 
-    //time_test_sub = Subscribe<TimeTest>("/time_test", std::function<void(std::shared_ptr<const TimeTest>)>(std::bind(this, &ExampleUnit::OnTimeTest)));
-    time_test_sub = Subscribe<TimeTest>("/time_test", [this](auto msg){OnTimeTest(msg); });
+    // time_test_sub = Subscribe<TimeTest>("/time_test", std::function<void(std::shared_ptr<const
+    // TimeTest>)>(std::bind(this, &ExampleUnit::OnTimeTest)));
+    time_test_sub = Subscribe<TimeTest>("/time_test", [this](auto msg) { OnTimeTest(msg); });
 
 #ifdef BASIS_ENABLE_ROS
     pc2_pub = Advertise<sensor_msgs::PointCloud2>("/point_cloud");
@@ -47,6 +48,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   example_unit.Initialize();
 
   while (true) {
+    auto sleep_until = std::chrono::steady_clock::now() + std::chrono::seconds(1);
     example_unit.Update(1);
 
     // TODO: need to have a way of marking up nodes to have a fixed update
@@ -77,6 +79,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     */
     spdlog::info("Publishing ROS message");
 #endif
+
+    std::this_thread::sleep_until(sleep_until);
   }
 
   return 0;
