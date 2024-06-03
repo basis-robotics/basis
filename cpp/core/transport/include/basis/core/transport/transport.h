@@ -67,7 +67,6 @@ private:
   size_t progress_counter = 0;
 };
 
-
 using OutputQueue = SimpleMPSCQueue<std::function<void()>>;
 
 class Transport {

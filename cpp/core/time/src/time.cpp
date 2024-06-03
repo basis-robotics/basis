@@ -1,7 +1,7 @@
 #include <basis/core/time.h>
 
 #include <chrono>
-#include <spdlog/spdlog.h>
+
 #include <thread>
 #include <time.h>
 
