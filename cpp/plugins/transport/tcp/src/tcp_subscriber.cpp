@@ -67,7 +67,13 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
 
       case TcpReceiver::ReceiveStatus::DONE: {
         if (output_queue) {
-          output_queue->Emplace({topic_name, incomplete->GetCompletedMessage(), callback});
+          std::shared_ptr<basis::core::transport::MessagePacket> message = incomplete->GetCompletedMessage();
+          
+          output_queue->Emplace(
+              [this,message]() { 
+                // does the callback really need to take ownership here??
+                callback(message);
+              });
         } else {
           // TODO: this still isn't quite correct - we need to define three policies
           // 1. Put into work queue, rely on queue to be processed

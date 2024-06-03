@@ -17,7 +17,7 @@ namespace core {
 namespace transport {
 
 template <typename T_MSG> using SubscriberCallback = std::function<void(std::shared_ptr<const T_MSG>)>;
-using TypeErasedSubscriberCallback = std::function<void(std::unique_ptr<MessagePacket>)>;
+using TypeErasedSubscriberCallback = std::function<void(std::shared_ptr<MessagePacket>)>;
 
 class TransportSubscriber {
 protected:

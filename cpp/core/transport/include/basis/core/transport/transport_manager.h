@@ -103,12 +103,15 @@ public:
     };
 
     if (inproc) {
-      inproc_subscriber = inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg){
+      inproc_subscriber = inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg) {
         if(output_queue) {
 
-          output_queue->Emplace({msg.topic_info.topic, nullptr, [callback, message = msg.message](std::shared_ptr<MessagePacket>){
-            callback(message);
-            }});
+          output_queue->Emplace(
+            [callback = callback, message = msg.message]()
+            {
+              callback(message);
+            }
+            );
         }
         else {
           callback(std::move(msg.message));

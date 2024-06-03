@@ -84,16 +84,16 @@ public:
 
     // while there are still events, clear them out
     while (auto event = output_queue.Pop(0)) {
-      event->callback(std::move(event->packet));
+      (*event)();
     }
 
     // try to get an event
     if (auto event = output_queue.Pop(sleep_time_s)) {
-      event->callback(std::move(event->packet));
+      (*event)();
     }
 
     while (auto event = output_queue.Pop(0)) {
-      event->callback(std::move(event->packet));
+      (*event)();
     }
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
   }
@@ -102,7 +102,7 @@ public:
   [[nodiscard]] std::shared_ptr<core::transport::Subscriber<T_MSG>>
   Subscribe(std::string_view topic, core::transport::SubscriberCallback<T_MSG> callback,
             core::serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
-    return Unit::Subscribe<T_MSG, T_Serializer>(topic, callback, &thread_pool, &output_queue, std::move(message_type));
+    return Unit::Subscribe<T_MSG, T_Serializer>(topic, callback, &thread_pool, nullptr, std::move(message_type));
   }
 
   basis::core::transport::OutputQueue output_queue;

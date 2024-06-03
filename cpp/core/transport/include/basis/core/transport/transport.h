@@ -75,7 +75,9 @@ struct OutputQueueEvent {
   std::unique_ptr<MessagePacket> packet;
   TypeErasedSubscriberCallback callback;
 };
-using OutputQueue = SimpleMPSCQueue<OutputQueueEvent>;
+
+//using OutputQueue = SimpleMPSCQueue<OutputQueueEvent>;
+using OutputQueue = SimpleMPSCQueue<std::function<void()>>;
 
 class Transport {
 public:
