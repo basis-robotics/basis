@@ -63,6 +63,8 @@ static_assert(!std::is_same<time_t, int32_t>::value, "This platform is likely to
 #endif
 
 struct Duration : public TimeBase {
+  static Duration FromSecondsNanoseconds(int64_t seconds, int64_t nanoseconds) { return {TimeBase::SecondsToNanoseconds(seconds) + nanoseconds}; }
+
   std::pair<int32_t, int32_t> ToRosDuration() { return {nsecs / NSECS_IN_SECS, nsecs % NSECS_IN_SECS}; }
 
 protected:
@@ -76,6 +78,7 @@ protected:
   using TimeBase::TimeBase;
 };
 
+// TODO: do we need "RealTimeDuration???"
 struct RealTimeDuration : public Duration {
   static RealTimeDuration FromSeconds(double seconds) { return {TimeBase::SecondsToNanoseconds(seconds)}; }
 
@@ -83,11 +86,26 @@ protected:
   using Duration::Duration;
 };
 
+
 /**
  * Monotonic time - used as the basis for all robot time operations.
  */
 struct MonotonicTime : public TimePoint {
-  static MonotonicTime FromSeconds(double seconds) { return {TimeBase::SecondsToNanoseconds(seconds)}; }
+  static MonotonicTime FromSeconds(double seconds);
+
+  static MonotonicTime Now();
+
+  MonotonicTime & operator+=(const Duration & duration) {
+    nsecs += duration.nsecs;
+    return *this;
+  }
+
+  MonotonicTime operator+(const Duration &duration) const {
+    MonotonicTime out(nsecs + duration.nsecs);
+    return out;
+  }
+
+  void SleepUntil() const;
 
 protected:
   using TimePoint::TimePoint;
