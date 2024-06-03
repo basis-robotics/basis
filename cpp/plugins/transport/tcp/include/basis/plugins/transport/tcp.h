@@ -131,11 +131,11 @@ public:
   virtual std::shared_ptr<basis::core::transport::TransportSubscriber>
   Subscribe(std::string_view topic, core::transport::TypeErasedSubscriberCallback callback,
             basis::core::threading::ThreadPool* work_thread_pool,
-            core::transport::OutputQueue *output_queue, [[maybe_unused]] core::serialization::MessageTypeInfo type_info) override {
+            [[maybe_unused]] core::serialization::MessageTypeInfo type_info) override {
     // TODO: pass in the thread pool every time
     // TODO: error handling
     std::shared_ptr<TcpSubscriber> subscriber = *TcpSubscriber::Create(
-        topic, std::move(callback), &epoll, work_thread_pool, output_queue);
+        topic, std::move(callback), &epoll, work_thread_pool);
     {
       std::lock_guard lock(subscribers_mutex);
       subscribers.emplace(std::string(topic), subscriber);

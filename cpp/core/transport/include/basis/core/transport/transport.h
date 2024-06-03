@@ -87,7 +87,6 @@ public:
                                                         serialization::MessageTypeInfo type_info) = 0;
   virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, TypeErasedSubscriberCallback callback,
                                                          basis::core::threading::ThreadPool *work_thread_pool,
-                                                         OutputQueue *output_queue,
                                                          serialization::MessageTypeInfo type_info) = 0;
 
   /**

@@ -7,10 +7,10 @@ namespace basis::plugins::transport {
 
 nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
 TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
-                      core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue,
+                      core::threading::ThreadPool *worker_pool,
                       std::vector<std::pair<std::string_view, uint16_t>> addresses) {
   auto subscriber = std::shared_ptr<TcpSubscriber>(
-      new TcpSubscriber(topic_name, std::move(callback), epoll, worker_pool, output_queue));
+      new TcpSubscriber(topic_name, std::move(callback), epoll, worker_pool));
   for (auto &[address, port] : addresses) {
     subscriber->ConnectToPort(address, port);
   }
@@ -18,10 +18,9 @@ TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSu
 }
 
 TcpSubscriber::TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback,
-                             Epoll *epoll, core::threading::ThreadPool *worker_pool,
-                             core::transport::OutputQueue *output_queue)
+                             Epoll *epoll, core::threading::ThreadPool *worker_pool)
     : core::transport::TransportSubscriber(TCP_TRANSPORT_NAME), topic_name(topic_name), callback(callback),
-      epoll(epoll), worker_pool(worker_pool), output_queue(output_queue) {}
+      epoll(epoll), worker_pool(worker_pool) {}
 
 bool TcpSubscriber::Connect(std::string_view host, std::string_view endpoint,
                             [[maybe_unused]] __uint128_t publisher_id) {
@@ -66,21 +65,7 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
       switch (receiver_ptr->ReceiveMessage(*incomplete)) {
 
       case TcpReceiver::ReceiveStatus::DONE: {
-        if (output_queue) {
-          std::shared_ptr<basis::core::transport::MessagePacket> message = incomplete->GetCompletedMessage();
-          
-          output_queue->Emplace(
-              [this,message]() { 
-                // does the callback really need to take ownership here??
-                callback(message);
-              });
-        } else {
-          // TODO: this still isn't quite correct - we need to define three policies
-          // 1. Put into work queue, rely on queue to be processed
-          // 2. Put into local queue, rely on someone servicing the subscriber
-          // 3. Call immediately
           this->callback(incomplete->GetCompletedMessage());
-        }
       }
       case TcpReceiver::ReceiveStatus::DOWNLOADING: {
         // No work to be done
