@@ -5,6 +5,7 @@ add_executable(
 )
 target_link_libraries(
   basis_example
+  basis::unit
   basis::plugins::transport::tcp
   basis::plugins::serialization::protobuf
   basis::core::coordinator

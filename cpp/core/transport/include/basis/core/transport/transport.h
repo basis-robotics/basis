@@ -69,6 +69,7 @@ private:
 
 // TODO: use MessageEvent
 // TODO: don't store the packet directly, store a weak reference to the transport subscriber
+// TODO: just capture everything in a closure
 struct OutputQueueEvent {
   std::string topic_name;
   std::unique_ptr<MessagePacket> packet;
