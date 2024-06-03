@@ -3,12 +3,13 @@
 #include "inproc.h"
 #include "message_event.h"
 #include "message_packet.h"
-#include <basis/core/serialization/message_type_info.h>
 #include "publisher_info.h"
+#include <basis/core/serialization/message_type_info.h>
 
 #include <basis/core/time.h>
 #include <functional>
 #include <memory>
+#include <thread>
 
 class TestTcpTransport;
 
@@ -22,6 +23,7 @@ using TypeErasedSubscriberCallback = std::function<void(std::shared_ptr<MessageP
 class TransportSubscriber {
 protected:
   TransportSubscriber(std::string_view transport_name) : transport_name(transport_name) {}
+
 public:
   std::string_view GetTransportName() const { return transport_name; }
 
@@ -31,7 +33,6 @@ public:
 
   virtual ~TransportSubscriber() = default;
   const std::string transport_name;
-
 };
 
 /**
@@ -40,23 +41,22 @@ public:
  */
 class SubscriberBase {
 public:
-  SubscriberBase(
-    std::string_view topic, serialization::MessageTypeInfo type_info,
-             std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers, bool has_inproc) :
-               topic(topic), type_info(std::move(type_info)), has_inproc(has_inproc), transport_subscribers(std::move(transport_subscribers)) {
-
-             }
+  SubscriberBase(std::string_view topic, serialization::MessageTypeInfo type_info,
+                 std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers, bool has_inproc)
+      : topic(topic), type_info(std::move(type_info)), has_inproc(has_inproc),
+        transport_subscribers(std::move(transport_subscribers)) {}
 
   virtual ~SubscriberBase() = default;
 
   /**
    * Notify this subscriber of one or more publishers.
-   * 
+   *
    * The subscriber will pass the relevant information down into the correct transports.
    */
-  void HandlePublisherInfo(const std::vector<PublisherInfo>& info);
+  void HandlePublisherInfo(const std::vector<PublisherInfo> &info);
 
   size_t GetPublisherCount();
+
 protected:
   friend class ::TestTcpTransport;
   const std::string topic;
@@ -71,7 +71,7 @@ protected:
    * Map associating a publisher ID to a transport that is assigned to handle it.
    * nullptr is valid and is a sentinal value for the inproc transport.
    */
-  std::unordered_map<__uint128_t, TransportSubscriber*> publisher_id_to_transport_sub;
+  std::unordered_map<__uint128_t, TransportSubscriber *> publisher_id_to_transport_sub;
 };
 
 template <typename T_MSG> class Subscriber : public SubscriberBase {
@@ -81,17 +81,48 @@ public:
              std::shared_ptr<InprocSubscriber<T_MSG>> inproc)
       : SubscriberBase(topic, std::move(type_info), std::move(transport_subscribers), inproc != nullptr),
         inproc(std::move(inproc)) {}
-  
+
 protected:
   std::shared_ptr<InprocSubscriber<T_MSG>> inproc;
 };
 
-#if 0
 class RateSubscriber {
+public:
+  RateSubscriber(const Duration &tick_length, std::function<void(MonotonicTime)> callback)
+      : tick_length(tick_length), callback(std::move(callback)) {
+        // auto start?
+        Start();
+      }
+
+  RateSubscriber() = default;
+
+  ~RateSubscriber() {
+    stop = true;
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
+
+  void Start() { thread = std::thread(&RateSubscriber::ThreadFunction, this); }
+
+protected:
+  void ThreadFunction() {
+    MonotonicTime next = MonotonicTime::Now();
+    while (!stop) {
+      next += tick_length;
+      next.SleepUntil();
+      // Don't use next here - it will be affected by the scheduler
+      callback( MonotonicTime::Now());
+    }
+  }
+
+  Duration tick_length;
+  std::atomic<bool> stop;
+
+  std::thread thread;
 
   std::function<void(MonotonicTime)> callback;
 };
-#endif
 
 } // namespace transport
 } // namespace core

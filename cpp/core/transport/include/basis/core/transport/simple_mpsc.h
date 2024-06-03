@@ -47,6 +47,8 @@ public:
     return ret;
   }
 
+  // todo: add PopAll()
+
   std::mutex queue_mutex;
   std::condition_variable queue_cv;
   std::queue<T> queue;

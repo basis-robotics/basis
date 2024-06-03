@@ -27,10 +27,11 @@ public:
         basis::plugins::transport::TCP_TRANSPORT_NAME,
         std::make_unique<basis::plugins::transport::TcpTransport>());
   }
-
-  virtual void Initialize() {
-    // override this, should be called once by main()
-  }
+  
+  
+  // override this, should be called once by main()
+  virtual void Initialize() = 0;
+  
   virtual ~Unit() = default;
   virtual void Update() {
     transport_manager->Update();
@@ -71,6 +72,9 @@ private:
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 };
 
+/**
+ * A simple unit where all are run mutally exclusive from eachother - uses a queue for all outputs, which adds some amount of latency
+ */
 class SingleThreadedUnit : Unit {
 private:
   using Unit::Update;
@@ -82,16 +86,12 @@ public:
   void Update(int sleep_time_s) {
     Update();
 
-    // while there are still events, clear them out
-    while (auto event = output_queue.Pop(0)) {
-      (*event)();
-    }
-
-    // try to get an event
+    // try to get a single event, with a wait time
     if (auto event = output_queue.Pop(sleep_time_s)) {
       (*event)();
     }
-
+    
+    // Try to drain the buffer of events
     while (auto event = output_queue.Pop(0)) {
       (*event)();
     }
