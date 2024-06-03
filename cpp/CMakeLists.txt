@@ -78,6 +78,7 @@ add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 add_subdirectory(core)
 add_subdirectory(cli)
 add_subdirectory(examples)
+add_subdirectory(unit)
 
 add_subdirectory(plugins/serialization/protobuf)
 if(BASIS_ENABLE_ROS)
