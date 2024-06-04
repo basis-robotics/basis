@@ -67,15 +67,7 @@ private:
   size_t progress_counter = 0;
 };
 
-// TODO: use MessageEvent
-// TODO: don't store the packet directly, store a weak reference to the transport subscriber
-// TODO: just capture everything in a closure
-struct OutputQueueEvent {
-  std::string topic_name;
-  std::unique_ptr<MessagePacket> packet;
-  TypeErasedSubscriberCallback callback;
-};
-using OutputQueue = SimpleMPSCQueue<OutputQueueEvent>;
+using OutputQueue = SimpleMPSCQueue<std::function<void()>>;
 
 class Transport {
 public:
@@ -85,7 +77,6 @@ public:
                                                         serialization::MessageTypeInfo type_info) = 0;
   virtual std::shared_ptr<TransportSubscriber> Subscribe(std::string_view topic, TypeErasedSubscriberCallback callback,
                                                          basis::core::threading::ThreadPool *work_thread_pool,
-                                                         OutputQueue *output_queue,
                                                          serialization::MessageTypeInfo type_info) = 0;
 
   /**

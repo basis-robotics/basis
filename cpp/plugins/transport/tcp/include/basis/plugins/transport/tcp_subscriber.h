@@ -52,7 +52,7 @@ public:
   // todo: error condition
   static nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
   Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
-         core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue = nullptr,
+         core::threading::ThreadPool *worker_pool,
          std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
 
   virtual bool Connect(std::string_view host, std::string_view endpoint, __uint128_t publisher_id) override;
@@ -63,14 +63,13 @@ public:
   virtual size_t GetPublisherCount() override;
 protected:
   TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
-                core::threading::ThreadPool *worker_pool, core::transport::OutputQueue *output_queue);
+                core::threading::ThreadPool *worker_pool);
 
   std::string topic_name;
   core::transport::TypeErasedSubscriberCallback callback;
 
   Epoll *epoll;
   core::threading::ThreadPool *worker_pool;
-  core::transport::OutputQueue *output_queue;
   std::unordered_map<std::pair<std::string, uint16_t>, TcpReceiver, AddressPortHash> receivers = {};
 };
 

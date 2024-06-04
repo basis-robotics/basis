@@ -87,8 +87,7 @@ public:
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
   Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
-            basis::core::threading::ThreadPool *work_thread_pool,
-            core::transport::OutputQueue *output_queue = nullptr,
+            basis::core::threading::ThreadPool *work_thread_pool, core::transport::OutputQueue *output_queue = nullptr,
             serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
@@ -103,22 +102,18 @@ public:
     };
 
     if (inproc) {
-      inproc_subscriber = inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg){
-        if(output_queue) {
+      inproc_subscriber = inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg) {
+        if (output_queue) {
 
-          output_queue->Emplace({msg.topic_info.topic, nullptr, [callback, message = msg.message](std::shared_ptr<MessagePacket>){
-            callback(message);
-            }});
-        }
-        else {
+          output_queue->Emplace([callback = callback, message = msg.message]() { callback(message); });
+        } else {
           callback(std::move(msg.message));
         }
-
       });
-
     }
 
-    return SubscribeInternal<Subscriber<T_MSG>>(topic, outer_callback, work_thread_pool, output_queue, message_type, inproc_subscriber);
+    return SubscribeInternal<Subscriber<T_MSG>>(topic, outer_callback, work_thread_pool, output_queue, message_type,
+                                                inproc_subscriber);
   }
 
   /**
@@ -199,14 +194,22 @@ protected:
    */
   template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
   [[nodiscard]] std::shared_ptr<T_SUBSCRIBER>
-  SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback, basis::core::threading::ThreadPool *work_thread_pool,
-                    core::transport::OutputQueue *output_queue, serialization::MessageTypeInfo message_type,
+  SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback,
+                    basis::core::threading::ThreadPool *work_thread_pool, core::transport::OutputQueue *output_queue,
+                    serialization::MessageTypeInfo message_type,
                     std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
 
-    std::vector<std::shared_ptr<TransportSubscriber>> tps;
+    std::vector<std::shared_ptr<TransportSubscriber>> tps;        
+
+    TypeErasedSubscriberCallback outer_callback = output_queue ? [callback, output_queue](std::shared_ptr<basis::core::transport::MessagePacket> message) { 
+       output_queue->Emplace(
+        [callback, message]() { 
+          callback(message);
+        });
+    } : callback;
 
     for (auto &[transport_name, transport] : transports) {
-      tps.push_back(transport->Subscribe(topic, callback, work_thread_pool, output_queue, message_type));
+      tps.push_back(transport->Subscribe(topic, outer_callback, work_thread_pool, message_type));
     }
 
     std::shared_ptr<T_SUBSCRIBER> subscriber;

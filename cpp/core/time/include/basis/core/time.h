@@ -51,11 +51,12 @@ protected:
 public:
   int64_t nsecs = std::numeric_limits<int64_t>::min();
 
-  bool IsValid() { return nsecs != std::numeric_limits<int64_t>::min(); }
+  bool IsValid() const { return nsecs != std::numeric_limits<int64_t>::min(); }
 
-  double ToSeconds() { return (nsecs / NSECS_IN_SECS) + double(nsecs % NSECS_IN_SECS) / NSECS_IN_SECS; }
+  double ToSeconds() const { return (nsecs / NSECS_IN_SECS) + double(nsecs % NSECS_IN_SECS) / NSECS_IN_SECS; }
 
-  timeval ToTimeval() { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_usec = 1000 * (nsecs % NSECS_IN_SECS)}; }
+  timeval ToTimeval() const { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_usec = 1000 * (nsecs % NSECS_IN_SECS)}; }
+  timespec ToTimespec() const { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_nsec = (nsecs % NSECS_IN_SECS)}; }
 };
 #ifndef IGNORE_YEAR_2038
 // I'd like to think this software will be alive in some form in 14 years.

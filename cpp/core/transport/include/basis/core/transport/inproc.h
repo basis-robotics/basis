@@ -49,14 +49,11 @@ public:
   InprocSubscriber(std::string_view topic_name, const std::function<void(const MessageEvent<T_MSG> &message)> callback) : callback(callback), topic_name(topic_name) {}
 
   void OnMessage(std::shared_ptr<const T_MSG> msg) {
-
     MessageEvent<T_MSG> event;
     event.topic_info.topic = topic_name;
     event.message = msg;
 
     callback(event);
-
-
   }
 
   const std::function<void(MessageEvent<T_MSG> message)> callback;
