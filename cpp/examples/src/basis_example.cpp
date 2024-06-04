@@ -14,7 +14,9 @@
 
 // Plugins
 #include <basis/plugins/serialization/protobuf.h>
+#ifdef BASIS_ENABLE_ROS
 #include <basis/plugins/serialization/rosmsg.h>
+#endif
 
 // Message definitions
 #include <test.pb.h>
