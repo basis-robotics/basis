@@ -9,7 +9,7 @@ project(basis_plugins_serialization_rosmsg)
 
 message("using BASIS_ROS_ROOT=${BASIS_ROS_ROOT}")
 
-add_library(basis_plugins_serialization_rosmsg SHARED src/rosmsg.cpp)
+add_plugin(basis_plugins_serialization_rosmsg src/rosmsg.cpp)
 
 target_include_directories(basis_plugins_serialization_rosmsg PUBLIC include)
 target_include_directories(basis_plugins_serialization_rosmsg PUBLIC ${BASIS_ROS_ROOT}/include/)
@@ -20,4 +20,6 @@ target_link_libraries(basis_plugins_serialization_rosmsg PUBLIC basis_core_seria
 
 add_library(basis::plugins::serialization::rosmsg ALIAS basis_plugins_serialization_rosmsg)
 
-add_subdirectory(test)
+if(${BASIS_ENABLE_TESTING})
+  add_subdirectory(test)
+endif()

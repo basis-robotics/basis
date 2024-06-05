@@ -190,6 +190,4 @@ struct SerializationHandler<T_MSG, std::enable_if_t<std::is_base_of_v<google::pr
   using type = plugins::serialization::ProtobufSerializer;
 };
 
-
-
 } // namespace basis

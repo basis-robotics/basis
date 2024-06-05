@@ -1,5 +1,3 @@
-enable_testing()
-
 add_executable(
   test_tcp_transport
   test_tcp_transport.cpp
