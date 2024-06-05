@@ -9,7 +9,7 @@ project(basis_plugins_serialization_rosmsg)
 
 message("using BASIS_ROS_ROOT=${BASIS_ROS_ROOT}")
 
-add_library(basis_plugins_serialization_rosmsg SHARED src/rosmsg.cpp)
+add_plugin(basis_plugins_serialization_rosmsg src/rosmsg.cpp)
 
 target_include_directories(basis_plugins_serialization_rosmsg PUBLIC include)
 target_include_directories(basis_plugins_serialization_rosmsg PUBLIC ${BASIS_ROS_ROOT}/include/)
