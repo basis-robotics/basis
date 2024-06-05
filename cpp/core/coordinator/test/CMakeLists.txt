@@ -1,5 +1,3 @@
-enable_testing()
-
 add_executable(
   test_coordinator
   test_coordinator.cpp

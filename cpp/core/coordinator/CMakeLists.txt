@@ -1,5 +1,3 @@
-enable_testing()
-
 add_library(basis_libcoordinator SHARED src/coordinator.cpp)
 target_include_directories(basis_libcoordinator PUBLIC include)
 target_link_libraries(

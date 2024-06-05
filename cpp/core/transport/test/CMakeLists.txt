@@ -1,5 +1,3 @@
-enable_testing()
-
 add_executable(
   test_basic_transport
   test_basic_transport.cpp
