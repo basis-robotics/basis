@@ -20,4 +20,6 @@ target_link_libraries(basis_plugins_serialization_rosmsg PUBLIC basis_core_seria
 
 add_library(basis::plugins::serialization::rosmsg ALIAS basis_plugins_serialization_rosmsg)
 
-add_subdirectory(test)
+if(${BASIS_ENABLE_TESTING})
+  add_subdirectory(test)
+endif()

@@ -9,4 +9,6 @@ target_link_libraries(basis_plugins_serialization_protobuf basis_core_serializat
 
 add_library(basis::plugins::serialization::protobuf ALIAS basis_plugins_serialization_protobuf)
 
-add_subdirectory(test)
+if(${BASIS_ENABLE_TESTING})
+  add_subdirectory(test)
+endif()

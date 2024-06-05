@@ -11,11 +11,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 include(FetchContent)
+if(${BASIS_ENABLE_TESTING})
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
 )
 FetchContent_MakeAvailable(googletest)
+endif()
 
 FetchContent_Declare(
   spdlog

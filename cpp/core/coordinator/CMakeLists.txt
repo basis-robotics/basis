@@ -18,4 +18,6 @@ target_link_libraries(
 
 add_library(basis::core::coordinator ALIAS basis_libcoordinator)
 
-add_subdirectory(test)
+if(${BASIS_ENABLE_TESTING})
+  add_subdirectory(test)
+endif()
