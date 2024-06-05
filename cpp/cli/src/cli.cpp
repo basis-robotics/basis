@@ -15,23 +15,80 @@
 
 #ifdef BASIS_ENABLE_ROS
 #include <basis/plugins/serialization/rosmsg.h>
-
 #endif
+
+#include <filesystem>
+
+#include <dlfcn.h>
+#include <unistd.h>
 
 using namespace basis;
 
-// Load all of the plugins we have
-auto protobuf_plugin = std::make_unique<basis::plugins::serialization::ProtobufPlugin>();
-#ifdef BASIS_ENABLE_ROS
-auto rosmsg_plugins = std::make_unique<basis::plugins::serialization::RosmsgPlugin>();
-#endif
+template<typename T>
+std::unique_ptr<T> LoadPlugin(const char *path) {
+  void *handle = dlopen(path, RTLD_NOW);
+  if (!handle) {
+    return nullptr;
+  }
 
-std::unordered_map<std::string, core::serialization::SerializationPlugin *> serialization_plugins = {
-    {(std::string)protobuf_plugin->GetSerializerName(), protobuf_plugin.get()},
-#ifdef BASIS_ENABLE_ROS
-    {(std::string)rosmsg_plugins->GetSerializerName(), rosmsg_plugins.get()},
-#endif
-};
+  using PluginCreator = T *(*)();
+  auto Loader = (PluginCreator)dlsym(handle, "LoadPlugin");
+  if (!Loader) {
+    return nullptr;
+  }
+  std::unique_ptr<T> plugin(Loader());
+
+  return plugin;
+}
+template<typename T>
+void LoadPluginsAtPath(std::filesystem::path search_path, std::unordered_map<std::string, std::unique_ptr<T>>& out) {
+  if(!std::filesystem::exists(search_path)) {
+    return;
+  }
+  for (auto entry : std::filesystem::directory_iterator(search_path)) {
+    std::filesystem::path plugin_path = entry.path();
+    if(entry.is_directory()) {
+      plugin_path /= plugin_path.filename();
+      plugin_path.replace_extension(".so");
+    }
+    
+    std::unique_ptr<T> plugin(LoadPlugin<T>(plugin_path.string().c_str()));
+    if(!plugin) {
+      std::cerr << "Failed to load plugin at " << search_path.string();
+      continue;
+    }
+
+    std::string name(plugin->GetPluginName());
+    if(!out.contains(name)) {
+      out.emplace(name, std::move(plugin));
+    }
+  }
+}
+
+
+std::unordered_map<std::string, std::unique_ptr<core::serialization::SerializationPlugin>> serialization_plugins;
+
+/**
+ * Load all plugins of a type
+ *
+ * @todo: this won't work well for things other than cli - it's assuming the build system layout, for one
+ */
+template<typename T>
+void LoadPlugins() {
+  char buf[1024];
+  readlink("/proc/self/exe", buf, 1024);
+
+  std::filesystem::path search_path = buf;
+  search_path = search_path.parent_path().parent_path() / "plugins" / T::PLUGIN_TYPE;
+
+  std::unordered_map<std::string, std::unique_ptr<T>> out;
+
+  LoadPluginsAtPath<T>(search_path, out);
+  LoadPluginsAtPath<T>(std::filesystem::path("/opt/basis/plugins") / T::PLUGIN_TYPE, out);
+  serialization_plugins = std::move(out);
+
+}
+
 
 std::optional<basis::core::transport::proto::MessageSchema>
 FetchSchema(const std::string &schema_id, basis::core::transport::CoordinatorConnector *connector, int timeout_s) {
@@ -84,13 +141,12 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
               << std::endl;
     return;
   }
-  core::serialization::SerializationPlugin *plugin = plugin_it->second;
+  core::serialization::SerializationPlugin *plugin = plugin_it->second.get();
 
   plugin->LoadSchema(maybe_schema->name(), maybe_schema->schema());
   basis::core::transport::TransportManager transport_manager(
       std::make_unique<basis::core::transport::InprocTransport>());
-  transport_manager.RegisterTransport("net_tcp",
-                                      std::make_unique<basis::plugins::transport::TcpTransport>());
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<basis::plugins::transport::TcpTransport>());
 
   // This looks dangerous to take as a reference but is actually safe -
   // the subscriber destructor will wait until the callback exits before the atomic goes out of scope
@@ -131,6 +187,8 @@ void PrintSchema(const std::string &schema_name, basis::core::transport::Coordin
 }
 
 int main(int argc, char *argv[]) {
+  LoadPlugins<basis::core::serialization::SerializationPlugin>();
+
   argparse::ArgumentParser parser("basis");
 
   parser.add_argument("--port")
@@ -170,6 +228,9 @@ int main(int argc, char *argv[]) {
   schema_print_command.add_description("print a schema");
   schema_print_command.add_argument("schema");
   schema_command.add_subparser(schema_print_command);
+
+  // todo
+  // basis plugins ls
 
   parser.add_subparser(schema_command);
 

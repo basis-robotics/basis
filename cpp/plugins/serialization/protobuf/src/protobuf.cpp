@@ -7,3 +7,12 @@ google::protobuf::DynamicMessageFactory ProtobufSerializer::protoFactory(&Protob
 std::unordered_set<std::string> ProtobufSerializer::known_schemas;
 
 } // namespace basis::plugins::serialization
+
+
+extern "C" {
+
+basis::core::serialization::SerializationPlugin* LoadPlugin() {
+    return new basis::plugins::serialization::ProtobufPlugin();
+}
+
+}

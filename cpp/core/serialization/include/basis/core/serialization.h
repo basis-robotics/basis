@@ -70,10 +70,11 @@ private:
 
 class SerializationPlugin {
 public:
+  static constexpr char PLUGIN_TYPE[] = "serialization";
+
   virtual ~SerializationPlugin() = default;
   
-  virtual std::string_view GetSerializerName() = 0;
-
+  virtual std::string_view GetPluginName() = 0;
 
   virtual bool LoadSchema(std::string_view schema_name, std::string_view schema) = 0;
 
@@ -87,7 +88,7 @@ class AutoSerializationPlugin : public SerializationPlugin {
   public:
     AutoSerializationPlugin() = default;
     
-    std::string_view GetSerializerName() override {
+    std::string_view GetPluginName() override {
       return T_Serializer::SERIALIZER_ID;
     }
 
