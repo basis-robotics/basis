@@ -10,7 +10,7 @@ TEST(TestSyncAll, BasicTest) {
     ASSERT_EQ(*b, 'b');
   };
 
-  basis::synchronizers::All<char, char> test_all(test_cb);
+  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all(test_cb);
 
   auto a = std::make_shared<char>('a');
   auto b = std::make_shared<char>('b');
@@ -38,7 +38,7 @@ TEST(TestSyncAll, TestOptional) {
   std::shared_ptr<char> recvd_a;
   std::shared_ptr<char> recvd_b;
 
-  basis::synchronizers::All<char, char> test_all(
+  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all(
       [&](auto a, auto b) {
         was_called = true;
         recvd_a = a;
@@ -74,7 +74,7 @@ TEST(TestSyncAll, TestCached) {
     ASSERT_EQ(*b, 'b');
   };
 
-  basis::synchronizers::All<char, char> test_all(test_cb, {}, {.is_cached = true});
+  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all(test_cb, {}, {.is_cached = true});
 
   auto a = std::make_shared<char>('a');
   auto b = std::make_shared<char>('b');
@@ -96,4 +96,52 @@ TEST(TestSyncAll, TestCached) {
   ASSERT_EQ(was_called, false);
   test_all.OnMessage<0>(a);
   ASSERT_EQ(was_called, true);
+}
+
+TEST(TestSyncAll, TestContainer) {
+  std::atomic<bool> was_called{false};
+
+  std::shared_ptr<char> recvd_a;
+  std::vector<std::shared_ptr<char>> recvd_b;
+
+  basis::synchronizers::All<std::shared_ptr<char>, std::vector<std::shared_ptr<char>>> test_all([&](auto a, auto b) {
+    was_called = true;
+    recvd_a = a;
+    recvd_b = b;
+  });
+
+  auto a = std::make_shared<char>('a');
+  auto b1 = std::make_shared<char>('1');
+  auto b2 = std::make_shared<char>('2');
+  auto b3 = std::make_shared<char>('3');
+
+  ASSERT_EQ(recvd_a, nullptr);
+  ASSERT_EQ(recvd_b.size(), 0);
+
+  test_all.OnMessage<0>(a);
+  ASSERT_EQ(recvd_a, nullptr);
+  ASSERT_EQ(recvd_b.size(), 0);
+
+  test_all.OnMessage<1>(b1);
+  ASSERT_EQ(recvd_a, a);
+  ASSERT_EQ(recvd_b.size(), 1);
+  ASSERT_EQ(recvd_b, decltype(recvd_b)({b1}));
+
+  recvd_a.reset();
+  recvd_b.clear();
+
+  test_all.OnMessage<1>(b1);
+  ASSERT_EQ(recvd_a, nullptr);
+  ASSERT_EQ(recvd_b.size(), 0);
+  test_all.OnMessage<1>(b2);
+  ASSERT_EQ(recvd_a, nullptr);
+  ASSERT_EQ(recvd_b.size(), 0);
+  test_all.OnMessage<1>(b3);
+  ASSERT_EQ(recvd_a, nullptr);
+  ASSERT_EQ(recvd_b.size(), 0);
+
+  test_all.OnMessage<0>(a);
+  ASSERT_EQ(recvd_a, a);
+
+  ASSERT_EQ(recvd_b, decltype(recvd_b)({b1, b2, b3}));
 }
