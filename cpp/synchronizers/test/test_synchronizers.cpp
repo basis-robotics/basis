@@ -156,27 +156,61 @@ struct Foo {
   uint32_t foo;
 };
 
-struct Baz {
-  uint32_t baz;
+struct Unsynced {
+  uint32_t unsynced;
 };
 
+uint32_t GetMember(const OuterSyncTestStruct *outer) { return outer->header().stamp(); }
+
 TEST(TestSyncField, BasicTest) {
+  auto produce_proto = [](uint32_t stamp) {
+    auto proto = std::make_shared<OuterSyncTestStruct>();
+    proto->mutable_header()->set_stamp(stamp);
+    return proto;
+  };
+
   basis::synchronizers::FieldSyncEqual<
       basis::synchronizers::Field<std::shared_ptr<const Foo>, &Foo::foo>,
-      basis::synchronizers::Field<std::shared_ptr<const TestProtoStruct>, &TestProtoStruct::foo>,
-      basis::synchronizers::Field<std::vector<std::shared_ptr<const Baz>>, nullptr>>
+      basis::synchronizers::Field<std::shared_ptr<const OuterSyncTestStruct>,
+                                  [](const OuterSyncTestStruct *outer) { return outer->header().stamp(); }>,
+      basis::synchronizers::Field<std::vector<std::shared_ptr<const Unsynced>>, nullptr>>
       test;
 
-  auto foo = std::make_shared<Foo>(2);
-  auto baz = std::make_shared<Baz>(10);
+  auto unsynced = std::make_shared<Unsynced>(0xFF);
 
-  auto proto1 = std::make_shared<TestProtoStruct>();
-  proto1->set_foo(1);
-  ASSERT_FALSE(test.OnMessage<0>(foo));
-  ASSERT_FALSE(test.OnMessage<1>(proto1));
-  ASSERT_FALSE(test.OnMessage<2>(baz));
+  // Check that we sync at all
+  // [1], [], []
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<Foo>(2)));
+  // [1], [2], []
+  ASSERT_FALSE(test.OnMessage<1>(produce_proto(1)));
+  // [1], [2], [X]
+  ASSERT_FALSE(test.OnMessage<2>(unsynced));
+  // [1, 2], [2], [X] (sync on 2)
+  ASSERT_TRUE(test.OnMessage<1>(produce_proto(2)));
+  // [], [], []
 
-  auto proto2 = std::make_shared<TestProtoStruct>();
-  proto2->set_foo(2);
-  ASSERT_TRUE(test.OnMessage<1>(proto2));
+  // Check that when we sync, we leave data in the buffer for later
+  // [], [], [X]
+  ASSERT_FALSE(test.OnMessage<2>(unsynced));
+  // [3], [], [X]
+  ASSERT_FALSE(test.OnMessage<1>(produce_proto(3)));
+  // [3, 4], [], [X]
+  ASSERT_FALSE(test.OnMessage<1>(produce_proto(4)));
+  // [3, 4], [3], [X] (sync on 3)
+  ASSERT_TRUE(test.OnMessage<0>(std::make_shared<Foo>(3)));
+  // [4], [], []
+
+  // [4], [], [X]
+  ASSERT_FALSE(test.OnMessage<2>(unsynced));
+  // [4], [4], [X] (sync on 4)
+  ASSERT_TRUE(test.OnMessage<0>(std::make_shared<Foo>(4)));
+  // [], [], []
+
+  // Test that when we sync, we still wait for unsynced messages
+
+  // [5], [5], [] (sync on 5, but no output)
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<Foo>(5)));
+  ASSERT_FALSE(test.OnMessage<1>(produce_proto(5)));
+  // [5], [5], [X]
+  ASSERT_TRUE(test.OnMessage<2>(unsynced));
 }

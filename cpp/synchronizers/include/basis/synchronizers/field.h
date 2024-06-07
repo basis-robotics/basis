@@ -24,15 +24,13 @@ namespace internal {
  */
 template <typename... T_FIELD_SYNCs>
 concept NoContainerSupportForFieldSync =
-    ((T_FIELD_SYNCs::FieldPtr == nullptr ||
-      !HasPushBack<typename T_FIELD_SYNCs::ContainerMessageType>) &&
-     ...);
+    ((T_FIELD_SYNCs::FieldPtr == nullptr || !HasPushBack<typename T_FIELD_SYNCs::ContainerMessageType>) && ...);
 
 } // namespace internal
 
 /**
  * Class used to synchronize fields in messages.
- * @tparam T_OPERATOR class used to check if two fields are synced. Must be a class with this structure:       
+ * @tparam T_OPERATOR class used to check if two fields are synced. Must be a class with this structure:
     struct Operator {
         template<typename T1, typename T2>
         auto operator()(const T1& t1, const T2& t2) {
@@ -40,8 +38,9 @@ concept NoContainerSupportForFieldSync =
         }
     };
  * @tparam T_FIELD_SYNCs A parameter packed list of types and fields to sync, eg:
-    basis::synchronizers::Field<std::shared_ptr<const SensorMessages::LidarScan>, &SensorMessages::LidarScan::header.timestamp>,
-    basis::synchronizers::Field<std::shared_ptr<const TestProtoStruct>, &TestProtoStruct::foo>,
+    basis::synchronizers::Field<std::shared_ptr<const SensorMessages::LidarScan>,
+ &SensorMessages::LidarScan::header.timestamp>, basis::synchronizers::Field<std::shared_ptr<const TestProtoStruct>,
+ &TestProtoStruct::foo>,
  */
 template <typename T_OPERATOR, typename... T_FIELD_SYNCs>
 // This class does not support vectors for synced messages
@@ -53,17 +52,17 @@ public:
   using MessageSumType = Base::MessageSumType;
 
   template <auto T_INDIR_A, typename T_MSG_A> auto GetFieldData(T_MSG_A a) {
-    if constexpr (std::is_member_function_pointer_v<decltype(T_INDIR_A)>) {
+    /*if constexpr (std::is_member_function_pointer_v<decltype(T_INDIR_A)>) {
       return (a->*T_INDIR_A)();
+    } else*/ if constexpr (std::is_invocable_v<decltype(T_INDIR_A), T_MSG_A>) {
+      return std::invoke(T_INDIR_A, a);
     } else {
       return a->*T_INDIR_A;
     }
   }
 
 protected:
-  virtual bool IsReadyNoLock() override {
-    return Base::AreAllNonOptionalFieldsFilledNoLock();
-  }
+  virtual bool IsReadyNoLock() override { return Base::AreAllNonOptionalFieldsFilledNoLock(); }
 
   template <auto T_INDIR_B, typename T_FIELD_A, typename T_MSG_B>
   int FindMatchingField(T_FIELD_A &a, const std::vector<T_MSG_B> &syncs_b) {
@@ -125,21 +124,15 @@ protected:
 };
 
 struct Equal {
-    template<typename T1, typename T2>
-    auto operator()(const T1& t1, const T2& t2) {
-        return t1 == t2;
-    }
+  template <typename T1, typename T2> auto operator()(const T1 &t1, const T2 &t2) { return t1 == t2; }
 };
 
-template<auto T_EPSILON>
-struct ApproximatelyEqual {
-    template<typename T1, typename T2>
-    auto operator()(const T1& t1, const T2& t2) {
-        return std::abs(t1 - t2) <= T_EPSILON;
-    }
+template <auto T_EPSILON> struct ApproximatelyEqual {
+  template <typename T1, typename T2> auto operator()(const T1 &t1, const T2 &t2) {
+    return std::abs(t1 - t2) <= T_EPSILON;
+  }
 };
 
-template <typename... T_FIELD_SYNCs>
-using FieldSyncEqual = FieldSync<Equal, T_FIELD_SYNCs...>;
+template <typename... T_FIELD_SYNCs> using FieldSyncEqual = FieldSync<Equal, T_FIELD_SYNCs...>;
 
 } // namespace basis::synchronizers

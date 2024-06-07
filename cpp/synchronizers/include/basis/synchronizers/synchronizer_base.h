@@ -105,9 +105,8 @@ public:
 protected:
   std::optional<MessageSumType> ConsumeIfReadyNoLock() {
     if (IsReadyNoLock()) {
-      MessageSumType out;
+      MessageSumType out(ConsumeMessagesNoLock());
 
-      out = ConsumeMessagesNoLock();
       if (callback) {
         std::apply(callback, out);
       }
