@@ -1,3 +1,5 @@
+#pragma once
+
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -5,7 +7,9 @@
 
 namespace basis::synchronizers {
 
-struct MessageMetadata {
+// todo: how are we going to add timing require to this
+
+template <typename T_MSG_CONTAINER> struct MessageMetadata {
   /**
    * If set, this message will not participate in ready checks, but will still be passed into any results.
    */
@@ -19,32 +23,23 @@ struct MessageMetadata {
   // todo: we've untemplated this but maybe we should retemplate it?
 };
 
-/**
- * Helper class that always returns MessageMetadata for any template type
- */
-template <typename T_MSG_CONTAINERs> struct MessageMetadataHelper {
-  using Type = MessageMetadata;
-};
-template<typename T>
+template <typename T>
 concept HasPushBack = requires {
-    { std::declval<T>().push_back(std::declval<typename T::value_type>()) } -> std::same_as<void>;
+  { std::declval<T>().push_back(std::declval<typename T::value_type>()) } -> std::same_as<void>;
 };
 
+template <class T> struct ExtractMessageType;
 
-
-template<class T>
-struct ExtractMessageType {
-};
-
-template<class T>
-  requires requires { typename T::element_type; }
-struct ExtractMessageType<T> {
-  using Type = T::element_type;
-};
-template<class T>
+template <class T>
   requires HasPushBack<T>
 struct ExtractMessageType<T> {
   using Type = T::value_type::element_type;
+};
+
+template <class T>
+  requires requires { typename T::element_type; }
+struct ExtractMessageType<T> {
+  using Type = T::element_type;
 };
 
 // template
@@ -54,10 +49,9 @@ struct ExtractMessageType<T> {
 //   using Type = HasPushBack<T> ? T::value_type::element_type : T::element_type;
 // };
 
-
 template <typename T_MSG_CONTAINER> struct Storage {
   using T_MSG = ExtractMessageType<T_MSG_CONTAINER>::Type;
-  MessageMetadata metadata;
+  MessageMetadata<T_MSG_CONTAINER> metadata;
   T_MSG_CONTAINER data;
 
   operator bool() const {
@@ -93,21 +87,26 @@ public:
   using Callback = std::function<void(T_MSG_CONTAINERs...)>;
   using MessageSumType = std::tuple<T_MSG_CONTAINERs...>;
 
-  SynchronizerBase(Callback callback, MessageMetadataHelper<T_MSG_CONTAINERs>::Type &&...metadatas)
+  SynchronizerBase(Callback callback, MessageMetadata<T_MSG_CONTAINERs> &&...metadatas)
       : SynchronizerBase(callback, std::forward_as_tuple(metadatas...)) {}
 
-  SynchronizerBase(Callback callback = {},
-                   std::tuple<typename MessageMetadataHelper<T_MSG_CONTAINERs>::Type...> &&metadatas = {})
+  SynchronizerBase(Callback callback = {}, std::tuple<MessageMetadata<T_MSG_CONTAINERs>...> &&metadatas = {})
       : callback(callback), storage(metadatas) {}
 
-  template <size_t INDEX> MessageSumType OnMessage(auto msg) {
+  virtual ~SynchronizerBase() = default;
+
+template <size_t INDEX> std::optional<MessageSumType> OnMessage(auto msg) {
     std::lock_guard lock(mutex);
     std::get<INDEX>(storage).ApplyMessage(msg);
 
+    return ConsumeIfReadyNoLock();
+  }
+protected:
+  std::optional<MessageSumType> ConsumeIfReadyNoLock() {
     MessageSumType out;
 
     if (IsReadyNoLock()) {
-      out = ConsumeMessages();
+      out = ConsumeMessagesNoLock();
       if (callback) {
         std::apply(callback, out);
       }
@@ -116,11 +115,9 @@ public:
     return out;
   }
 
-protected:
   virtual bool IsReadyNoLock() = 0;
 
-protected:
-  MessageSumType ConsumeMessages() {
+  MessageSumType ConsumeMessagesNoLock() {
     return std::apply([](auto &...storage) { return std::tuple{storage.Consume()...}; }, storage);
   }
 

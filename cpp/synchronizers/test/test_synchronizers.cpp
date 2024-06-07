@@ -1,6 +1,13 @@
 #include <basis/synchronizers/all.h>
+#include <basis/synchronizers/field.h>
 
 #include <gtest/gtest.h>
+
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#include <test.pb.h>
+#pragma clang diagnostic pop
 
 TEST(TestSyncAll, BasicTest) {
   std::atomic<bool> was_called{false};
@@ -145,3 +152,23 @@ TEST(TestSyncAll, TestContainer) {
 
   ASSERT_EQ(recvd_b, decltype(recvd_b)({b1, b2, b3}));
 }
+
+struct Foo {
+    uint32_t foo;
+};
+
+struct Baz {
+    uint32_t baz;
+};
+TEST(TestSyncField, BasicTest) {
+  basis::synchronizers::FieldSync<basis::synchronizers::Field<std::shared_ptr<const Foo>, &Foo::foo>,
+                                  basis::synchronizers::Field<std::shared_ptr<const TestProtoStruct>, &TestProtoStruct::foo>,
+                                  basis::synchronizers::Field<std::vector<std::shared_ptr<const Baz>>, nullptr>> test;
+
+  auto foobar = std::make_shared<Foo>(1);
+
+  ASSERT_FALSE(test.OnMessage<0>(foobar));
+
+
+}
+

@@ -6,6 +6,8 @@ target_link_libraries(
   test_synchronizers
   GTest::gtest_main
   basis::synchronizers
+  basis_proto
+  
 )
 
 include(GoogleTest REQUIRED)
