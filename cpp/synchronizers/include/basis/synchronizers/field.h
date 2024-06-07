@@ -3,8 +3,8 @@
 // this might be overdoing it
 
 #include "synchronizer_base.h"
-#include <type_traits>
 #include <spdlog/spdlog.h>
+#include <type_traits>
 namespace basis::synchronizers {
 
 template <typename T_CONTAINER_MSG, auto T_FIELD> struct Field {};
@@ -43,8 +43,20 @@ public:
 
   using MessageSumType = Base::MessageSumType;
 
+  template <auto T_INDIR_A, typename T_MSG_A> auto GetFieldData(T_MSG_A a) {
+    if constexpr (std::is_member_function_pointer_v<decltype(T_INDIR_A)>) {
+      return (a->*T_INDIR_A)();
+    } else {
+      return a->*T_INDIR_A;
+    }
+  }
+
 protected:
-  virtual bool IsReadyNoLock() override { return false; }
+  virtual bool IsReadyNoLock() override {
+    spdlog::info("IsReadyNoLock {}", is_synced);
+
+    return is_synced;
+  }
 
   template <auto T_INDIR_B, typename T_FIELD_A, typename T_MSG_B>
   int FindMatchingField(T_FIELD_A &a, const std::vector<T_MSG_B> &syncs_b) {
@@ -53,14 +65,8 @@ protected:
       for (size_t i = 0; i < syncs_b.size(); i++) {
         auto *b = syncs_b[i].get();
         // Handle protobuf not exposing members directly
-        if constexpr (std::is_member_function_pointer_v<decltype(T_INDIR_B)>) {
-          if ((b->*T_INDIR_B)() == a) {
-            return i;
-          }
-        } else {
-          if (b->*T_INDIR_B == a) {
-            return i;
-          }
+        if (GetFieldData<T_INDIR_B>(b) == a) {
+          return i;
         }
       }
     }
@@ -82,12 +88,12 @@ public:
 
     constexpr auto pointer_to_member = std::get<INDEX>(fields);
 
-    if constexpr (pointer_to_member) {
+    if constexpr (pointer_to_member != nullptr) {
       std::get<INDEX>(sync_buffers).push_back(msg);
 
       MessageSumType matching;
 
-      [[maybe_unused]] const auto &field_to_check = msg.get()->*pointer_to_member;
+      auto field_to_check = GetFieldData<pointer_to_member>(msg.get());
 
       [&]<std::size_t... I>(std::index_sequence<I...>) {
         const auto syncs =
@@ -102,7 +108,7 @@ public:
     } else {
       std::get<INDEX>(this->storage).ApplyMessage(msg);
     }
-spdlog::info("foobar");
+
     return this->ConsumeIfReadyNoLock();
   }
 

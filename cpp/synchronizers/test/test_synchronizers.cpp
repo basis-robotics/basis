@@ -3,7 +3,6 @@
 
 #include <gtest/gtest.h>
 
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include <test.pb.h>
@@ -154,21 +153,29 @@ TEST(TestSyncAll, TestContainer) {
 }
 
 struct Foo {
-    uint32_t foo;
+  uint32_t foo;
 };
 
 struct Baz {
-    uint32_t baz;
+  uint32_t baz;
 };
 TEST(TestSyncField, BasicTest) {
-  basis::synchronizers::FieldSync<basis::synchronizers::Field<std::shared_ptr<const Foo>, &Foo::foo>,
-                                  basis::synchronizers::Field<std::shared_ptr<const TestProtoStruct>, &TestProtoStruct::foo>,
-                                  basis::synchronizers::Field<std::vector<std::shared_ptr<const Baz>>, nullptr>> test;
+  basis::synchronizers::FieldSync<
+      basis::synchronizers::Field<std::shared_ptr<const Foo>, &Foo::foo>,
+      basis::synchronizers::Field<std::shared_ptr<const TestProtoStruct>, &TestProtoStruct::foo>,
+      basis::synchronizers::Field<std::vector<std::shared_ptr<const Baz>>, nullptr>>
+      test;
 
-  auto foobar = std::make_shared<Foo>(1);
+  auto foo = std::make_shared<Foo>(2);
+  auto baz = std::make_shared<Baz>(10);
 
-  ASSERT_FALSE(test.OnMessage<0>(foobar));
+  auto proto1 = std::make_shared<TestProtoStruct>();
+  proto1->set_foo(1);
+  ASSERT_FALSE(test.OnMessage<0>(foo));
+  ASSERT_FALSE(test.OnMessage<1>(proto1));
+  ASSERT_FALSE(test.OnMessage<2>(baz));
 
-
+  auto proto2 = std::make_shared<TestProtoStruct>();
+  proto2->set_foo(2);
+  ASSERT_TRUE(test.OnMessage<1>(proto2));
 }
-

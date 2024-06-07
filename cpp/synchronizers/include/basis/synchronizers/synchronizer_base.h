@@ -95,24 +95,26 @@ public:
 
   virtual ~SynchronizerBase() = default;
 
-template <size_t INDEX> std::optional<MessageSumType> OnMessage(auto msg) {
+  template <size_t INDEX> std::optional<MessageSumType> OnMessage(auto msg) {
     std::lock_guard lock(mutex);
     std::get<INDEX>(storage).ApplyMessage(msg);
 
     return ConsumeIfReadyNoLock();
   }
+
 protected:
   std::optional<MessageSumType> ConsumeIfReadyNoLock() {
-    MessageSumType out;
 
     if (IsReadyNoLock()) {
+      MessageSumType out;
+
       out = ConsumeMessagesNoLock();
       if (callback) {
         std::apply(callback, out);
       }
       return out;
     }
-    return out;
+    return {};
   }
 
   virtual bool IsReadyNoLock() = 0;
