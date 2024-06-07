@@ -7,39 +7,48 @@
 #include <type_traits>
 namespace basis::synchronizers {
 
-template <typename T_CONTAINER_MSG, auto T_FIELD> struct Field {};
+/**
+ * Helper to associate a message type and a field in that message
+ * @tparam T_CONTAINER_MSG - the container for the message - eg std::shared_ptr<Message>
+ * @tparam T_FIELD - a pointer to member for the field to be symced (or nullptr if unsynced).
+ *  May be a pointer to the actual field or pointer to member taking no additional arguments.
+ */
+template <typename T_CONTAINER_MSG, auto T_FIELD> struct Field {
+  using ContainerMessageType = T_CONTAINER_MSG;
+  static constexpr auto FieldPtr = T_FIELD;
+};
 
 namespace internal {
-// Helper meta-function to extract the Container type from Field
-template <typename T> struct ExtractFieldContainer;
-
-template <template <typename, auto> typename T_FIELD_SYNC, typename T_CONTAINER, auto T_FIELD>
-struct ExtractFieldContainer<T_FIELD_SYNC<T_CONTAINER, T_FIELD>> {
-  using Type = T_CONTAINER;
-};
-
-template <typename T> struct ExtractField;
-template <template <typename, auto> typename T_FIELD_SYNC, typename T_CONTAINER, auto T_FIELD>
-struct ExtractField<T_FIELD_SYNC<T_CONTAINER, T_FIELD>> {
-  constexpr static auto Field = T_FIELD;
-};
-
+/**
+ * (internal) Helper to ensure that we don't sync a field of a container that's buffered.
+ */
 template <typename... T_FIELD_SYNCs>
 concept NoContainerSupportForFieldSync =
-    ((internal::ExtractField<T_FIELD_SYNCs>::Field == nullptr ||
-      !HasPushBack<typename internal::ExtractFieldContainer<T_FIELD_SYNCs>::Type>) &&
+    ((T_FIELD_SYNCs::FieldPtr == nullptr ||
+      !HasPushBack<typename T_FIELD_SYNCs::ContainerMessageType>) &&
      ...);
 
 } // namespace internal
 
-template <typename... T_FIELD_SYNCs>
+/**
+ * Class used to synchronize fields in messages.
+ * @tparam T_OPERATOR class used to check if two fields are synced. Must be a class with this structure:       
+    struct Operator {
+        template<typename T1, typename T2>
+        auto operator()(const T1& t1, const T2& t2) {
+            return MyOperation(t1, t2); // (eg, t1 == t2)
+        }
+    };
+ * @tparam T_FIELD_SYNCs A parameter packed list of types and fields to sync, eg:
+    basis::synchronizers::Field<std::shared_ptr<const SensorMessages::LidarScan>, &SensorMessages::LidarScan::header.timestamp>,
+    basis::synchronizers::Field<std::shared_ptr<const TestProtoStruct>, &TestProtoStruct::foo>,
+ */
+template <typename T_OPERATOR, typename... T_FIELD_SYNCs>
 // This class does not support vectors for synced messages
   requires internal::NoContainerSupportForFieldSync<T_FIELD_SYNCs...>
-class FieldSync : public SynchronizerBase<typename internal::ExtractFieldContainer<T_FIELD_SYNCs>::Type...> {
+class FieldSync : public SynchronizerBase<typename T_FIELD_SYNCs::ContainerMessageType...> {
 public:
-  // static_assert(typename internal::ExtractFieldContainer<T_FIELD_SYNCs>::Type... , "all numbers must be 0 or 1");
-
-  using Base = SynchronizerBase<typename internal::ExtractFieldContainer<T_FIELD_SYNCs>::Type...>;
+  using Base = SynchronizerBase<typename T_FIELD_SYNCs::ContainerMessageType...>;
 
   using MessageSumType = Base::MessageSumType;
 
@@ -53,9 +62,7 @@ public:
 
 protected:
   virtual bool IsReadyNoLock() override {
-    spdlog::info("IsReadyNoLock {}", is_synced);
-
-    return is_synced;
+    return Base::AreAllNonOptionalFieldsFilledNoLock();
   }
 
   template <auto T_INDIR_B, typename T_FIELD_A, typename T_MSG_B>
@@ -65,7 +72,7 @@ protected:
       for (size_t i = 0; i < syncs_b.size(); i++) {
         auto *b = syncs_b[i].get();
         // Handle protobuf not exposing members directly
-        if (GetFieldData<T_INDIR_B>(b) == a) {
+        if (T_OPERATOR()(GetFieldData<T_INDIR_B>(b), a)) {
           return i;
         }
       }
@@ -98,11 +105,10 @@ public:
       [&]<std::size_t... I>(std::index_sequence<I...>) {
         const auto syncs =
             std::tuple(FindMatchingField<std::get<I>(fields)>(field_to_check, std::get<I>(sync_buffers))...);
-        is_synced = ((std::get<I>(fields) == nullptr || std::get<I>(syncs) != -1) && ...);
+        const bool is_synced = ((std::get<I>(fields) == nullptr || std::get<I>(syncs) != -1) && ...);
         if (is_synced) {
           [[maybe_unused]] auto t = ((ApplySync<I>(std::get<I>(syncs)), true) && ...);
         }
-        return is_synced;
       }(std::index_sequence_for<T_FIELD_SYNCs...>());
 
     } else {
@@ -113,11 +119,27 @@ public:
   }
 
 protected:
-  bool is_synced = false;
+  static constexpr auto fields = (std::make_tuple(T_FIELD_SYNCs::FieldPtr...));
 
-  static constexpr auto fields = (std::make_tuple(internal::ExtractField<T_FIELD_SYNCs>::Field...));
-
-  std::tuple<std::vector<typename internal::ExtractFieldContainer<T_FIELD_SYNCs>::Type>...> sync_buffers;
+  std::tuple<std::vector<typename T_FIELD_SYNCs::ContainerMessageType>...> sync_buffers;
 };
+
+struct Equal {
+    template<typename T1, typename T2>
+    auto operator()(const T1& t1, const T2& t2) {
+        return t1 == t2;
+    }
+};
+
+template<auto T_EPSILON>
+struct ApproximatelyEqual {
+    template<typename T1, typename T2>
+    auto operator()(const T1& t1, const T2& t2) {
+        return std::abs(t1 - t2) <= T_EPSILON;
+    }
+};
+
+template <typename... T_FIELD_SYNCs>
+using FieldSyncEqual = FieldSync<Equal, T_FIELD_SYNCs...>;
 
 } // namespace basis::synchronizers

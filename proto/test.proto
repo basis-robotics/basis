@@ -21,6 +21,13 @@ message ReferencedMessage {
   string data = 1;
 }
 
+message InnerSyncTestStruct {
+  uint32 stamp = 1;
+}
+
+message OuterSyncTestStruct {
+  InnerSyncTestStruct header = 1; 
+}
 
 enum EnumTest {
   CORPUS_UNSPECIFIED = 0;

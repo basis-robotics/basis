@@ -159,8 +159,9 @@ struct Foo {
 struct Baz {
   uint32_t baz;
 };
+
 TEST(TestSyncField, BasicTest) {
-  basis::synchronizers::FieldSync<
+  basis::synchronizers::FieldSyncEqual<
       basis::synchronizers::Field<std::shared_ptr<const Foo>, &Foo::foo>,
       basis::synchronizers::Field<std::shared_ptr<const TestProtoStruct>, &TestProtoStruct::foo>,
       basis::synchronizers::Field<std::vector<std::shared_ptr<const Baz>>, nullptr>>

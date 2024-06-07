@@ -104,7 +104,6 @@ public:
 
 protected:
   std::optional<MessageSumType> ConsumeIfReadyNoLock() {
-
     if (IsReadyNoLock()) {
       MessageSumType out;
 
@@ -121,6 +120,11 @@ protected:
 
   MessageSumType ConsumeMessagesNoLock() {
     return std::apply([](auto &...storage) { return std::tuple{storage.Consume()...}; }, storage);
+  }
+
+  bool AreAllNonOptionalFieldsFilledNoLock() {
+    // Maybe C++25 will have constexpr for loops on tuples
+    return std::apply([](auto... x) { return (bool(x) && ...); }, storage);
   }
 
   Callback callback;

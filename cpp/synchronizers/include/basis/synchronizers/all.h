@@ -11,8 +11,7 @@ public:
 
 protected:
   virtual bool IsReadyNoLock() override {
-    // Maybe C++25 will have constexpr for loops on tuples
-    return std::apply([](auto... x) { return (bool(x) && ...); }, Base::storage);
+    return Base::AreAllNonOptionalFieldsFilledNoLock();
   }
 };
 
