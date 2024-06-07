@@ -42,7 +42,7 @@ struct ExtractMessageType<T> {
   using Type = T::element_type;
 };
 template<class T>
-  requires requires { typename T::value_type; }
+  requires HasPushBack<T>
 struct ExtractMessageType<T> {
   using Type = T::value_type::element_type;
 };
