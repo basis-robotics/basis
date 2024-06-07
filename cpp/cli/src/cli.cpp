@@ -10,13 +10,6 @@
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/transport/transport_manager.h>
 
-// todo: load via plugin
-#include <basis/plugins/serialization/protobuf.h>
-
-#ifdef BASIS_ENABLE_ROS
-#include <basis/plugins/serialization/rosmsg.h>
-#endif
-
 #include <filesystem>
 
 #include <dlfcn.h>
