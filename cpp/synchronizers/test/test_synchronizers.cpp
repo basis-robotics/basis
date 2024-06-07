@@ -174,7 +174,10 @@ TEST(TestSyncField, BasicTest) {
       basis::synchronizers::Field<std::shared_ptr<const OuterSyncTestStruct>,
                                   [](const OuterSyncTestStruct *outer) { return outer->header().stamp(); }>,
       basis::synchronizers::Field<std::vector<std::shared_ptr<const Unsynced>>, nullptr>>
-      test;
+      test([](std::shared_ptr<const Foo>, std::shared_ptr<const OuterSyncTestStruct>,
+              std::vector<std::shared_ptr<const Unsynced>>) {
+
+      });
 
   auto unsynced = std::make_shared<Unsynced>(0xFF);
 
@@ -213,4 +216,62 @@ TEST(TestSyncField, BasicTest) {
   ASSERT_FALSE(test.OnMessage<1>(produce_proto(5)));
   // [5], [5], [X]
   ASSERT_TRUE(test.OnMessage<2>(unsynced));
+}
+
+struct ApproxTest {
+  double f = 0.0;
+};
+
+TEST(TestSyncField, TestApproximate) {
+  basis::synchronizers::FieldSyncApproximatelyEqual<
+      0.01, basis::synchronizers::Field<std::shared_ptr<const ApproxTest>, &ApproxTest::f>,
+      basis::synchronizers::Field<std::shared_ptr<const ApproxTest>, &ApproxTest::f>,
+      basis::synchronizers::Field<std::vector<std::shared_ptr<const Unsynced>>, nullptr>>
+      test({}, {}, {}, {.is_cached = true});
+
+  // Test the same number, but no third memeber
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<ApproxTest>(0.0)));
+  ASSERT_FALSE(test.OnMessage<1>(std::make_shared<ApproxTest>(0.0)));
+  auto unsynced = std::make_shared<Unsynced>(0xFF);
+  ASSERT_TRUE(test.OnMessage<2>(unsynced));
+  // Shouldn't need unsynced after this as we are cached
+
+  // Test the same number, again
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<ApproxTest>(1.0)));
+  ASSERT_TRUE(test.OnMessage<1>(std::make_shared<ApproxTest>(1.0)));
+
+  // Test numbers that are too far apart
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<ApproxTest>(2.0)));
+  ASSERT_FALSE(test.OnMessage<1>(std::make_shared<ApproxTest>(3.0)));
+
+  // Test numbers that are similar
+  ASSERT_TRUE(test.OnMessage<0>(std::make_shared<ApproxTest>(3.001)));
+
+  // Test numbers that aren't quite similar enough
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<ApproxTest>(4.0)));
+  ASSERT_FALSE(test.OnMessage<1>(std::make_shared<ApproxTest>(4.011)));
+}
+
+struct TypeConversionString {
+  std::string s;
+};
+
+struct TypeConversionInt {
+  int64_t i;
+};
+
+TEST(TestSyncField, TestTypeConversion) {
+  basis::synchronizers::FieldSyncEqual<
+      basis::synchronizers::Field<std::shared_ptr<const TypeConversionString>, &TypeConversionString::s>,
+      basis::synchronizers::Field<std::shared_ptr<const TypeConversionInt>,
+                                  [](const TypeConversionInt *i) { return std::to_string(i->i); }>>
+      test;
+
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<TypeConversionString>("foobar")));
+  ASSERT_FALSE(test.OnMessage<1>(std::make_shared<TypeConversionInt>(1)));
+  ASSERT_TRUE(test.OnMessage<0>(std::make_shared<TypeConversionString>("1")));
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<TypeConversionString>("33")));
+  ASSERT_FALSE(test.OnMessage<0>(std::make_shared<TypeConversionString>("42")));
+  ASSERT_TRUE(test.OnMessage<1>(std::make_shared<TypeConversionInt>(33)));
+  ASSERT_TRUE(test.OnMessage<1>(std::make_shared<TypeConversionInt>(42)));
 }

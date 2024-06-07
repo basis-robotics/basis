@@ -7,7 +7,7 @@ namespace basis::synchronizers {
 template <typename... T_MSG_CONTAINERs> class All : public SynchronizerBase<T_MSG_CONTAINERs...> {
 public:
   using Base = SynchronizerBase<T_MSG_CONTAINERs...>;
-  using Base::SynchronizerBase;
+  using Base::Base;
 
 protected:
   virtual bool IsReadyNoLock() override {
