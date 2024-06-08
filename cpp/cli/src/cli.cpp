@@ -22,12 +22,14 @@ std::unique_ptr<T> LoadPlugin(const char *path) {
   // Use RTLD_DEEPBIND to avoid the plugin sharing protobuf globals with us and crashing
   void *handle = dlopen(path, RTLD_NOW | RTLD_DEEPBIND);
   if (!handle) {
+    std::cerr << "Failed to dlopen " << path << std::endl;
     return nullptr;
   }
 
   using PluginCreator = T *(*)();
   auto Loader = (PluginCreator)dlsym(handle, "LoadPlugin");
   if (!Loader) {
+    std::cerr << "Failed to find plugin interface LoadPlugin in " << path << std::endl;
     return nullptr;
   }
   std::unique_ptr<T> plugin(Loader());

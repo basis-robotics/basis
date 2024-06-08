@@ -103,8 +103,8 @@ protected:
     auto stamped_v = std::make_shared<ExampleStampedVector>();
     stamped_v->set_time(time_sec);
     auto* pos = stamped_v->mutable_pos();
-    pos->set_x(time_sec / 10000.0);
-    pos->set_y(sin(time_sec / 10000.0));
+    pos->set_x(time_sec / 100.0);
+    pos->set_y(sin(time_sec / 100.0));
     pos->set_z(0);
     stamped_vector_pub->Publish(std::move(stamped_v));
   }
