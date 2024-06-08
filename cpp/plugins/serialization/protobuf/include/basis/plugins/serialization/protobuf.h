@@ -170,12 +170,19 @@ protected:
     return fd_set;
   }
 
+  struct PrintOnDestruct {
+    ~PrintOnDestruct() {
+      spdlog::error("I'm melting");
+    };
+  };
+  static PrintOnDestruct pod;
   // https://mcap.dev/guides/cpp/protobuf
   // todo: thread safety
   static google::protobuf::DescriptorPool protoPool;
   static google::protobuf::SimpleDescriptorDatabase protoDb;
   static google::protobuf::DynamicMessageFactory protoFactory;
   static std::unordered_set<std::string> known_schemas;
+
 };
 
 using ProtobufPlugin = core::serialization::AutoSerializationPlugin<ProtobufSerializer>;

@@ -19,7 +19,8 @@ using namespace basis;
 
 template<typename T>
 std::unique_ptr<T> LoadPlugin(const char *path) {
-  void *handle = dlopen(path, RTLD_NOW);
+  // Use RTLD_DEEPBIND to avoid the plugin sharing protobuf globals with us and crashing
+  void *handle = dlopen(path, RTLD_NOW | RTLD_DEEPBIND);
   if (!handle) {
     return nullptr;
   }
@@ -68,7 +69,7 @@ std::unordered_map<std::string, std::unique_ptr<core::serialization::Serializati
  */
 template<typename T>
 void LoadPlugins() {
-  char buf[1024];
+  char buf[1024] = {};
   readlink("/proc/self/exe", buf, 1024);
 
   std::filesystem::path search_path = buf;
@@ -78,8 +79,8 @@ void LoadPlugins() {
 
   LoadPluginsAtPath<T>(search_path, out);
   LoadPluginsAtPath<T>(std::filesystem::path("/opt/basis/plugins") / T::PLUGIN_TYPE, out);
-  serialization_plugins = std::move(out);
 
+  serialization_plugins = std::move(out);
 }
 
 

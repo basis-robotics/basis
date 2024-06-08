@@ -3,7 +3,7 @@ include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 
 add_library(basis_proto transport.proto test.proto basis_example.proto)
-target_link_libraries(basis_proto protobuf::libprotobuf)
+target_link_libraries(basis_proto basis::plugins::serialization::protobuf)
 
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 make_directory(${GENERATED_DIR})
