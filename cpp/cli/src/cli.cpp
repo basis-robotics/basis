@@ -10,13 +10,6 @@
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/transport/transport_manager.h>
 
-// todo: load via plugin
-#include <basis/plugins/serialization/protobuf.h>
-
-#ifdef BASIS_ENABLE_ROS
-#include <basis/plugins/serialization/rosmsg.h>
-#endif
-
 #include <filesystem>
 
 #include <dlfcn.h>
@@ -26,20 +19,24 @@ using namespace basis;
 
 template<typename T>
 std::unique_ptr<T> LoadPlugin(const char *path) {
-  void *handle = dlopen(path, RTLD_NOW);
+  // Use RTLD_DEEPBIND to avoid the plugin sharing protobuf globals with us and crashing
+  void *handle = dlopen(path, RTLD_NOW | RTLD_DEEPBIND);
   if (!handle) {
+    std::cerr << "Failed to dlopen " << path << std::endl;
     return nullptr;
   }
 
   using PluginCreator = T *(*)();
   auto Loader = (PluginCreator)dlsym(handle, "LoadPlugin");
   if (!Loader) {
+    std::cerr << "Failed to find plugin interface LoadPlugin in " << path << std::endl;
     return nullptr;
   }
   std::unique_ptr<T> plugin(Loader());
 
   return plugin;
 }
+
 template<typename T>
 void LoadPluginsAtPath(std::filesystem::path search_path, std::unordered_map<std::string, std::unique_ptr<T>>& out) {
   if(!std::filesystem::exists(search_path)) {
@@ -54,7 +51,7 @@ void LoadPluginsAtPath(std::filesystem::path search_path, std::unordered_map<std
     
     std::unique_ptr<T> plugin(LoadPlugin<T>(plugin_path.string().c_str()));
     if(!plugin) {
-      std::cerr << "Failed to load plugin at " << search_path.string();
+      std::cerr << "Failed to load plugin at " << plugin_path.string() << std::endl;
       continue;
     }
 
@@ -75,7 +72,7 @@ std::unordered_map<std::string, std::unique_ptr<core::serialization::Serializati
  */
 template<typename T>
 void LoadPlugins() {
-  char buf[1024];
+  char buf[1024] = {};
   readlink("/proc/self/exe", buf, 1024);
 
   std::filesystem::path search_path = buf;
@@ -85,8 +82,8 @@ void LoadPlugins() {
 
   LoadPluginsAtPath<T>(search_path, out);
   LoadPluginsAtPath<T>(std::filesystem::path("/opt/basis/plugins") / T::PLUGIN_TYPE, out);
-  serialization_plugins = std::move(out);
 
+  serialization_plugins = std::move(out);
 }
 
 
@@ -299,5 +296,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
+serialization_plugins.clear();
   return 0;
 }

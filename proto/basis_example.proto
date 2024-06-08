@@ -1,0 +1,21 @@
+syntax= "proto3";
+
+message ExampleVector {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message ExampleStampedVector {
+    double time = 1;
+    ExampleVector pos = 2; 
+}
+
+message TimeTest {
+  double time = 1;
+}
+
+message SyncedVectorLidarEvent {
+  double time_vector = 1;
+  double time_lidar = 2;
+}
