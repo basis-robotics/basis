@@ -36,6 +36,7 @@ std::unique_ptr<T> LoadPlugin(const char *path) {
 
   return plugin;
 }
+
 template<typename T>
 void LoadPluginsAtPath(std::filesystem::path search_path, std::unordered_map<std::string, std::unique_ptr<T>>& out) {
   if(!std::filesystem::exists(search_path)) {

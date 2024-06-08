@@ -27,7 +27,6 @@
 #include <sensor_msgs/PointCloud2.h>
 #endif
 
-
 /**
  * An example Unit class.
  *
@@ -38,11 +37,10 @@ public:
   void Initialize() {
     using namespace std::placeholders;
 
-
     // Subscribe to the /time_test topic, with a protobuf message TimeTest.
     time_test_sub = Subscribe<TimeTest>("/time_test", std::bind(&ExampleUnit::OnTimeTest, this, _1));
 
-    // Advertise to that same topic - we will get our own subscriptions (via inproc), and any others from the network.    
+    // Advertise to that same topic - we will get our own subscriptions (via inproc), and any others from the network.
     time_test_pub = Advertise<TimeTest>("/time_test");
     // Advertise to another topic, to demonstrate publishing from a subscription
     time_test_pub_forwarded = Advertise<TimeTest>("/time_test_forwarded");
@@ -52,14 +50,28 @@ public:
     pc2_pub = Advertise<sensor_msgs::PointCloud2>("/point_cloud");
 #endif
 
-  stamped_vector_pub = Advertise<ExampleStampedVector>("/stamped_vector");
+    stamped_vector_pub = Advertise<ExampleStampedVector>("/stamped_vector");
 
     // Subscribe to changes in time, at a rate of 1Hz
     one_hz_rate_subscriber = std::make_unique<basis::core::transport::RateSubscriber>(
         basis::core::Duration::FromSecondsNanoseconds(1, 0), std::bind(&ExampleUnit::EveryOneSecond, this, _1));
 
     ten_hz_rate_subscriber = std::make_unique<basis::core::transport::RateSubscriber>(
-        basis::core::Duration::FromSecondsNanoseconds(1, 0), std::bind(&ExampleUnit::EveryTenHertz, this, _1));
+        basis::core::Duration::FromSecondsNanoseconds(0, std::nano::den / 10),
+        std::bind(&ExampleUnit::EveryTenHertz, this, _1));
+
+#ifdef BASIS_ENABLE_ROS
+    vector_lidar_sync = std::make_unique<decltype(vector_lidar_sync)::element_type>(
+        std::bind(&ExampleUnit::OnSyncedVectorLidar, this, _1, _2));
+
+    vector_sub =
+        Subscribe<ExampleStampedVector>("/stamped_vector", [this](auto m) { vector_lidar_sync->OnMessage<0>(m); });
+
+    pc2_sub =
+        Subscribe<sensor_msgs::PointCloud2>("/point_cloud", [this](auto m) { vector_lidar_sync->OnMessage<1>(m); });
+
+    sync_event_pub = Advertise<SyncedVectorLidarEvent>("/synced_vector_lidar");
+#endif
   }
 
 protected:
@@ -102,12 +114,22 @@ protected:
     const double time_sec = time.ToSeconds();
     auto stamped_v = std::make_shared<ExampleStampedVector>();
     stamped_v->set_time(time_sec);
-    auto* pos = stamped_v->mutable_pos();
+    auto *pos = stamped_v->mutable_pos();
     pos->set_x(time_sec / 100.0);
     pos->set_y(sin(time_sec / 100.0));
     pos->set_z(0);
     stamped_vector_pub->Publish(std::move(stamped_v));
   }
+
+#ifdef BASIS_ENABLE_ROS
+  void OnSyncedVectorLidar(std::shared_ptr<const ExampleStampedVector> v,
+                           std::shared_ptr<const sensor_msgs::PointCloud2> p) {
+    auto msg = std::make_shared<SyncedVectorLidarEvent>();
+    msg->set_time_vector(v->time());
+    msg->set_time_lidar(p->header.stamp.toSec());
+    sync_event_pub->Publish(msg);
+  }
+#endif
   /**
    * Called whenever a message is received over /time_test
    * @param msg
@@ -122,6 +144,10 @@ protected:
 
   // Our subscribers
   std::shared_ptr<basis::core::transport::Subscriber<TimeTest>> time_test_sub;
+#ifdef BASIS_ENABLE_ROS
+  std::shared_ptr<basis::core::transport::Subscriber<ExampleStampedVector>> vector_sub;
+  std::shared_ptr<basis::core::transport::Subscriber<sensor_msgs::PointCloud2>> pc2_sub;
+#endif
   std::unique_ptr<basis::core::transport::RateSubscriber> one_hz_rate_subscriber;
   std::unique_ptr<basis::core::transport::RateSubscriber> ten_hz_rate_subscriber;
 
@@ -130,9 +156,20 @@ protected:
   std::shared_ptr<basis::core::transport::Publisher<TimeTest>> time_test_pub_forwarded;
 #ifdef BASIS_ENABLE_ROS
   std::shared_ptr<basis::core::transport::Publisher<sensor_msgs::PointCloud2>> pc2_pub;
+  std::shared_ptr<basis::core::transport::Publisher<SyncedVectorLidarEvent>> sync_event_pub;
 #endif
   std::shared_ptr<basis::core::transport::Publisher<ExampleStampedVector>> stamped_vector_pub;
 
+#ifdef BASIS_ENABLE_ROS
+  // Synchronize together lidar and vector data
+  // lidar is 1hz here, and the vector is 10hz
+  // they won't always line up exactly, so be liberal about matching them together
+  std::unique_ptr<basis::synchronizers::FieldSyncApproximatelyEqual<
+      0.05, basis::synchronizers::Field<std::shared_ptr<const ExampleStampedVector>, &ExampleStampedVector::time>,
+      basis::synchronizers::Field<std::shared_ptr<const sensor_msgs::PointCloud2>,
+                                  [](const sensor_msgs::PointCloud2 *msg) { return msg->header.stamp.toSec(); }>>>
+      vector_lidar_sync;
+#endif
 };
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {

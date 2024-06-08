@@ -13,10 +13,6 @@ message TestProtoStruct {
   string baz = 3;
 };
 
-message TimeTest {
-  double time = 1;
-}
-
 message ReferencedMessage {
   string data = 1;
 }

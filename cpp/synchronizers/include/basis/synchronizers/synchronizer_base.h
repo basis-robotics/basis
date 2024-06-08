@@ -82,7 +82,13 @@ template <typename T_MSG_CONTAINER> struct Storage {
   }
 };
 
-template <typename... T_MSG_CONTAINERs> class SynchronizerBase {
+// "base" type to use for holding inside a smart ptr
+class Synchronizer {
+public:
+  virtual ~Synchronizer() = default;
+};
+
+template <typename... T_MSG_CONTAINERs> class SynchronizerBase : Synchronizer {
 public:
   using Callback = std::function<void(T_MSG_CONTAINERs...)>;
   using MessageSumType = std::tuple<T_MSG_CONTAINERs...>;
