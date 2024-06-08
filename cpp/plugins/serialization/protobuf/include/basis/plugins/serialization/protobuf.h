@@ -172,8 +172,8 @@ protected:
 
   // https://mcap.dev/guides/cpp/protobuf
   // todo: thread safety
-  static google::protobuf::SimpleDescriptorDatabase protoDb;
   static google::protobuf::DescriptorPool protoPool;
+  static google::protobuf::SimpleDescriptorDatabase protoDb;
   static google::protobuf::DynamicMessageFactory protoFactory;
   static std::unordered_set<std::string> known_schemas;
 };

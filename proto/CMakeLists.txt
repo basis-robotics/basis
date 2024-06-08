@@ -2,7 +2,7 @@ project(basis_proto)
 include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 
-add_library(basis_proto transport.proto test.proto)
+add_library(basis_proto transport.proto test.proto basis_example.proto)
 target_link_libraries(basis_proto protobuf::libprotobuf)
 
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")

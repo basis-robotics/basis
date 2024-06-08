@@ -47,7 +47,7 @@ void LoadPluginsAtPath(std::filesystem::path search_path, std::unordered_map<std
     
     std::unique_ptr<T> plugin(LoadPlugin<T>(plugin_path.string().c_str()));
     if(!plugin) {
-      std::cerr << "Failed to load plugin at " << search_path.string();
+      std::cerr << "Failed to load plugin at " << plugin_path.string() << std::endl;
       continue;
     }
 
@@ -292,5 +292,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
+serialization_plugins.clear();
   return 0;
 }

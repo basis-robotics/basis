@@ -12,6 +12,8 @@
 // Core
 #include <basis/unit.h>
 
+#include <basis/synchronizers/field.h>
+
 // Plugins
 #include <basis/plugins/serialization/protobuf.h>
 #ifdef BASIS_ENABLE_ROS
@@ -19,10 +21,12 @@
 #endif
 
 // Message definitions
+#include <basis_example.pb.h>
 #include <test.pb.h>
 #ifdef BASIS_ENABLE_ROS
 #include <sensor_msgs/PointCloud2.h>
 #endif
+
 
 /**
  * An example Unit class.
@@ -48,9 +52,14 @@ public:
     pc2_pub = Advertise<sensor_msgs::PointCloud2>("/point_cloud");
 #endif
 
+  stamped_vector_pub = Advertise<ExampleStampedVector>("/stamped_vector");
+
     // Subscribe to changes in time, at a rate of 1Hz
-    rate_subscriber = std::make_unique<basis::core::transport::RateSubscriber>(
+    one_hz_rate_subscriber = std::make_unique<basis::core::transport::RateSubscriber>(
         basis::core::Duration::FromSecondsNanoseconds(1, 0), std::bind(&ExampleUnit::EveryOneSecond, this, _1));
+
+    ten_hz_rate_subscriber = std::make_unique<basis::core::transport::RateSubscriber>(
+        basis::core::Duration::FromSecondsNanoseconds(1, 0), std::bind(&ExampleUnit::EveryTenHertz, this, _1));
   }
 
 protected:
@@ -61,7 +70,7 @@ protected:
    *
    * @param time the current monotonic time
    */
-  void EveryOneSecond([[maybe_unused]] const basis::core::MonotonicTime time) {
+  void EveryOneSecond(const basis::core::MonotonicTime time) {
     // Create a protobuf message
     auto msg = std::make_shared<TimeTest>();
     // Set a member of it
@@ -89,6 +98,16 @@ protected:
 #endif
   }
 
+  void EveryTenHertz(const basis::core::MonotonicTime time) {
+    const double time_sec = time.ToSeconds();
+    auto stamped_v = std::make_shared<ExampleStampedVector>();
+    stamped_v->set_time(time_sec);
+    auto* pos = stamped_v->mutable_pos();
+    pos->set_x(time_sec / 10000.0);
+    pos->set_y(sin(time_sec / 10000.0));
+    pos->set_z(0);
+    stamped_vector_pub->Publish(std::move(stamped_v));
+  }
   /**
    * Called whenever a message is received over /time_test
    * @param msg
@@ -103,7 +122,8 @@ protected:
 
   // Our subscribers
   std::shared_ptr<basis::core::transport::Subscriber<TimeTest>> time_test_sub;
-  std::unique_ptr<basis::core::transport::RateSubscriber> rate_subscriber;
+  std::unique_ptr<basis::core::transport::RateSubscriber> one_hz_rate_subscriber;
+  std::unique_ptr<basis::core::transport::RateSubscriber> ten_hz_rate_subscriber;
 
   // Our publishers
   std::shared_ptr<basis::core::transport::Publisher<TimeTest>> time_test_pub;
@@ -111,6 +131,8 @@ protected:
 #ifdef BASIS_ENABLE_ROS
   std::shared_ptr<basis::core::transport::Publisher<sensor_msgs::PointCloud2>> pc2_pub;
 #endif
+  std::shared_ptr<basis::core::transport::Publisher<ExampleStampedVector>> stamped_vector_pub;
+
 };
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {

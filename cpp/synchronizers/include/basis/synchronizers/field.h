@@ -3,8 +3,8 @@
 // this might be overdoing it
 
 #include "synchronizer_base.h"
-#include <spdlog/spdlog.h>
 #include <type_traits>
+
 namespace basis::synchronizers {
 
 /**

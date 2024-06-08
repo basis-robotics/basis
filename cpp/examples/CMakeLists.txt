@@ -9,6 +9,7 @@ target_link_libraries(
   basis::plugins::transport::tcp
   basis::plugins::serialization::protobuf
   basis::core::coordinator
+  basis::synchronizers
   argparse
 )
 
