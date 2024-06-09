@@ -39,8 +39,8 @@ handlers:
     inputs:
       /lidar_data:
         type: rosmsg:sensor_msgs::PointCloud2
-        # The time field of the protobuf message is a double, so we apply a conversion here
-        sync_field: header.stamp.toSec()
+        # The time field of protobuf:StampedVectorData message is a double, so we apply a conversion here so that we can compare between the two types
+        sync_field: header.stamp.toSecs()
       /vector_data:
         type: protobuf:StampedVectorData
         # the double colon specifies that this is a raw field on the type, rather than code to call
