@@ -58,7 +58,7 @@ handlers:
 
   # This handler produces topics at a rate of 1hz, but only when /topic_a has been provided
   # If /topic_b has come, we also use that as well
-  OneHertzWithTopic:
+  TenHertzWithTopic:
     type:
       # 10hz / 0.1s / 100ms
       rate: 10hz
