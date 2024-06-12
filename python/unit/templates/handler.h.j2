@@ -1,0 +1,37 @@
+namespace {{unit_name}}::{{handler_name}} {
+    struct Input {
+{% for input_name, input in inputs.items() %}
+        // {{input_name}}
+        {{input.cpp_type}} {{input.cpp_topic_name}};
+{% endfor %}
+        // TODO: time?
+        // TODO: this will need metadata around topics to handle deterministic mode
+    };
+
+    struct Output {
+{% for output_name, output in outputs.items() %}
+        // {{output_name}}
+        {{output.cpp_type}} {{output.cpp_topic_name}};
+{% endfor %}
+        // TODO: diagnostics, error state, etc
+        // TODO: should we take as unique_ptr instead?
+    };
+
+    struct PubSub {
+{% for input_name, input in inputs.items() %}
+        // {{input_name}}
+        basis::Subscriber<{{input.cpp_message_type}}> {{input.cpp_topic_name}}_subscriber;
+{% endfor %}
+{% for output_name, output in outputs.items() %}
+        // {{output_name}}
+        basis::Subscriber<{{output.cpp_message_type}}> {{output.cpp_topic_name}}_publisher;
+{%- endfor %}
+        basis::synchronizers::All<
+{%- set comma = joiner(", ") %}
+{%- for input_name, input in inputs.items() %}
+            {{- comma() }}
+            {{input.cpp_type}}
+{%- endfor %}
+        > synchronizer;
+    };
+}

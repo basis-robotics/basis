@@ -20,11 +20,11 @@ handlers:
         # or by allowing a default serializer to be specified
         type: rosmsg:sensor_msgs::Image
         # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
-        sync_field: header.stamp
+        sync_field: header.stamp()
       /camera_right:
         type: rosmsg:sensor_msgs::Image
-        sync_field: header.stamp
-    ouputs:
+        sync_field: header.stamp()
+    outputs:
       /camera_stereo:
         type: rosmsg:example_msgs::StereoImage
 
@@ -59,15 +59,21 @@ handlers:
   # This handler produces topics at a rate of 1hz, but only when /topic_a has been provided
   # If /topic_b has come, we also use that as well
   TenHertzWithTopic:
-    type:
+    sync:
       # 10hz / 0.1s / 100ms
       rate: 10hz
     inputs:
       /topic_a:
         type: protobuf:A
+        # Only allow inproc transport
+        allow_transports:
+          - inproc
       /topic_b:
         type: protobuf:B
         optional: True
+        # Don't allow inproc transport
+        deny_transports:
+          - inproc
 
     outputs:
       /topic_c:
@@ -78,7 +84,7 @@ handlers:
 
   # This will trigger when all inputs of a type are received
   HandleAll:
-    type:
+    sync:
       all
     inputs:
       /topic_c:

@@ -84,5 +84,11 @@
         "random": "cpp",
         "algorithm": "cpp",
         "csignal": "cpp"
-    }
+    },
+    "yaml.schemas": {
+        "./unit/schema.yaml": "unit/*/*.yaml"
+    },
+    "yaml.disableAdditionalProperties": true,
+    "yaml.disableDefaultProperties": false,
+    "cmake.configureOnOpen": false
 }

@@ -58,6 +58,10 @@ RUN useradd -ms /bin/bash basis
 RUN adduser basis sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
+#     apt install python3.8-venv
+# python3 -m venv env
+# pip install jsonschema pyyaml jinja2
+
 USER basis
 
 WORKDIR /basis
