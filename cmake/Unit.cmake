@@ -32,8 +32,8 @@ function(generate_unit UNIT_NAME)
             ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_base.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/src/${UNIT_NAME}.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/${UNIT_NAME}.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.example.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.example.h
             ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
         )
 

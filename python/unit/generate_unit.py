@@ -74,7 +74,7 @@ def generate_unit(unit_path, output_dir, source_dir):
     
     template = jinja_env.get_template("unit.h.j2")
     template_output = template.render(in_template_dir = True, unit_name=unit_name, **unit)
-    with open(f'{source_dir}/template/{unit_name}.h', 'w') as f:
+    with open(f'{source_dir}/template/{unit_name}.example.h', 'w') as f:
         f.write(template_output)
         
     unit_main_header = f'{source_dir}/include/{unit_name}.h'
@@ -86,7 +86,7 @@ def generate_unit(unit_path, output_dir, source_dir):
             
     template = jinja_env.get_template("unit.cpp.j2")
     template_output = template.render(in_template_dir = True, unit_name=unit_name, **unit)
-    with open(f'{source_dir}/template/{unit_name}.cpp', 'w') as f:
+    with open(f'{source_dir}/template/{unit_name}.example.cpp', 'w') as f:
         f.write(template_output)
         
     unit_main_source = f'{source_dir}/src/{unit_name}.cpp'
