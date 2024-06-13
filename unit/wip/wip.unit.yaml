@@ -52,6 +52,8 @@ handlers:
     inputs:
       /stamped_vector:
         type: protobuf:ExampleStampedVector
+        sync_field: ::time
       /point_cloud:
         type: rosmsg:sensor_msgs::PointCloud2
-  
+        sync_field: header.stamp.toSec()
+

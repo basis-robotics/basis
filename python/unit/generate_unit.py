@@ -36,6 +36,8 @@ def generate_unit(unit_path, output_dir, source_dir):
 
     serializers = set()
     
+    # todo: set default sync to 'all'
+    
     # Write handler headers
     for handler_name, handler in unit['handlers'].items():
         handler.setdefault('inputs', {})
