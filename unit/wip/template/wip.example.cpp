@@ -18,3 +18,7 @@ StereoMatch::Output wip::StereoMatch(const StereoMatch::Input& input) {
 TimeTest::Output wip::TimeTest(const TimeTest::Input& input) {
     static_assert(false, "Impelement me");
 }
+
+ApproxTest::Output wip::ApproxTest(const ApproxTest::Input& input) {
+    static_assert(false, "Impelement me");
+}

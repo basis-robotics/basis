@@ -21,3 +21,8 @@ wip::TimeTest(const unit::wip::TimeTest::Input &input) {
   out.time_test_forwarded_2 = input.time_test_forwarded;
   return out;
 }
+
+ApproxTest::Output wip::ApproxTest(const ApproxTest::Input& input) {
+  spdlog::info("Got approximate output");
+  return {};
+}

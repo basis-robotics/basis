@@ -9,6 +9,7 @@ threading_model:
   single
 cpp_includes:
   - sensor_msgs/Image.h
+  - sensor_msgs/PointCloud2.h
   - test.pb.h
   - basis_example.pb.h
 
@@ -26,10 +27,10 @@ handlers:
         # or by allowing a default serializer to be specified
         type: rosmsg:sensor_msgs::Image
         # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
-        sync_field: header.stamp()
+        sync_field: header
       /camera_right:
         type: rosmsg:sensor_msgs::Image
-        sync_field: header.stamp()
+        sync_field: header
     outputs:
       /difference_image:
         type: rosmsg:sensor_msgs::Image
@@ -44,3 +45,13 @@ handlers:
     outputs:
       /time_test_forwarded_2:
         type: "protobuf: ::TimeTest"
+  ApproxTest:
+    sync:
+      type: 
+        approximate: 0.01
+    inputs:
+      /stamped_vector:
+        type: protobuf:ExampleStampedVector
+      /point_cloud:
+        type: rosmsg:sensor_msgs::PointCloud2
+  

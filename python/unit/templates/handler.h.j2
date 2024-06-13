@@ -28,13 +28,43 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         // TODO: should we take as unique_ptr instead?
     };
 
+{%if sync.type == 'all' %}
+    // Simple, synchronize all messages on presence
     using Synchronizer = basis::synchronizers::All<
 {%- set comma = joiner(", ") %}
 {%- for input_name, input in inputs.items() %}
             {{- comma() }}
             {{input.cpp_type}}
 {%- endfor %}
-        >;
+    >;
+
+{% elif sync.type == 'equal' or 'approximate' in sync.type %}
+    // Simple, synchronize all messages on presence
+    {% if sync.type == 'equal' %}
+    using Synchronizer = basis::synchronizers::FieldSyncEqual<
+    {% else %}
+    using Synchronizer = basis::synchronizers::FieldSyncApproximatelyEqual<
+        {{sync.type.approximate}},
+    {% endif %}
+{%- set comma = joiner(", ") %}
+{%- for input_name, input in inputs.items() %}
+            {{- comma() }}
+            basis::synchronizers::Field<{{input.cpp_type}},
+            {%if 'sync_field' in input %}
+                {%if input.sync_field.startswith('::') %}
+                    &{{input.cpp_message_type}}{{input.sync_field}}
+                {% else %}
+                    [](const {{input.cpp_message_type}}* msg) {
+                        return msg->{{input.sync_field}};
+                    }
+                {% endif %}
+            {% else %}
+                nullptr
+            {%endif%}
+            >
+{%- endfor %}
+    >;
+{% endif %}
 
     struct PubSub {
         using Callback = std::function<Output(const Input&)>;
