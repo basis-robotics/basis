@@ -12,5 +12,6 @@ struct wip : public unit::wip::Base {
 
 
     virtual unit::wip::StereoMatch::Output StereoMatch(const unit::wip::StereoMatch::Input& input) override;
-
+    
+    virtual unit::wip::TimeTest::Output TimeTest(const unit::wip::TimeTest::Input& input) override;
 };

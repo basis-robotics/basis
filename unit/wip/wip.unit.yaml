@@ -9,6 +9,9 @@ threading_model:
   single
 cpp_includes:
   - sensor_msgs/Image.h
+  - test.pb.h
+  - basis_example.pb.h
+
 handlers:
   # This handler looks for two image messages coming in with the same timestamp and outputs one stereo image
   StereoMatch:
@@ -30,3 +33,14 @@ handlers:
     outputs:
       /difference_image:
         type: rosmsg:sensor_msgs::Image
+  TimeTest:
+    sync:
+      type: all
+    inputs:
+      /time_test:
+        type: "protobuf: ::TimeTest"
+      /time_test_forwarded:
+        type: "protobuf: ::TimeTest"
+    outputs:
+      /time_test_forwarded_2:
+        type: "protobuf: ::TimeTest"

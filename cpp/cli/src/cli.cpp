@@ -229,6 +229,9 @@ int main(int argc, char *argv[]) {
   // todo
   // basis plugins ls
 
+  // todo
+  // basis unit ls?
+
   parser.add_subparser(schema_command);
 
   try {

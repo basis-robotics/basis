@@ -26,6 +26,7 @@ function(generate_unit UNIT_NAME)
             ${BASIS_SOURCE_ROOT}/python/unit/templates/unit_base.h.j2
             ${BASIS_SOURCE_ROOT}/python/unit/templates/unit_base.cpp.j2
             ${BASIS_SOURCE_ROOT}/python/unit/templates/unit.h.j2
+            ${BASIS_SOURCE_ROOT}/python/unit/templates/unit_main.cpp.j2
         OUTPUT
             ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_base.h
             ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_base.cpp
@@ -33,16 +34,22 @@ function(generate_unit UNIT_NAME)
             ${CMAKE_CURRENT_SOURCE_DIR}/include/${UNIT_NAME}.h
             ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.h
+            ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
         )
 
-    add_library(${UNIT_NAME} SHARED 
+    add_library(${UNIT_NAME} SHARED
             src/${UNIT_NAME}.cpp
             ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_base.cpp
+            ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
         )
 
     target_include_directories(${UNIT_NAME} PUBLIC ${GENERATED_DIR} include)
     target_link_libraries(${UNIT_NAME} basis::unit basis::synchronizers ${PARSED_ARGS_DEPENDS})
 
-    
+    file(TOUCH ${GENERATED_DIR}/dummy.cpp)
+    add_executable(${UNIT_NAME}_bin 
+        ${GENERATED_DIR}/dummy.cpp
+    )
+    target_link_libraries(${UNIT_NAME}_bin ${UNIT_NAME})
 
 endfunction()

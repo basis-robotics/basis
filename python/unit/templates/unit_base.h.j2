@@ -12,7 +12,8 @@
 {% endfor %}
 
 namespace unit::{{unit_name}} {
-    struct Base : protected basis::SingleThreadedUnit {
+    // TODO: this won't work with multi threaded units, obviously
+    struct Base : public basis::SingleThreadedUnit {
         void CreatePublishersSubscribers() {
             {% for handler_name in handlers %}
             // oops todo

@@ -14,3 +14,7 @@ using namespace unit::wip;
 StereoMatch::Output wip::StereoMatch(const StereoMatch::Input& input) {
     static_assert(false, "Impelement me");
 }
+
+TimeTest::Output wip::TimeTest(const TimeTest::Input& input) {
+    static_assert(false, "Impelement me");
+}

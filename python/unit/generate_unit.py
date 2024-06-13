@@ -96,6 +96,11 @@ def generate_unit(unit_path, output_dir, source_dir):
         with open(unit_main_source, 'w') as f:
             f.write(template_output)
 
+    template = jinja_env.get_template("unit_main.cpp.j2")
+    template_output = template.render(unit_name=unit_name, **unit)
+    with open(f'{output_dir}/unit_main.cpp', 'w') as f:
+        f.write(template_output)
+    
 parser = argparse.ArgumentParser(description='Generates basis units')
 
 parser.add_argument('unit_definition_file')
