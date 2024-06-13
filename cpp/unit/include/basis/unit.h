@@ -67,7 +67,7 @@ public:
                                                              std::move(message_type));
   }
 
-private:
+protected:
   std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 };
@@ -75,8 +75,8 @@ private:
 /**
  * A simple unit where all are run mutally exclusive from eachother - uses a queue for all outputs, which adds some amount of latency
  */
-class SingleThreadedUnit : Unit {
-private:
+class SingleThreadedUnit : public Unit {
+protected:
   using Unit::Update;
 public:
   using Unit::Initialize;

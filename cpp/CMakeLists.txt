@@ -1,7 +1,10 @@
 # TODO: support lower C++ versions by shimming new libraries with lite/abseil
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 20 PARENT_SCOPE)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON PARENT_SCOPE)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Workaround for std::expected not available in clang

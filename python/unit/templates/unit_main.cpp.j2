@@ -1,0 +1,14 @@
+#include <units/{{unit_name}}/unit_base.h>
+
+int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
+  spdlog::cfg::load_env_levels();
+
+  ExampleUnit example_unit;
+  example_unit.Initialize();
+
+  while (true) {
+    example_unit.Update(1);
+  }
+
+  return 0;
+}

@@ -1,17 +1,23 @@
-id: "my-test-schema-id"
+id: "basis-unit"
 $schema: "http://json-schema.org/draft-07/schema"
 title:
   Basis Unit
 description: |
   Schema to use for units
 
+additionalProperties: False
 unevaluatedProperties: False
 
 properties:
-  name:
-    type: string
-    title: name
-    description: The name of this unit - used to identify it by default
+  # name:
+  #   type: string
+  #   title: name
+  #   description: The name of this unit - used to identify it by default
+  cpp_includes:
+    type: array
+    title: Cpp Includes
+    items:
+      type: string
   threading_model:
     type: string
     title: Threading Model
@@ -82,6 +88,8 @@ properties:
                 type: string
               accumulate:
                 type: integer
+              cached:
+                type: boolean
               # https://github.com/redhat-developer/yaml-language-server/issues/478
               type: True
               optional: True

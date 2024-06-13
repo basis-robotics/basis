@@ -1,5 +1,6 @@
+# TODO: don't do this, use the file name?
 # the default name of the unit
-name: example
+# name: example
 
 # The ways handlers are allowed to interact with eachother 
 threading_model:
@@ -93,7 +94,12 @@ handlers:
         type: protobuf:D      
     # outputs aren't strictly necessary - this unit may be sending data to an external system
 
-
+  External:
+    sync:
+      external
+    outputs:
+      /some_image:
+        type: rosmsg:sensor_msgs::Image
 # TODO: transport buffer policies
 # TODO: mutex groups
 # TODO: worker thread configuration?

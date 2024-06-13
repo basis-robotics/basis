@@ -1,4 +1,15 @@
-namespace {{unit_name}}::{{handler_name}} {
+#pragma once
+
+#include <basis/core/transport/subscriber.h>
+#include <basis/core/transport/publisher.h>
+#include <basis/synchronizers/all.h>
+#include <basis/synchronizers/field.h>
+
+{% for serializer in serializers %}
+#include <basis/plugins/serialization/{{serializer}}.h>
+{% endfor %}
+
+namespace unit::{{unit_name}}::{{handler_name}} {
     struct Input {
 {% for input_name, input in inputs.items() %}
         // {{input_name}}
@@ -17,21 +28,66 @@ namespace {{unit_name}}::{{handler_name}} {
         // TODO: should we take as unique_ptr instead?
     };
 
-    struct PubSub {
-{% for input_name, input in inputs.items() %}
-        // {{input_name}}
-        basis::Subscriber<{{input.cpp_message_type}}> {{input.cpp_topic_name}}_subscriber;
-{% endfor %}
-{% for output_name, output in outputs.items() %}
-        // {{output_name}}
-        basis::Subscriber<{{output.cpp_message_type}}> {{output.cpp_topic_name}}_publisher;
-{%- endfor %}
-        basis::synchronizers::All<
+    using Synchronizer = basis::synchronizers::All<
 {%- set comma = joiner(", ") %}
 {%- for input_name, input in inputs.items() %}
             {{- comma() }}
             {{input.cpp_type}}
 {%- endfor %}
-        > synchronizer;
+        >;
+
+    struct PubSub {
+        using Callback = std::function<Output(const Input&)>;
+        PubSub(std::function<Output(const Input&)> callback) {
+            synchronizer = std::make_unique<Synchronizer>(
+        [this, callback](auto ...msgs) {
+                Output output = callback({msgs...});
+                // For now, publish directly
+                // Later, we will want to be able to bubble this back out
+                OnOutput(output);
+            }, 
+{%- set comma = joiner(", ") %}
+{%- for input_name, input in inputs.items() %}
+            {{- comma() }}
+            basis::synchronizers::MessageMetadata<{{input.cpp_type}}>{
+                .is_optional = {{input.get('optional', False)|lower}},
+                .is_cached = {{input.get('cached', False)|lower}},
+            }
+{%- endfor %}
+            );
+        }
+        void SetupPubSub(
+            basis::core::transport::TransportManager* transport_manager,
+            basis::core::transport::OutputQueue* output_queue,
+            basis::core::threading::ThreadPool* thread_pool) {
+                // todo init sync
+        {% for topic_name, input in inputs.items() %}
+            {{input.cpp_topic_name}}_subscriber = transport_manager->Subscribe<{{input.cpp_message_type}}>("{{topic_name}}", 
+            [this](auto msg){
+                synchronizer->OnMessage<{{loop.index0}}>(msg);
+            },
+            thread_pool, output_queue);
+        {% endfor %}
+        {% for topic_name, output in outputs.items() %}
+            {{output.cpp_topic_name}}_publisher = transport_manager->Advertise<{{output.cpp_message_type}}>("{{topic_name}}");
+        {% endfor %}
+        }
+
+        void OnOutput(const Output& output) {
+{% for output_name, output in outputs.items() %}
+        {{output.cpp_topic_name}}_publisher->Publish(output.{{output.cpp_topic_name}});
+{%- endfor %}
+        }
+{% for input_name, input in inputs.items() %}
+        // {{input_name}}
+        std::shared_ptr<basis::core::transport::Subscriber<{{input.cpp_message_type}}>> {{input.cpp_topic_name}}_subscriber;
+{% endfor %}
+{% for output_name, output in outputs.items() %}
+        // {{output_name}}
+        std::shared_ptr<basis::core::transport::Publisher<{{output.cpp_message_type}}>> {{output.cpp_topic_name}}_publisher;
+{%- endfor %}
+
+        std::unique_ptr<Synchronizer> synchronizer;
     };
+
 }
