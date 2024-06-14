@@ -7,7 +7,7 @@
 */
 #include <unit/wip/unit_base.h>
 
-struct wip : public unit::wip::Base {
+class wip : public unit::wip::Base {
   wip() {
 
   }

@@ -13,7 +13,8 @@
 
 namespace unit::{{unit_name}} {
     // TODO: this won't work with multi threaded units, obviously
-    struct Base : public basis::SingleThreadedUnit {
+    class Base : public basis::SingleThreadedUnit {
+    
         void CreatePublishersSubscribers() {
             {% for handler_name in handlers %}
             // oops todo
@@ -21,6 +22,7 @@ namespace unit::{{unit_name}} {
             {% endfor %}
         }
 
+    public:
 {% for handler_name in handlers %}
         virtual {{handler_name}}::Output {{handler_name}}(const {{handler_name}}::Input& input) = 0;
 {% endfor %}
@@ -28,7 +30,8 @@ namespace unit::{{unit_name}} {
         virtual void Initialize() final override {
             CreatePublishersSubscribers();
         }
-
+    
+    private:
         {% for handler_name in handlers %}
         {{handler_name}}::PubSub {{handler_name}}_pubsub = {
             [this](auto input){
