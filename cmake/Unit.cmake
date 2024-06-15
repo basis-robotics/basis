@@ -7,8 +7,9 @@ function(generate_unit UNIT_NAME)
         ${ARGN} # arguments of the function to parse, here we take the all original ones
     )
     set(UNIT_FILE_NAME "${CMAKE_CURRENT_SOURCE_DIR}/${UNIT_NAME}.unit.yaml")
-    set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/)
+    set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
+    make_directory(${GENERATED_DIR})
     make_directory(${CMAKE_CURRENT_SOURCE_DIR}/src)
     make_directory(${CMAKE_CURRENT_SOURCE_DIR}/include)
     make_directory(${CMAKE_CURRENT_SOURCE_DIR}/template)

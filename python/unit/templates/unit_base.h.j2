@@ -3,9 +3,12 @@
 
 #include <basis/unit.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 {% for include in cpp_includes %}
 #include <{{include}}>
 {% endfor %}
+#pragma clang diagnostic pop
 
 {% for handler_name in handlers %}
 #include <unit/{{unit_name}}/handlers/{{handler_name}}.h>
