@@ -1,4 +1,6 @@
 function(generate_unit UNIT_NAME)
+    set(TARGET_NAME "unit_${UNIT_NAME}")
+
     cmake_parse_arguments(
         PARSED_ARGS # prefix of output variables
         "" # list of names of the boolean arguments (only defined ones will be true)
@@ -35,22 +37,20 @@ function(generate_unit UNIT_NAME)
             ${CMAKE_CURRENT_SOURCE_DIR}/include/${UNIT_NAME}.h
             ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.example.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.example.h
-            ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
         )
 
-    add_library(${UNIT_NAME} SHARED
+    add_library(${TARGET_NAME} SHARED
             src/${UNIT_NAME}.cpp
             ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_base.cpp
-            ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
         )
 
-    target_include_directories(${UNIT_NAME} PUBLIC ${GENERATED_DIR} include)
-    target_link_libraries(${UNIT_NAME} basis::unit basis::synchronizers ${PARSED_ARGS_DEPENDS})
+    target_include_directories(${TARGET_NAME} PUBLIC ${GENERATED_DIR} include)
+    target_link_libraries(${TARGET_NAME} basis::unit basis::synchronizers ${PARSED_ARGS_DEPENDS})
 
-    file(TOUCH ${GENERATED_DIR}/dummy.cpp)
-    add_executable(${UNIT_NAME}_bin 
-        ${GENERATED_DIR}/dummy.cpp
+    add_executable(${TARGET_NAME}_bin 
+        ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
     )
-    target_link_libraries(${UNIT_NAME}_bin ${UNIT_NAME})
+    target_link_libraries(${TARGET_NAME}_bin ${TARGET_NAME} )
 
+    add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})
 endfunction()

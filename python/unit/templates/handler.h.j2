@@ -68,13 +68,17 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
     struct PubSub {
         using Callback = std::function<Output(const Input&)>;
-        PubSub(std::function<Output(const Input&)> callback) {
+        PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr) {
+            if(!publish_callback) {
+                publish_callback = 
+                    [this](Output& output){
+                        OnOutput(output);
+                    };
+            }
             synchronizer = std::make_unique<Synchronizer>(
-        [this, callback](auto ...msgs) {
+        [this, callback, publish_callback](auto ...msgs) {
                 Output output = callback({msgs...});
-                // For now, publish directly
-                // Later, we will want to be able to bubble this back out
-                OnOutput(output);
+                publish_callback(output);
             }, 
 {%- set comma = joiner(", ") %}
 {%- for input_name, input in inputs.items() %}

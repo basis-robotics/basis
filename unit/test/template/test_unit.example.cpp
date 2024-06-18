@@ -15,10 +15,14 @@ StereoMatch::Output test_unit::StereoMatch(const StereoMatch::Input& input) {
     static_assert(false, "Impelement me");
 }
 
-TimeTest::Output test_unit::TimeTest(const TimeTest::Input& input) {
+AllTest::Output test_unit::AllTest(const AllTest::Input& input) {
     static_assert(false, "Impelement me");
 }
 
 ApproxTest::Output test_unit::ApproxTest(const ApproxTest::Input& input) {
+    static_assert(false, "Impelement me");
+}
+
+TestEqualOptions::Output test_unit::TestEqualOptions(const TestEqualOptions::Input& input) {
     static_assert(false, "Impelement me");
 }

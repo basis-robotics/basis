@@ -7,5 +7,5 @@ if(${BASIS_ENABLE_ROS})
     generate_unit(wip)
 
     # TODO: query the yaml for the types
-    target_link_libraries(wip basis::plugins::serialization::rosmsg rostime)
+    target_link_libraries(unit_wip basis::plugins::serialization::rosmsg rostime)
 endif()

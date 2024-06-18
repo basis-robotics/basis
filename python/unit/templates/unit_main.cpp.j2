@@ -4,6 +4,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   //spdlog::cfg::load_env_levels();
 
   {{unit_name}} unit;
+  unit.WaitForCoordinatorConnection();
+  unit.CreateTransportManager();
   unit.Initialize();
 
   while (true) {

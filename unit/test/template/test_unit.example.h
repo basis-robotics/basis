@@ -15,8 +15,10 @@ class test_unit : public unit::test_unit::Base {
 
     virtual unit::test_unit::StereoMatch::Output StereoMatch(const unit::test_unit::StereoMatch::Input& input) override;
 
-    virtual unit::test_unit::TimeTest::Output TimeTest(const unit::test_unit::TimeTest::Input& input) override;
+    virtual unit::test_unit::AllTest::Output AllTest(const unit::test_unit::AllTest::Input& input) override;
 
     virtual unit::test_unit::ApproxTest::Output ApproxTest(const unit::test_unit::ApproxTest::Input& input) override;
+
+    virtual unit::test_unit::TestEqualOptions::Output TestEqualOptions(const unit::test_unit::TestEqualOptions::Input& input) override;
 
 };

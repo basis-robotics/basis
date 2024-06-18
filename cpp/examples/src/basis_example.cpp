@@ -176,6 +176,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   spdlog::cfg::load_env_levels();
 
   ExampleUnit example_unit;
+  example_unit.WaitForCoordinatorConnection();
+  example_unit.CreateTransportManager();
   example_unit.Initialize();
 
   while (true) {

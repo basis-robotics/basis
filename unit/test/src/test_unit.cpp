@@ -14,14 +14,19 @@ StereoMatch::Output test_unit::StereoMatch(const StereoMatch::Input &input) {
   return out;
 }
 
-unit::test_unit::TimeTest::Output test_unit::TimeTest(const unit::test_unit::TimeTest::Input &input) {
-  unit::test_unit::TimeTest::Output out;
+unit::test_unit::AllTest::Output test_unit::AllTest(const unit::test_unit::AllTest::Input &input) {
+  unit::test_unit::AllTest::Output out;
   spdlog::info("Got timetest");
-  out.time_test_forwarded_2 = input.time_test_forwarded;
+  out.time_test_out = input.time_test_time;
   return out;
 }
 
 ApproxTest::Output test_unit::ApproxTest(const ApproxTest::Input& input) {
+  spdlog::info("Got approximate output");
+  return {};
+}
+
+TestEqualOptions::Output test_unit::TestEqualOptions(const TestEqualOptions::Input& input) {
   spdlog::info("Got approximate output");
   return {};
 }

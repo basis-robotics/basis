@@ -22,7 +22,9 @@ def generate_unit(unit_path, output_dir, source_dir):
     with open(unit_path) as f:
         unit = yaml.safe_load(f)
 
+    # TODO: this needs to be converted to CamelCase for the cpp class name
     unit_name = os.path.basename(unit_path).split(".")[0]
+    
     output_dir = f"{output_dir}/unit/{unit_name}"
 
     handler_output_dir = output_dir + "/handlers"
@@ -53,6 +55,7 @@ def generate_unit(unit_path, output_dir, source_dir):
             io['serializer'] = type_serializer
             serializers.add(type_serializer)
             if io.get('accumulate'):
+                # TODO: actually set max size
                 cpp_type = f'std::vector<{cpp_type}>'
             io['cpp_type'] = cpp_type
 

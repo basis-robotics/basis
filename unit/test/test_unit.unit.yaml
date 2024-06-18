@@ -31,19 +31,23 @@ handlers:
       /camera_right:
         type: rosmsg:sensor_msgs::Image
         sync_field: header
+      /example_buffered_optional:
+        type: protobuf:TestEmptyEvent
+        optional: True
+        accumulate: 10
     outputs:
       /difference_image:
         type: rosmsg:sensor_msgs::Image
-  TimeTest:
+  AllTest:
     sync:
       type: all
     inputs:
-      /time_test:
+      /time_test_time:
         type: "protobuf: ::TimeTest"
-      /time_test_forwarded:
-        type: "protobuf: ::TimeTest"
+      /time_test_image:
+        type: rosmsg:sensor_msgs::Image
     outputs:
-      /time_test_forwarded_2:
+      /time_test_out:
         type: "protobuf: ::TimeTest"
   ApproxTest:
     sync:
@@ -56,4 +60,35 @@ handlers:
       /point_cloud:
         type: rosmsg:sensor_msgs::PointCloud2
         sync_field: header.stamp.toSec()
-
+    
+  TestEqualOptions:
+    sync:
+      # require exact field matching
+      type: equal
+      # buffer at most 2 messages on each channel before dropping
+      buffer_size: 2
+    inputs:
+      /required_a:
+        # TODO: we may end up allowing the `rosmsg:` field to be dropped, either by doing a search in the schemas
+        # or by allowing a default serializer to be specified
+        type: rosmsg:sensor_msgs::Image
+        # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
+        sync_field: header
+      /required_b:
+        type: rosmsg:sensor_msgs::Image
+        sync_field: header
+      /buffered_optional:
+        type: protobuf:TestEmptyEvent
+        optional: True
+        accumulate: 10
+      /buffered_non_optional:
+        type: protobuf:TestEmptyEvent
+        accumulate: 10
+      /optional_but_sync:
+        type: rosmsg:sensor_msgs::Image
+        # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
+        sync_field: header
+      /optional:
+        type: rosmsg:sensor_msgs::Image
+        # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
+        sync_field: header

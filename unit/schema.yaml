@@ -9,13 +9,9 @@ additionalProperties: False
 unevaluatedProperties: False
 
 properties:
-  # name:
-  #   type: string
-  #   title: name
-  #   description: The name of this unit - used to identify it by default
   cpp_includes:
     type: array
-    title: Cpp Includes
+    title: C++ Includes
     items:
       type: string
   threading_model:
