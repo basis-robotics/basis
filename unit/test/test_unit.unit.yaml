@@ -88,7 +88,8 @@ handlers:
         type: rosmsg:sensor_msgs::Image
         # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
         sync_field: header
+        optional: True
       /optional:
         type: rosmsg:sensor_msgs::Image
         # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
-        sync_field: header
+        optional: True

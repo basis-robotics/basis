@@ -228,16 +228,48 @@ TEST(TestUnitGeneration, TestEqualOptions) {
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
 
+
+  pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
+  ASSERT_TRUE(callback_called);
+  ASSERT_TRUE(pub_callback_called);
+  ASSERT_EQ(gotten_input.buffered_non_optional.size(), 1);
+  ASSERT_EQ(gotten_input.optional_but_sync, nullptr);
+  ASSERT_EQ(gotten_input.optional, nullptr);
+  ASSERT_NE(gotten_input.required_a, nullptr);
+  ASSERT_NE(gotten_input.required_b, nullptr);
+    callback_called = false;
+  pub_callback_called = false;
+  gotten_input = {};
+
+  pubsub.synchronizer->OnMessage<2>(std::make_shared<TestEmptyEvent>());
+  pubsub.synchronizer->OnMessage<2>(std::make_shared<TestEmptyEvent>());
+
   pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
   pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
   pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
 
-  pubsub.synchronizer->OnMessage<4>(a);
+  pubsub.synchronizer->OnMessage<4>(b);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
-  pubsub.synchronizer->OnMessage<4>(b);
+
+  pubsub.synchronizer->OnMessage<5>(a);
+  ASSERT_FALSE(callback_called);
+  ASSERT_FALSE(pub_callback_called);
+
+  pubsub.synchronizer->OnMessage<0>(b);
+  ASSERT_FALSE(callback_called);
+  ASSERT_FALSE(pub_callback_called);
+
+  pubsub.synchronizer->OnMessage<1>(b);
   ASSERT_TRUE(callback_called);
   ASSERT_TRUE(pub_callback_called);
+  ASSERT_EQ(gotten_input.buffered_optional.size(), 2);
+  ASSERT_EQ(gotten_input.buffered_non_optional.size(), 3);
+  ASSERT_NE(gotten_input.optional_but_sync, nullptr);
+  ASSERT_NE(gotten_input.optional, nullptr);
+  ASSERT_NE(gotten_input.required_a, nullptr);
+  ASSERT_NE(gotten_input.required_b, nullptr);
+
 }

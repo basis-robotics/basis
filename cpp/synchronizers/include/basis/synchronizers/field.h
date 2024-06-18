@@ -74,8 +74,9 @@ public:
 
       [&]<std::size_t... I>(std::index_sequence<I...>) {
         const auto syncs =
-            std::tuple(FindMatchingFieldNoLock<std::get<I>(fields)>(field_to_check, std::get<I>(sync_buffers))...);
-        const bool is_synced = ((std::get<I>(fields) == nullptr || std::get<I>(syncs) != -1) && ...);
+            std::tuple(
+              FindMatchingFieldNoLock<std::get<I>(fields)>(field_to_check, std::get<I>(sync_buffers))...);
+        const bool is_synced = ((std::get<I>(this->storage).metadata.is_optional || std::get<I>(fields) == nullptr || std::get<I>(syncs) != -1) && ...);
         if (is_synced) {
           [[maybe_unused]] auto t = ((ApplySync<I>(std::get<I>(syncs)), true) && ...);
         }
@@ -114,7 +115,7 @@ protected:
    * @tparam T_FIELD_ACCESS_B the field accessor for B
    * @tparam T_VALUE_A (deduced) the type of value_a
    * @tparam T_MSG_B (deduced) the type message to access in B
-   * @param value_a 
+   * @param value_a
    * @param syncs_b
    * @return -1 if not found or not synced, otherwise the index of the field
    * @todo reverse A and B
@@ -123,7 +124,7 @@ protected:
   template <auto T_FIELD_ACCESS_B, typename T_VALUE_A, typename T_MSG_B>
   int FindMatchingFieldNoLock(T_VALUE_A &value_a, const std::vector<T_MSG_B> &syncs_b) {
     // TODO: we can do a binary search here...maybe
-    
+
     // Ignore unsynced fields
     if constexpr (T_FIELD_ACCESS_B != nullptr) {
       // Search for a B that matches A
@@ -138,11 +139,13 @@ protected:
     return -1;
   }
 
-  template <auto INDEX> void ApplySync(size_t sync_index) {
+  template <auto INDEX> void ApplySync(int sync_index) {
     if constexpr (std::get<INDEX>(fields)) {
-      auto &sync = std::get<INDEX>(sync_buffers);
-      std::get<INDEX>(this->storage).ApplyMessage(sync[sync_index]);
-      sync.erase(sync.begin(), sync.begin() + sync_index + 1);
+      if(sync_index >= 0) {
+        auto &sync = std::get<INDEX>(sync_buffers);
+        std::get<INDEX>(this->storage).ApplyMessage(sync[sync_index]);
+        sync.erase(sync.begin(), sync.begin() + sync_index + 1);
+      }
     }
   }
 
@@ -162,6 +165,7 @@ template <auto EPSILON> struct ApproximatelyEqual {
   }
 };
 
-template <auto EPSILON, typename... T_FIELD_SYNCs> using FieldSyncApproximatelyEqual = FieldSync<ApproximatelyEqual<EPSILON>, T_FIELD_SYNCs...>;
+template <auto EPSILON, typename... T_FIELD_SYNCs>
+using FieldSyncApproximatelyEqual = FieldSync<ApproximatelyEqual<EPSILON>, T_FIELD_SYNCs...>;
 
 } // namespace basis::synchronizers
