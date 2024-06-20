@@ -37,6 +37,7 @@ function(generate_unit UNIT_NAME)
             ${CMAKE_CURRENT_SOURCE_DIR}/include/${UNIT_NAME}.h
             ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.example.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.example.h
+            ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
         )
 
     add_library(${TARGET_NAME} SHARED
@@ -50,7 +51,7 @@ function(generate_unit UNIT_NAME)
     add_executable(${TARGET_NAME}_bin 
         ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
     )
-    target_link_libraries(${TARGET_NAME}_bin ${TARGET_NAME} )
+    target_link_libraries(${TARGET_NAME}_bin ${TARGET_NAME})
 
     add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})
 endfunction()
