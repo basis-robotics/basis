@@ -52,6 +52,9 @@ function(generate_unit UNIT_NAME)
         ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
     )
     target_link_libraries(${TARGET_NAME}_bin ${TARGET_NAME})
+    set_target_properties(${TARGET_NAME}_bin PROPERTIES OUTPUT_NAME ${UNIT_NAME})
 
     add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})
+
+    # TODO: install .so file to /opt/basis/unit/
 endfunction()
