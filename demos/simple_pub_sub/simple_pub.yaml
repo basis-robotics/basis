@@ -1,0 +1,7 @@
+threading_model:
+  single
+handlers:
+  SimplePub:
+    outputs:
+      /out_message:
+        type: protobuf::StringMessage
