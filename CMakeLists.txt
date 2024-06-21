@@ -4,6 +4,8 @@ project(basis)
 # Allow include() on our cmake directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+set(BASIS_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+
 #################################################################################
 # Options
 set(BASIS_INSTALL_DIR /opt/basis CACHE STRING "Directory to install basis to")
@@ -30,6 +32,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Add all of our supported languages
 add_subdirectory(cpp)
 add_subdirectory(proto)
+
+# Add the units
+add_subdirectory(unit)
 
 include(FindAllTargets)
 find_all_targets(ALL_TARGETS)

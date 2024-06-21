@@ -1,5 +1,8 @@
 syntax= "proto3";
 
+message TestEmptyEvent {
+  
+}
 
 message TestExampleMessage {
   string name = 1;

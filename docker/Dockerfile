@@ -58,6 +58,13 @@ RUN useradd -ms /bin/bash basis
 RUN adduser basis sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
+# Install python dependencies
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    apt install -y --no-install-recommends python3-distutils
+RUN curl -s https://bootstrap.pypa.io/get-pip.py |  python3
+RUN pip -q install jsonschema pyyaml jinja2
+
 USER basis
 
 WORKDIR /basis

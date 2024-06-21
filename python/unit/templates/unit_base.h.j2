@@ -1,0 +1,47 @@
+#include <memory>
+#include <vector>
+
+#include <basis/unit.h>
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+{% for include in cpp_includes %}
+#include <{{include}}>
+{% endfor %}
+#pragma clang diagnostic pop
+
+{% for handler_name in handlers %}
+#include <unit/{{unit_name}}/handlers/{{handler_name}}.h>
+{% endfor %}
+
+namespace unit::{{unit_name}} {
+    // TODO: this won't work with multi threaded units, obviously
+    class Base : public basis::SingleThreadedUnit {
+    
+        void CreatePublishersSubscribers() {
+            {% for handler_name in handlers %}
+            // oops todo
+            {{handler_name}}_pubsub.SetupPubSub(transport_manager.get(), &output_queue, &thread_pool);
+            {% endfor %}
+        }
+
+    public:
+{% for handler_name in handlers %}
+        virtual {{handler_name}}::Output {{handler_name}}(const {{handler_name}}::Input& input) = 0;
+{% endfor %}
+
+        virtual void Initialize() final override {
+            CreatePublishersSubscribers();
+        }
+    
+    private:
+        {% for handler_name in handlers %}
+        {{handler_name}}::PubSub {{handler_name}}_pubsub = {
+            [this](auto input){
+                return {{handler_name}}(input); 
+            }
+        };
+        {% endfor %}
+    };
+    
+}

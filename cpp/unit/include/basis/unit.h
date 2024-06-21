@@ -8,30 +8,33 @@ namespace basis {
 class Unit {
 public:
   Unit(/*std::string_view unit_name*/) {
-    // todo: it may be better to pass these in - do we want one transport manager per unit or multiple?
-    // probably just one, so that they each get an ID
 
-    // It may be valuable to allow running without a connector, but for now, force it
-    while (!coordinator_connector) {
-      coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
-      if (!coordinator_connector) {
-        spdlog::warn("No connection to the coordinator, waiting 1 second and trying again");
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+
+  void WaitForCoordinatorConnection() {
+     while (!coordinator_connector) {
+        coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
+        if (!coordinator_connector) {
+          spdlog::warn("No connection to the coordinator, waiting 1 second and trying again");
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
       }
-    }
+  }
+
+  void CreateTransportManager() {
+    // todo: it may be better to pass these in - do we want one transport manager per unit ?
+    // probably yes, so that they each get an ID
 
     transport_manager = std::make_unique<basis::core::transport::TransportManager>(
         std::make_unique<basis::core::transport::InprocTransport>());
 
-    transport_manager->RegisterTransport(
-        basis::plugins::transport::TCP_TRANSPORT_NAME,
-        std::make_unique<basis::plugins::transport::TcpTransport>());
+    transport_manager->RegisterTransport(basis::plugins::transport::TCP_TRANSPORT_NAME,
+                                         std::make_unique<basis::plugins::transport::TcpTransport>());
   }
-  
-  
+
   // override this, should be called once by main()
   virtual void Initialize() = 0;
-  
+
   virtual ~Unit() = default;
   virtual void Update() {
     transport_manager->Update();
@@ -67,21 +70,23 @@ public:
                                                              std::move(message_type));
   }
 
-private:
+protected:
   std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 };
 
 /**
- * A simple unit where all are run mutally exclusive from eachother - uses a queue for all outputs, which adds some amount of latency
+ * A simple unit where all are run mutally exclusive from eachother - uses a queue for all outputs, which adds some
+ * amount of latency
  */
-class SingleThreadedUnit : Unit {
-private:
+class SingleThreadedUnit : public Unit {
+protected:
   using Unit::Update;
+
 public:
+  using Unit::Advertise;
   using Unit::Initialize;
   using Unit::Unit;
-  using Unit::Advertise;
 
   void Update(int sleep_time_s) {
     Update();
@@ -90,7 +95,7 @@ public:
     if (auto event = output_queue.Pop(sleep_time_s)) {
       (*event)();
     }
-    
+
     // Try to drain the buffer of events
     while (auto event = output_queue.Pop(0)) {
       (*event)();
@@ -106,8 +111,7 @@ public:
   }
 
   basis::core::transport::OutputQueue output_queue;
-  basis::core::threading::ThreadPool thread_pool {4};
-
+  basis::core::threading::ThreadPool thread_pool{4};
 };
 
 // todo: interface for multithreaded units

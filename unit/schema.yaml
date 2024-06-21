@@ -1,0 +1,149 @@
+id: "basis-unit"
+$schema: "http://json-schema.org/draft-07/schema"
+title:
+  Basis Unit
+description: |
+  Schema to use for units
+
+additionalProperties: False
+unevaluatedProperties: False
+
+properties:
+  cpp_includes:
+    type: array
+    title: C++ Includes
+    items:
+      type: string
+  threading_model:
+    type: string
+    title: Threading Model
+    description: |
+      The threading model to use for this unit.
+        single - by default all handlers run mutually exclusive from eachother
+        multi - by default all handlers run in parallel
+    enum:
+      - single
+      - multi
+  handlers:
+    title: Handlers
+    type: object
+    additionalProperties:
+      type: object
+      title: Handler
+      additionalProperties: False
+      description: |
+        A function run when the set of Inputs are satisfied, producing a set of Outputs
+      properties:
+        sync:
+          properties:
+            type:
+              oneOf:
+                - type: string
+                  const: all
+                - type: string
+                  const: equal
+                - type: object
+                  title: Rate Handler
+                  description: Calls the hander at the specified rate, with optional Inputs that also must be satisfied.
+                  additionalProperties: False
+                  properties:
+                    rate:
+                      $ref: "#/$defs/duration"
+                - type: object
+                  additionalProperties: False
+                  properties:
+                    approximate:
+                      #$ref: "#/$defs/duration"
+                      True
+        buffer_size:
+          type: integer
+        inputs:
+          type: object
+          description: The set of inputs that must be satisfied
+          additionalProperties:
+            type: object
+            title: Input
+            description: |
+              An input topic.
+            unevaluatedProperties: False
+            additionalProperties: False
+            allOf:
+              - $ref: "#/$defs/inputs_outputs_common"
+            properties:
+              sync_field:
+                title: Sync Field
+                description:
+                  The field or method to call on a message to get the field to sync on.
+                examples:
+                  -
+                    - Colon deliminted regular object fields are accessed as is
+                    - "::field": msg->field
+                  - 
+                    - Methods as fields are executed
+                    - "::method_field": msg->method_field()
+                  -
+                    - Unannotated fields are transformed into lambdas.
+                    - "complex.access.to_string()": "[](T_MSG* msg)[]{ return msg->complex.access.to_string(); }"
+                type: string
+              accumulate:
+                type: integer
+              cached:
+                type: boolean
+              # https://github.com/redhat-developer/yaml-language-server/issues/478
+              type: True
+              optional: True
+              allow_transports: True
+              deny_transports: True
+        outputs:
+          type: object
+          additionalProperties:
+            title: Output
+            unevaluatedProperties: False
+            additionalProperties: False
+            allOf:
+              - $ref: "#/$defs/inputs_outputs_common"
+            properties:
+              # https://github.com/redhat-developer/yaml-language-server/issues/478
+              type: True
+              optional: True
+              allow_transports: True
+              deny_transports: True
+
+$defs:
+  duration:
+    title: Duration
+    type: string
+    pattern: "[0-9]+(ms|s|hz)"
+  message_type:
+    type: string
+    pattern: "^[^:]+:[^:].*"
+  either_allow_or_deny_transports:
+    # "Helper to force allowing and denying transports to be mutually exclusive"
+    additionalProperties: True
+    type: object
+    not:
+      required:
+        - allow_transports
+        - deny_transports
+    properties:
+      allow_transports:
+        title: Allowed transports
+        type: array
+        items:
+          type: string
+      deny_transports:
+        title: Deny transports
+        type: array
+        items:
+          type: string
+  inputs_outputs_common:
+    type: object
+    required: ['type']
+    additionalProperties: True
+    allOf:
+      - $ref: "#/$defs/either_allow_or_deny_transports"
+    properties:
+      type:
+        $ref: "#/$defs/message_type"
+      optional:
+        type: boolean
