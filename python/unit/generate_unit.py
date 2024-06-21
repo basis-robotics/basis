@@ -7,12 +7,12 @@ import itertools
 import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
+basis_root = dir_path + "/../../"
 jinja_dir = dir_path + "/jinja/"
 
-SCHEMA_PATH = '/basis/unit/schema.yaml'
+SCHEMA_PATH = basis_root + '/unit/schema.yaml'
 
-OUTPUT_DIR = '/basis/build/tmp/'
+OUTPUT_DIR = basis_root + '/build/tmp/'
 
 with open(SCHEMA_PATH) as f:
     schema = yaml.safe_load(f)
