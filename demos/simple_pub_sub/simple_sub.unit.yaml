@@ -1,0 +1,12 @@
+threading_model:
+  single
+cpp_includes:
+# TODO: required, but not obvious it is
+  - simple_pub_sub.pb.h
+handlers:
+  SimpleSub:
+    sync:
+      all
+    inputs:
+      /in_message:
+        type: protobuf:StringMessage
