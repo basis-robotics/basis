@@ -1,17 +1,10 @@
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#include <simple_pub_sub.pb.h>
-#pragma clang diagnostic pop
-
-// #include <basis/core/transport/transport_manager.h>
-// #include <basis/plugins/transport/tcp.h>
-
-// #include "generated/unit/simple_pub/handlers/SimplePub.h"
-// #include "generated/unit/simple_sub/handlers/SimpleSub.h"
 
 #include "generated/include/simple_pub.h"
 #include "generated/include/simple_sub.h"
+
+#include <argparse/argparse.hpp>
+#include <spdlog/spdlog.h>
 
 unit::simple_pub::SimplePub::Output
 simple_pub::SimplePub(const unit::simple_pub::SimplePub::Input &input) {
@@ -23,6 +16,8 @@ simple_pub::SimplePub(const unit::simple_pub::SimplePub::Input &input) {
 }
 
 void pub() {
+  spdlog::info("Starting the publisher");
+
   simple_pub unit;
   unit.WaitForCoordinatorConnection();
   unit.CreateTransportManager();
@@ -40,6 +35,8 @@ simple_sub::SimpleSub(const unit::simple_sub::SimpleSub::Input &input) {
 }
 
 void sub() {
+  spdlog::info("Starting the subscriber");
+
   simple_sub unit;
   unit.WaitForCoordinatorConnection();
   unit.CreateTransportManager();
@@ -50,8 +47,18 @@ void sub() {
   }
 }
 
-int main() {
-  pub();
-  sub();
+int main(int argc, char *argv[]) {
+
+  argparse::ArgumentParser parser("simple_pub_sub");
+  parser.add_argument("--pub").default_value(false).implicit_value(true);
+
+  parser.parse_args(argc, argv);
+
+  if (parser["--pub"] == true) {
+    pub();
+  } else {
+    sub();
+  }
+
   return 0;
 }
