@@ -12,5 +12,5 @@ using namespace unit::simple_pub;
 
 
 SimplePub::Output simple_pub::SimplePub(const SimplePub::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }

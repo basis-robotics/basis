@@ -37,7 +37,7 @@ namespace unit::simple_pub {
     private:
         
         SimplePub::PubSub SimplePub_pubsub;
-        // TODO: fix this. The constructor requires std::function<void(Output&)>, not std::function<void(Input)>.
+        // TODO fix this, the ctos wants a void(Output) callback
         //  = {
         //     [this](auto input){
         //         return SimplePub(input); 

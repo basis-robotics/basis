@@ -4,38 +4,54 @@
 #include <simple_pub_sub.pb.h>
 #pragma clang diagnostic pop
 
-#include <basis/core/transport/transport_manager.h>
-#include <basis/plugins/transport/tcp.h>
+// #include <basis/core/transport/transport_manager.h>
+// #include <basis/plugins/transport/tcp.h>
 
-#include "generated/unit/simple_pub/handlers/SimplePub.h"
-#include "generated/unit/simple_sub/handlers/SimpleSub.h"
+// #include "generated/unit/simple_pub/handlers/SimplePub.h"
+// #include "generated/unit/simple_sub/handlers/SimpleSub.h"
 
-void setupPub(basis::core::transport::TransportManager &transport_manager) {
-  using namespace unit::simple_pub::SimplePub;
-  PubSub pubsub(nullptr);
+#include "generated/include/simple_pub.h"
+#include "generated/include/simple_sub.h"
 
-  pubsub.SetupPubSub(&transport_manager, nullptr, nullptr);
-
-  auto msg = std::make_shared<StringMessage>();
-  msg->set_message("Hello, world!");
-  pubsub.out_message_publisher->Publish(msg);
+unit::simple_pub::SimplePub::Output
+simple_pub::SimplePub(const unit::simple_pub::SimplePub::Input &input) {
+  unit::simple_pub::SimplePub::Output output;
+  std::shared_ptr<StringMessage> msg = std::make_shared<StringMessage>();
+  msg->set_message("hello");
+  output.out_message = msg;
+  return output;
 }
 
-void setupSub(basis::core::transport::TransportManager &transport_manager) {
-  using namespace unit::simple_sub::SimpleSub;
-  PubSub pubsub(nullptr);
+void pub() {
+  simple_pub unit;
+  unit.WaitForCoordinatorConnection();
+  unit.CreateTransportManager();
+  unit.Initialize();
 
-  pubsub.SetupPubSub(&transport_manager, nullptr, nullptr);
+  while (true) {
+    unit.Update(1);
+  }
+}
 
+unit::simple_sub::SimpleSub::Output
+simple_sub::SimpleSub(const unit::simple_sub::SimpleSub::Input &input) {
+  unit::simple_sub::SimpleSub::Output output;
+  return output;
+}
 
+void sub() {
+  simple_sub unit;
+  unit.WaitForCoordinatorConnection();
+  unit.CreateTransportManager();
+  unit.Initialize();
+
+  while (true) {
+    unit.Update(1);
+  }
 }
 
 int main() {
-  basis::core::transport::TransportManager transport_manager(
-      std::make_unique<basis::core::transport::InprocTransport>());
-  transport_manager.RegisterTransport(
-      "net_tcp", std::make_unique<basis::plugins::transport::TcpTransport>());
-
-  setupPub(transport_manager);
+  pub();
+  sub();
   return 0;
 }

@@ -10,5 +10,5 @@ using namespace unit::simple_sub;
 
 
 SimpleSub::Output simple_sub::SimpleSub(const SimpleSub::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }

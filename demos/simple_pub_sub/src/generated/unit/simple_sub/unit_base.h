@@ -36,12 +36,11 @@ namespace unit::simple_sub {
     
     private:
         
-        SimpleSub::PubSub SimpleSub_pubsub = {
+        SimpleSub::PubSub SimpleSub_pubsub  {
             [this](auto input){
                 return SimpleSub(input); 
             }
-        };
-        
+        };        
     };
     
 }
