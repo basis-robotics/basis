@@ -24,7 +24,7 @@ void pub() {
   unit.Initialize();
 
   unit::simple_pub::SimplePub::Output output;
-  std::shared_ptr<StringMessage> msg = std::make_shared<StringMessage>();
+  auto msg = std::make_shared<StringMessage>();
   msg->set_message("hello");
   output.chatter = msg;
 
@@ -61,11 +61,14 @@ void sub() {
 void coord() {
   spdlog::info("Starting the coordinator");
 
-  basis::core::transport::Coordinator coordinator =
-      *basis::core::transport::Coordinator::Create();
+  auto coordinator = basis::core::transport::Coordinator::Create();
+  if (!coordinator) {
+    spdlog::error("Failed to create the coordinator");
+    return;
+  }
 
   while (true) {
-    coordinator.Update();
+    coordinator->Update();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
