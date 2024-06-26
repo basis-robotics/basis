@@ -11,7 +11,7 @@
 #pragma clang diagnostic pop
 
 {% for handler_name in handlers %}
-#include "handlers/{{handler_name}}.h"
+#include <unit/{{unit_name}}/handlers/{{handler_name}}.h>
 {% endfor %}
 
 namespace unit::{{unit_name}} {
