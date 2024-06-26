@@ -35,6 +35,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(expected-lite)
 
+FetchContent_Declare(
+  yaml-cpp
+  GIT_REPOSITORY https://github.com/jbeder/yaml-cpp/
+  GIT_TAG 0.8.0
+)
+FetchContent_MakeAvailable(yaml-cpp)
+
 set(ARGPARSE_BUILD_TESTS OFF CACHE INTERNAL "force argparse tests to off")
 FetchContent_Declare(
   argparse

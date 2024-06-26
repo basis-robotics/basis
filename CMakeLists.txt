@@ -12,6 +12,8 @@ set(BASIS_INSTALL_DIR /opt/basis CACHE STRING "Directory to install basis to")
 option(BASIS_ENABLE_ROS "Enable basis support for ROS" OFF)
 option(BASIS_ENABLE_TESTING "Build tests" ${PROJECT_IS_TOP_LEVEL})
 
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+
 # Set variables based on options
 set(CMAKE_INSTALL_PREFIX ${BASIS_INSTALL_DIR})
 

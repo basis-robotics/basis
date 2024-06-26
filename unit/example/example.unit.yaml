@@ -86,7 +86,7 @@ handlers:
   # This will trigger when all inputs of a type are received
   HandleAll:
     sync:
-      all
+      type: all
     inputs:
       /topic_c:
         type: protobuf:C

@@ -57,4 +57,6 @@ function(generate_unit UNIT_NAME)
     add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})
 
     # TODO: install .so file to /opt/basis/unit/
+    install(TARGETS ${TARGET_NAME} DESTINATION unit/)
+
 endfunction()

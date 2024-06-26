@@ -1,0 +1,15 @@
+processes:
+  foo:
+    units:
+      - bar
+      - baz:
+          name: not_baz
+          env:
+            AN_ENV: 1
+            ANOTHER_ENV: another
+          args:
+            - these
+            - are
+            - arguments
+  quax:
+    unit: quud

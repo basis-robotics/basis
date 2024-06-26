@@ -93,3 +93,8 @@ handlers:
         type: rosmsg:sensor_msgs::Image
         # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
         optional: True
+
+  # TestRateNoInputs:
+  #   sync:
+  #     type: all
+    
