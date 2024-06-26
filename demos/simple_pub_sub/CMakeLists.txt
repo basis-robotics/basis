@@ -25,5 +25,5 @@ target_link_libraries(
   basis::core::coordinator
   basis::synchronizers
   simple_pub_sub_proto
-  argparse
+  # argparse
 )

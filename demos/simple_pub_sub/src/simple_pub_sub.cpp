@@ -5,8 +5,9 @@
 
 #include <basis/core/coordinator.h>
 
-#include <argparse/argparse.hpp>
 #include <spdlog/spdlog.h>
+
+//----------------- simple_pub -----------------
 
 unit::simple_pub::SimplePub::Output
 simple_pub::SimplePub(const unit::simple_pub::SimplePub::Input &input) {
@@ -17,28 +18,23 @@ simple_pub::SimplePub(const unit::simple_pub::SimplePub::Input &input) {
 void pub() {
   spdlog::info("Starting the publisher");
 
-  basis::core::transport::Coordinator coordinator =
-      *basis::core::transport::Coordinator::Create();
-
   simple_pub unit;
   unit.WaitForCoordinatorConnection();
   unit.CreateTransportManager();
   unit.Initialize();
 
-  coordinator.Update();
-
   unit::simple_pub::SimplePub::Output output;
   std::shared_ptr<StringMessage> msg = std::make_shared<StringMessage>();
   msg->set_message("hello");
   output.chatter = msg;
-  unit.SimplePub_pubsub.OnOutput(output);
 
   while (true) {
-    coordinator.Update();
     unit.SimplePub_pubsub.OnOutput(output);
     unit.Update(1);
   }
 }
+
+//----------------- simple_sub -----------------
 
 unit::simple_sub::SimpleSub::Output
 simple_sub::SimpleSub(const unit::simple_sub::SimpleSub::Input &input) {
@@ -60,17 +56,37 @@ void sub() {
   }
 }
 
+//----------------- coordinator -----------------
+
+void coord() {
+  spdlog::info("Starting the coordinator");
+
+  basis::core::transport::Coordinator coordinator =
+      *basis::core::transport::Coordinator::Create();
+
+  while (true) {
+    coordinator.Update();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+}
+
+//----------------- main -----------------
 int main(int argc, char *argv[]) {
 
-  argparse::ArgumentParser parser("simple_pub_sub");
-  parser.add_argument("--pub").default_value(false).implicit_value(true);
+  if (argc < 2) {
+    spdlog::error("Usage: simple_pub_sub --pub|--sub");
+    return 1;
+  }
 
-  parser.parse_args(argc, argv);
-
-  if (parser["--pub"] == true) {
+  if (strcmp(argv[1], "pub") == 0) {
     pub();
-  } else {
+  } else if (strcmp(argv[1], "sub") == 0) {
     sub();
+  } else if (strcmp(argv[1], "coord") == 0) {
+    coord();
+  } else {
+    spdlog::error("Usage: simple_pub_sub pub|sub|coord");
+    return 1;
   }
 
   return 0;
