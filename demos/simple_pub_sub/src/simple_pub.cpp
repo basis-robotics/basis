@@ -10,5 +10,7 @@ using namespace unit::simple_pub;
 
 
 SimplePub::Output simple_pub::SimplePub(const SimplePub::Input& input) {
-    static_assert(false, "Implement me");
+    // static_assert(false, "Implement me");
+    spdlog::info("SimplePub::SimplePub");
+    return SimplePub::Output();
 }

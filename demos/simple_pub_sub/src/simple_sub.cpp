@@ -10,5 +10,7 @@ using namespace unit::simple_sub;
 
 
 SimpleSub::Output simple_sub::SimpleSub(const SimpleSub::Input& input) {
-    static_assert(false, "Implement me");
+    // static_assert(false, "Implement me");
+    spdlog::info("SimpleSub::SimpleSub");
+    return SimpleSub::Output();
 }

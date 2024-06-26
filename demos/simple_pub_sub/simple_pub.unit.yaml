@@ -5,6 +5,9 @@ cpp_includes:
   - simple_pub_sub.pb.h
 handlers:
   SimplePub:
+    sync:
+      type: all
+      rate: 0.1
     outputs:
       /chatter:
         type: protobuf:StringMessage

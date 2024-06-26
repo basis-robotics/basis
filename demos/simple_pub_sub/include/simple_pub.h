@@ -3,7 +3,7 @@
   This is the starting point for your Unit. Edit this directly and implement the missing methods!
 
 */
-#include "../unit/simple_pub/unit_base.h"
+#include <unit/simple_pub/unit_base.h>
 
 class simple_pub : public unit::simple_pub::Base {
 public:

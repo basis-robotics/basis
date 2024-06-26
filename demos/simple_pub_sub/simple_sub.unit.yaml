@@ -6,7 +6,7 @@ cpp_includes:
 handlers:
   SimpleSub:
     sync:
-      all
+      type: all
     inputs:
       /chatter:
         type: protobuf:StringMessage

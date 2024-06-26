@@ -28,8 +28,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         // TODO: should we take as unique_ptr instead?
     };
 
-{% if not inputs.items() %}
-{% elif sync == 'all' %}
+{%if sync.type == 'all' %}
     // Simple, synchronize all messages on presence
     using Synchronizer = basis::synchronizers::All<
 {%- set comma = joiner(", ") %}
@@ -69,23 +68,18 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
     struct PubSub {
         using Callback = std::function<Output(const Input&)>;
-        PubSub(
-{% if inputs.items() %}
-            std::function<Output(const Input&)> callback, 
-{% endif %}
-            std::function<void(Output&)> publish_callback = nullptr) {
+        PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr) {
             if(!publish_callback) {
                 publish_callback = 
                     [this](Output& output){
                         OnOutput(output);
                     };
             }
-{% if inputs.items() %}
             synchronizer = std::make_unique<Synchronizer>(
         [this, callback, publish_callback](auto ...msgs) {
                 Output output = callback({msgs...});
                 publish_callback(output);
-            }, 
+            }, std::tuple{ 
 {%- set comma = joiner(", ") %}
 {%- for input_name, input in inputs.items() %}
             {{- comma() }}
@@ -94,8 +88,8 @@ namespace unit::{{unit_name}}::{{handler_name}} {
                 .is_cached = {{input.get('cached', False)|lower}},
             }
 {%- endfor %}
+            }
             );
-{% endif %}
         }
         void SetupPubSub(
             basis::core::transport::TransportManager* transport_manager,
@@ -127,9 +121,8 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         // {{output_name}}
         std::shared_ptr<basis::core::transport::Publisher<{{output.cpp_message_type}}>> {{output.cpp_topic_name}}_publisher;
 {%- endfor %}
-{% if inputs.items() %}
+
         std::unique_ptr<Synchronizer> synchronizer;
-{% endif %}
     };
 
 }
