@@ -8,5 +8,5 @@ handlers:
     sync:
       all
     inputs:
-      /in_message:
+      /chatter:
         type: protobuf:StringMessage

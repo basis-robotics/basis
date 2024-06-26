@@ -6,5 +6,5 @@ cpp_includes:
 handlers:
   SimplePub:
     outputs:
-      /out_message:
+      /chatter:
         type: protobuf:StringMessage

@@ -18,8 +18,8 @@ namespace unit::simple_pub::SimplePub {
 
     struct Output {
 
-        // /out_message
-        std::shared_ptr<const StringMessage> out_message;
+        // /chatter
+        std::shared_ptr<const StringMessage> chatter;
 
         // TODO: diagnostics, error state, etc
         // TODO: should we take as unique_ptr instead?
@@ -48,18 +48,18 @@ namespace unit::simple_pub::SimplePub {
                 // todo init sync
         
         
-            out_message_publisher = transport_manager->Advertise<StringMessage>("/out_message");
+            chatter_publisher = transport_manager->Advertise<StringMessage>("/chatter");
         
         }
 
         void OnOutput(const Output& output) {
 
-        out_message_publisher->Publish(output.out_message);
+        chatter_publisher->Publish(output.chatter);
         }
 
 
-        // /out_message
-        std::shared_ptr<basis::core::transport::Publisher<StringMessage>> out_message_publisher;
+        // /chatter
+        std::shared_ptr<basis::core::transport::Publisher<StringMessage>> chatter_publisher;
 
     };
 

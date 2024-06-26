@@ -37,7 +37,7 @@ namespace unit::{{unit_name}} {
     private:
         {% for handler_name in handlers %}
         {{handler_name}}::PubSub {{handler_name}}_pubsub;
-        // TODO fix this this only applies to units with inputs
+        // TODO fix this: this only applies to units with inputs
         //  = {
         //     [this](auto input){
         //         return {{handler_name}}(input); 

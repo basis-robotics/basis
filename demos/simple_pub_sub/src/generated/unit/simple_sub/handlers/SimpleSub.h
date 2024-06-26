@@ -12,8 +12,8 @@
 namespace unit::simple_sub::SimpleSub {
     struct Input {
 
-        // /in_message
-        std::shared_ptr<const StringMessage> in_message;
+        // /chatter
+        std::shared_ptr<const StringMessage> chatter;
 
         // TODO: time?
         // TODO: this will need metadata around topics to handle deterministic mode
@@ -65,7 +65,7 @@ namespace unit::simple_sub::SimpleSub {
             basis::core::threading::ThreadPool* thread_pool) {
                 // todo init sync
         
-            in_message_subscriber = transport_manager->Subscribe<StringMessage>("/in_message", 
+            chatter_subscriber = transport_manager->Subscribe<StringMessage>("/chatter", 
             [this](auto msg){
                 synchronizer->OnMessage<0>(msg);
             },
@@ -78,8 +78,8 @@ namespace unit::simple_sub::SimpleSub {
 
         }
 
-        // /in_message
-        std::shared_ptr<basis::core::transport::Subscriber<StringMessage>> in_message_subscriber;
+        // /chatter
+        std::shared_ptr<basis::core::transport::Subscriber<StringMessage>> chatter_subscriber;
 
 
 

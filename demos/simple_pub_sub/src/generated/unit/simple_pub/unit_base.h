@@ -34,10 +34,10 @@ namespace unit::simple_pub {
             CreatePublishersSubscribers();
         }
     
-    private:
+    // private:
         
         SimplePub::PubSub SimplePub_pubsub;
-        // TODO fix this, the ctos wants a void(Output) callback
+        // TODO fix this: this only applies to units with inputs
         //  = {
         //     [this](auto input){
         //         return SimplePub(input); 
