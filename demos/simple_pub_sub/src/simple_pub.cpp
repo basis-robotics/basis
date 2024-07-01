@@ -12,5 +12,9 @@ using namespace unit::simple_pub;
 SimplePub::Output simple_pub::SimplePub(const SimplePub::Input& input) {
     // static_assert(false, "Implement me");
     spdlog::info("SimplePub::SimplePub");
-    return SimplePub::Output();
+    SimplePub::Output output;
+    std::shared_ptr<StringMessage> msg{std::make_shared<StringMessage>()};
+    msg->set_message(std::string("Hello, world!"));
+    output.chatter = msg;
+    return output;
 }

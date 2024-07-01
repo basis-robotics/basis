@@ -68,7 +68,13 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
     struct PubSub {
         using Callback = std::function<Output(const Input&)>;
-        PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr) {
+        PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr)
+{% if 'rate' in sync %}
+        : rate_subsciber(
+          basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{sync.rate}})),
+          std::bind(&PubSub::OnRateSubscriber, this))
+{% endif %}
+        {
             if(!publish_callback) {
                 publish_callback = 
                     [this](Output& output){
@@ -100,6 +106,9 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             {{input.cpp_topic_name}}_subscriber = transport_manager->Subscribe<{{input.cpp_message_type}}>("{{topic_name}}", 
             [this](auto msg){
                 synchronizer->OnMessage<{{loop.index0}}>(msg);
+{% if 'rate' not in sync %}
+                synchronizer->ConsumeIfReadyNoLock();
+{% endif %}
             },
             thread_pool, output_queue);
         {% endfor %}
@@ -113,6 +122,18 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         {{output.cpp_topic_name}}_publisher->Publish(output.{{output.cpp_topic_name}});
 {%- endfor %}
         }
+
+{% if 'rate' in sync %}
+private:
+    void OnRateSubscriber() {
+        spdlog::info("OnRateSubscriber");
+        synchronizer->ConsumeIfReadyNoLock();
+    }
+
+    basis::core::transport::RateSubscriber rate_subsciber;
+
+public:
+{% endif %}
 {% for input_name, input in inputs.items() %}
         // {{input_name}}
         std::shared_ptr<basis::core::transport::Subscriber<{{input.cpp_message_type}}>> {{input.cpp_topic_name}}_subscriber;

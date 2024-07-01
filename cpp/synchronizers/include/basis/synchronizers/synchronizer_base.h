@@ -108,7 +108,7 @@ public:
     return ConsumeIfReadyNoLock();
   }
 
-protected:
+public:
   std::optional<MessageSumType> ConsumeIfReadyNoLock() {
     if (IsReadyNoLock()) {
       MessageSumType out(ConsumeMessagesNoLock());
@@ -121,6 +121,7 @@ protected:
     return {};
   }
 
+protected:
   virtual bool IsReadyNoLock() = 0;
 
   MessageSumType ConsumeMessagesNoLock() {
