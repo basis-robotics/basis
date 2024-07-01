@@ -10,7 +10,6 @@ using namespace unit::simple_pub;
 
 
 SimplePub::Output simple_pub::SimplePub(const SimplePub::Input& input) {
-    // static_assert(false, "Implement me");
     spdlog::info("SimplePub::SimplePub");
     SimplePub::Output output;
     std::shared_ptr<StringMessage> msg{std::make_shared<StringMessage>()};
