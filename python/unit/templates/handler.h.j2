@@ -84,6 +84,10 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             synchronizer = std::make_unique<Synchronizer>(
         [this, callback, publish_callback](auto ...msgs) {
                 Output output = callback({msgs...});
+{% for output_name, output in outputs.items() %}
+                assert(output.{{output.cpp_topic_name}} != nullptr);
+{% endfor %}
+
                 publish_callback(output);
             }, std::tuple{ 
 {%- set comma = joiner(", ") %}
@@ -107,7 +111,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             [this](auto msg){
                 synchronizer->OnMessage<{{loop.index0}}>(msg);
 {% if 'rate' not in sync %}
-                synchronizer->ConsumeIfReadyNoLock();
+                synchronizer->ConsumeIfReadyLock();
 {% endif %}
             },
             thread_pool, output_queue);
@@ -127,7 +131,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 private:
     void OnRateSubscriber() {
         spdlog::info("OnRateSubscriber");
-        synchronizer->ConsumeIfReadyNoLock();
+        synchronizer->ConsumeIfReadyLock();
     }
 
     basis::core::transport::RateSubscriber rate_subsciber;
