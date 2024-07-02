@@ -15,6 +15,4 @@ protobuf_generate(
   PROTOC_OUT_DIR "${GENERATED_DIR}"
  )
 
-# include(Unit)
-# generate_unit(wip)
 

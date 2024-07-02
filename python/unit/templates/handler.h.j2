@@ -130,7 +130,6 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 {% if 'rate' in sync %}
 private:
     void OnRateSubscriber() {
-        spdlog::info("OnRateSubscriber");
         synchronizer->ConsumeIfReady();
     }
 
