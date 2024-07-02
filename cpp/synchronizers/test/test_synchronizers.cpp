@@ -211,9 +211,9 @@ TEST(TestSyncField, BasicTest) {
   test.OnMessage<2>(unsynced);
   ASSERT_FALSE(test.ConsumeIfReadyLock());
   // [1, 2], [2], [X] (sync on 2)
-  // [], [], []
   test.OnMessage<1>(produce_proto(2));
   ASSERT_TRUE(test.ConsumeIfReadyLock());
+  // [], [], []
 
   // Check that when we sync, we leave data in the buffer for later
   // [], [], [X]
@@ -274,8 +274,8 @@ TEST(TestSyncField, TestApproximate) {
   // Test the same number, again
   test.OnMessage<0>(std::make_shared<ApproxTest>(1.0));
   ASSERT_FALSE(test.ConsumeIfReadyLock());
-  // test.OnMessage<1>(std::make_shared<ApproxTest>(1.0));
-  // ASSERT_TRUE(test.ConsumeIfReadyLock());
+  test.OnMessage<1>(std::make_shared<ApproxTest>(1.0));
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
 
   // Test numbers that are too far apart
   test.OnMessage<0>(std::make_shared<ApproxTest>(2.0));
@@ -313,14 +313,14 @@ TEST(TestSyncField, TestTypeConversion) {
   ASSERT_FALSE(test.ConsumeIfReadyLock());
   test.OnMessage<1>(std::make_shared<TypeConversionInt>(1));
   ASSERT_FALSE(test.ConsumeIfReadyLock());
-  // test.OnMessage<0>(std::make_shared<TypeConversionString>("1"));
-  // ASSERT_TRUE(test.ConsumeIfReadyLock());
+  test.OnMessage<0>(std::make_shared<TypeConversionString>("1"));
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
   test.OnMessage<0>(std::make_shared<TypeConversionString>("33"));
   ASSERT_FALSE(test.ConsumeIfReadyLock());
   test.OnMessage<0>(std::make_shared<TypeConversionString>("42"));
   ASSERT_FALSE(test.ConsumeIfReadyLock());
-  // test.OnMessage<1>(std::make_shared<TypeConversionInt>(33));
-  // ASSERT_TRUE(test.ConsumeIfReadyLock());
-  // test.OnMessage<1>(std::make_shared<TypeConversionInt>(42));
-  // ASSERT_TRUE(test.ConsumeIfReadyLock());
+  test.OnMessage<1>(std::make_shared<TypeConversionInt>(33));
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  test.OnMessage<1>(std::make_shared<TypeConversionInt>(42));
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
 }
