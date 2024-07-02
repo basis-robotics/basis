@@ -200,7 +200,8 @@ TEST(TestSyncField, BasicTest) {
   // [3, 4], [], [X]
   ASSERT_FALSE(test.OnMessage<1>(produce_proto(4)));
   // [3, 4], [3], [X] (sync on 3)
-  ASSERT_TRUE(test.OnMessage<0>(std::make_shared<Foo>(3)));
+  test.OnMessage___<0>(std::make_shared<Foo>(3));
+  ASSERT_TRUE(test.ConsumeIfReadyLock__());
   // [4], [], []
 
   // [4], [], [X]

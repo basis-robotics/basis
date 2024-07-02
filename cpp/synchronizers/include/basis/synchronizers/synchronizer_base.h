@@ -108,6 +108,16 @@ public:
     return ConsumeIfReadyNoLock();
   }
 
+  template <size_t INDEX> void OnMessage___(auto msg) {
+    std::lock_guard lock(mutex);s
+    std::get<INDEX>(storage).ApplyMessage(msg);
+  }
+
+  std::optional<MessageSumType> ConsumeIfReadyLock__() {
+    std::lock_guard lock(mutex);
+    return ConsumeIfReadyNoLock();
+  }
+
 protected:
   std::optional<MessageSumType> ConsumeIfReadyNoLock() {
     if (IsReadyNoLock()) {
