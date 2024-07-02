@@ -31,7 +31,7 @@ namespace basis::core {
 /**
  * Base of all time types. Don't construct this directly.
  *
- * Has nanosecond precision. Doesn't
+ * Has nanosecond precision.
  */
 struct TimeBase {
 protected:

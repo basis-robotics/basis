@@ -23,7 +23,7 @@ public:
 // TODO: move to template??
 extern "C" {
 
-basis::Unit* LoadUnit() {
+basis::Unit* CreateUnit() {
     return new wip();
 }
 

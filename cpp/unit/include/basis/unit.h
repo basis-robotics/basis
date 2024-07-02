@@ -36,7 +36,7 @@ public:
   virtual void Initialize() = 0;
 
   virtual ~Unit() = default;
-  virtual void Update() {
+  virtual void Update([[maybe_unused]] const basis::core::Duration& max_sleep_duration = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     transport_manager->Update();
     // send it off to the coordinator
     if (coordinator_connector) {
@@ -88,17 +88,17 @@ public:
   using Unit::Initialize;
   using Unit::Unit;
 
-  //todo this is absolutely wrong, move the sleep time into the base class if needed!
-  void Update(int sleep_time_s) {
-    Update();
+  virtual void Update(const basis::core::Duration& max_sleep_duration) override {
+    Unit::Update(max_sleep_duration);
+    // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing
 
     // try to get a single event, with a wait time
-    if (auto event = output_queue.Pop(sleep_time_s)) {
+    if (auto event = output_queue.Pop(max_sleep_duration)) {
       (*event)();
     }
 
     // Try to drain the buffer of events
-    while (auto event = output_queue.Pop(0)) {
+    while (auto event = output_queue.Pop()) {
       (*event)();
     }
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
