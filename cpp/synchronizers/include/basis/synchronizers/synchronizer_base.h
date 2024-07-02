@@ -109,7 +109,7 @@ public:
   }
 
   template <size_t INDEX> void OnMessage___(auto msg) {
-    std::lock_guard lock(mutex);s
+    std::lock_guard lock(mutex);
     std::get<INDEX>(storage).ApplyMessage(msg);
   }
 
