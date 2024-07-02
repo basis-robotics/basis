@@ -111,7 +111,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             [this](auto msg){
                 synchronizer->OnMessage<{{loop.index0}}>(msg);
 {% if 'rate' not in sync %}
-                synchronizer->ConsumeIfReadyLock();
+                synchronizer->ConsumeIfReady();
 {% endif %}
             },
             thread_pool, output_queue);
@@ -131,7 +131,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 private:
     void OnRateSubscriber() {
         spdlog::info("OnRateSubscriber");
-        synchronizer->ConsumeIfReadyLock();
+        synchronizer->ConsumeIfReady();
     }
 
     basis::core::transport::RateSubscriber rate_subsciber;

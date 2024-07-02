@@ -106,7 +106,7 @@ public:
     std::get<INDEX>(storage).ApplyMessage(msg);
   }
 
-  std::optional<MessageSumType> ConsumeIfReadyLock() {
+  std::optional<MessageSumType> ConsumeIfReady() {
     std::lock_guard lock(mutex);
     return ConsumeIfReadyNoLock();
   }

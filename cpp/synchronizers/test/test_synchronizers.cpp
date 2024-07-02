@@ -23,24 +23,24 @@ TEST(TestSyncAll, BasicTest) {
 
   // Shouldn't be called
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_FALSE(was_called);
   // Shouldn't be called
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_FALSE(was_called);
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_TRUE(was_called);
   was_called = false;
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_FALSE(was_called);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_TRUE(was_called);
 }
 
@@ -64,18 +64,18 @@ TEST(TestSyncAll, TestOptional) {
   ASSERT_EQ(recvd_b, nullptr);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(*recvd_a, 'a');
   ASSERT_EQ(recvd_b, nullptr);
   recvd_a = nullptr;
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b, nullptr);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(*recvd_a, 'a');
   ASSERT_EQ(*recvd_b, 'b');
 }
@@ -96,24 +96,24 @@ TEST(TestSyncAll, TestCached) {
   ASSERT_EQ(was_called, false);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(was_called, false);
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(was_called, true);
   was_called = false;
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(was_called, true);
   was_called = false;
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(was_called, false);
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(was_called, true);
 }
 
@@ -138,12 +138,12 @@ TEST(TestSyncAll, TestContainer) {
   ASSERT_EQ(recvd_b.size(), 0);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b.size(), 0);
 
   test_all.OnMessage<1>(b1);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(recvd_a, a);
   ASSERT_EQ(recvd_b.size(), 1);
   ASSERT_EQ(recvd_b, decltype(recvd_b)({b1}));
@@ -152,20 +152,20 @@ TEST(TestSyncAll, TestContainer) {
   recvd_b.clear();
 
   test_all.OnMessage<1>(b1);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b.size(), 0);
   test_all.OnMessage<1>(b2);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b.size(), 0);
   test_all.OnMessage<1>(b3);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b.size(), 0);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReadyLock();
+  test_all.ConsumeIfReady();
   ASSERT_EQ(recvd_a, a);
 
   ASSERT_EQ(recvd_b, decltype(recvd_b)({b1, b2, b3}));
@@ -203,51 +203,51 @@ TEST(TestSyncField, BasicTest) {
   // Check that we sync at all
   // [1], [], []
   test.OnMessage<0>(std::make_shared<Foo>(2));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   // [1], [2], []
   test.OnMessage<1>(produce_proto(1));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   // [1], [2], [X]
   test.OnMessage<2>(unsynced);
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   // [1, 2], [2], [X] (sync on 2)
   test.OnMessage<1>(produce_proto(2));
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
   // [], [], []
 
   // Check that when we sync, we leave data in the buffer for later
   // [], [], [X]
   test.OnMessage<2>(unsynced);
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   // [3], [], [X]
   test.OnMessage<1>(produce_proto(3));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   // [3, 4], [], [X]
   test.OnMessage<1>(produce_proto(4));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   // [3, 4], [3], [X] (sync on 3)
   test.OnMessage<0>(std::make_shared<Foo>(3));
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
   // [4], [], []
 
   // [4], [], [X]
   test.OnMessage<2>(unsynced);
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   // [4], [4], [X] (sync on 4)
   test.OnMessage<0>(std::make_shared<Foo>(4));
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
   // [], [], []
 
   // Test that when we sync, we still wait for unsynced messages
 
   // [5], [5], [] (sync on 5, but no output)
   test.OnMessage<0>(std::make_shared<Foo>(5));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<1>(produce_proto(5));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   // [5], [5], [X]
   test.OnMessage<2>(unsynced);
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
 }
 
 struct ApproxTest {
@@ -263,35 +263,35 @@ TEST(TestSyncField, TestApproximate) {
 
   // Test the same number, but no third memeber
   test.OnMessage<0>(std::make_shared<ApproxTest>(0.0));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<1>(std::make_shared<ApproxTest>(0.0));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   auto unsynced = std::make_shared<Unsynced>(0xFF);
   test.OnMessage<2>(unsynced);
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
   // Shouldn't need unsynced after this as we are cached
 
   // Test the same number, again
   test.OnMessage<0>(std::make_shared<ApproxTest>(1.0));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<1>(std::make_shared<ApproxTest>(1.0));
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
 
   // Test numbers that are too far apart
   test.OnMessage<0>(std::make_shared<ApproxTest>(2.0));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<1>(std::make_shared<ApproxTest>(3.0));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
 
   // Test numbers that are similar
   test.OnMessage<0>(std::make_shared<ApproxTest>(3.001));
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
 
   // Test numbers that aren't quite similar enough
   test.OnMessage<0>(std::make_shared<ApproxTest>(4.0));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<1>(std::make_shared<ApproxTest>(4.011));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
 }
 
 struct TypeConversionString {
@@ -310,17 +310,17 @@ TEST(TestSyncField, TestTypeConversion) {
       test;
 
   test.OnMessage<0>(std::make_shared<TypeConversionString>("foobar"));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<1>(std::make_shared<TypeConversionInt>(1));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<0>(std::make_shared<TypeConversionString>("1"));
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
   test.OnMessage<0>(std::make_shared<TypeConversionString>("33"));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<0>(std::make_shared<TypeConversionString>("42"));
-  ASSERT_FALSE(test.ConsumeIfReadyLock());
+  ASSERT_FALSE(test.ConsumeIfReady());
   test.OnMessage<1>(std::make_shared<TypeConversionInt>(33));
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
   test.OnMessage<1>(std::make_shared<TypeConversionInt>(42));
-  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  ASSERT_TRUE(test.ConsumeIfReady());
 }
