@@ -211,6 +211,7 @@ TEST(TestSyncField, BasicTest) {
   test.OnMessage<2>(unsynced);
   ASSERT_FALSE(test.ConsumeIfReadyLock());
   // [1, 2], [2], [X] (sync on 2)
+  // [], [], []
   test.OnMessage<1>(produce_proto(2));
   ASSERT_TRUE(test.ConsumeIfReadyLock());
 
