@@ -1,0 +1,22 @@
+kv_store:
+  key: value
+  other_key: other_value
+processes:
+  navigation:
+    # Specify the units used by the process
+    units:
+      # Unit pathfinder, named pathfinder
+      pathfinder: {}
+      # named alt_pathfinder
+      alt_pathfinder:
+        # Including the same unit twice in one process requires disambigution on the name
+        unit: pathfinder
+        args:
+          - use_experimental_algo=1
+    env:
+      MAP_DIR: /home/basis/maps/oakland
+  lidar:
+    units:
+      lidar_driver:
+        unit_path: /custom/basis/lidar_driver.so
+      lidar_segmentation: {}

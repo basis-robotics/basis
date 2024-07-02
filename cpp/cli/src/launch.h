@@ -63,9 +63,27 @@ void FindUnit([[maybe_unused]] std::string_view unit_name) {
 
 }
 
-void LaunchYaml([[maybe_unused]] const YAML::Node& yaml) {
+void LaunchProcess(const std::string_view process_name, [[maybe_unused]] const YAML::Node& process) {
+  // fork??
+  spdlog::info("{}", process_name);
+
+  // todo safe SIGHUP
+  if(fork() == -1) {
+    // basically we have to exec here as we have threads elsewhere
+  }
+  else {
+
+  }
+}
+
+void LaunchYaml(const YAML::Node& yaml) {
     // todo
-    LaunchSharedObject("/opt/basis/unit/libunit_wip.so");
+    //LaunchSharedObject("/opt/basis/unit/libunit_wip.so");
+    const auto processes = yaml["processes"];
+    for(const auto& node : processes) {
+
+      LaunchProcess(node.first.as<std::string>(), node.second);
+    }
 }
 
 // todo: probably take a std::fs::path here
