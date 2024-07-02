@@ -226,19 +226,19 @@ TEST(TestSyncField, BasicTest) {
   test.OnMessage<1>(produce_proto(4));
   ASSERT_FALSE(test.ConsumeIfReadyLock());
   // [3, 4], [3], [X] (sync on 3)
-  // test.OnMessage<0>(std::make_shared<Foo>(3));
-  // ASSERT_TRUE(test.ConsumeIfReadyLock());
+  test.OnMessage<0>(std::make_shared<Foo>(3));
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
   // [4], [], []
 
   // [4], [], [X]
   test.OnMessage<2>(unsynced);
   ASSERT_FALSE(test.ConsumeIfReadyLock());
   // [4], [4], [X] (sync on 4)
-//   test.OnMessage<0>(std::make_shared<Foo>(4));
-//   ASSERT_TRUE(test.ConsumeIfReadyLock());
-//   // [], [], []
+  test.OnMessage<0>(std::make_shared<Foo>(4));
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
+  // [], [], []
 
-//   // Test that when we sync, we still wait for unsynced messages
+  // Test that when we sync, we still wait for unsynced messages
 
   // [5], [5], [] (sync on 5, but no output)
   test.OnMessage<0>(std::make_shared<Foo>(5));
@@ -246,8 +246,8 @@ TEST(TestSyncField, BasicTest) {
   test.OnMessage<1>(produce_proto(5));
   ASSERT_FALSE(test.ConsumeIfReadyLock());
   // [5], [5], [X]
-//   test.OnMessage<2>(unsynced);
-//   ASSERT_TRUE(test.ConsumeIfReadyLock());
+  test.OnMessage<2>(unsynced);
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
 }
 
 struct ApproxTest {
@@ -266,9 +266,9 @@ TEST(TestSyncField, TestApproximate) {
   ASSERT_FALSE(test.ConsumeIfReadyLock());
   test.OnMessage<1>(std::make_shared<ApproxTest>(0.0));
   ASSERT_FALSE(test.ConsumeIfReadyLock());
-  // auto unsynced = std::make_shared<Unsynced>(0xFF);
-  // test.OnMessage<2>(unsynced);
-  // ASSERT_TRUE(test.ConsumeIfReadyLock());
+  auto unsynced = std::make_shared<Unsynced>(0xFF);
+  test.OnMessage<2>(unsynced);
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
   // Shouldn't need unsynced after this as we are cached
 
   // Test the same number, again
@@ -284,8 +284,8 @@ TEST(TestSyncField, TestApproximate) {
   ASSERT_FALSE(test.ConsumeIfReadyLock());
 
   // Test numbers that are similar
-  // test.OnMessage<0>(std::make_shared<ApproxTest>(3.001));
-  // ASSERT_TRUE(test.ConsumeIfReadyLock());
+  test.OnMessage<0>(std::make_shared<ApproxTest>(3.001));
+  ASSERT_TRUE(test.ConsumeIfReadyLock());
 
   // Test numbers that aren't quite similar enough
   test.OnMessage<0>(std::make_shared<ApproxTest>(4.0));
