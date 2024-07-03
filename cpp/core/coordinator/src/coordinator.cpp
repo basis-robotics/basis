@@ -46,7 +46,7 @@ void Coordinator::Update() {
         // todo: break these out into handlers for better unit testing
         switch (msg->PossibleMessages_case()) {
         case proto::ClientToCoordinatorMessage::kTransportManagerInfo:
-          HandleTransportManagerInfoRequest(msg->mutable_transport_manager_info(), client);
+          HandleTransportManagerInfoRequest(msg->release_transport_manager_info(), client);
           break;
 
         case proto::ClientToCoordinatorMessage::kSchemas:
