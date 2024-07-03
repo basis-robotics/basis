@@ -8,6 +8,7 @@
 #include <unit/simple_pub/unit_base.h>
 
 class simple_pub : public unit::simple_pub::Base {
+public:
   simple_pub() {
 
   }
