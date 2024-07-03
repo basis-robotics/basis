@@ -12,13 +12,13 @@ using namespace unit::wip;
 
 
 StereoMatch::Output wip::StereoMatch(const StereoMatch::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }
 
 TimeTest::Output wip::TimeTest(const TimeTest::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }
 
 ApproxTest::Output wip::ApproxTest(const ApproxTest::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }

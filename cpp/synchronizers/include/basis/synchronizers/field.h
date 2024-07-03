@@ -60,7 +60,7 @@ public:
    * @param msg
    * @return the set of messages that would be called using the callback
    */
-  template <size_t INDEX> std::optional<MessageSumType> OnMessage(auto msg) {
+  template <size_t INDEX> void OnMessage(auto msg) {
     std::lock_guard lock(this->mutex);
 
     constexpr auto pointer_to_member = std::get<INDEX>(fields);
@@ -85,8 +85,6 @@ public:
     } else {
       std::get<INDEX>(this->storage).ApplyMessage(msg);
     }
-
-    return this->ConsumeIfReadyNoLock();
   }
 
 protected:

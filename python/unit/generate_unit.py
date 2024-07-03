@@ -29,6 +29,9 @@ def generate_unit(unit_path, output_dir, source_dir):
 
     handler_output_dir = output_dir + "/handlers"
     os.makedirs(handler_output_dir, exist_ok=True)
+    os.makedirs(f'{source_dir}/include/', exist_ok=True)
+    os.makedirs(f'{source_dir}/src/', exist_ok=True)
+    os.makedirs(f'{source_dir}/template/', exist_ok=True)
 
     # Validate with the schema
     jsonschema.validate(instance=unit, schema=schema)
@@ -81,7 +84,7 @@ def generate_unit(unit_path, output_dir, source_dir):
     template_output = template.render(in_template_dir = True, unit_name=unit_name, **unit)
     with open(f'{source_dir}/template/{unit_name}.example.h', 'w') as f:
         f.write(template_output)
-        
+
     unit_main_header = f'{source_dir}/include/{unit_name}.h'
     if not os.path.exists(unit_main_header):
         template = jinja_env.get_template("unit.h.j2")

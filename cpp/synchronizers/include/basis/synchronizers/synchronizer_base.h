@@ -101,10 +101,13 @@ public:
 
   virtual ~SynchronizerBase() = default;
 
-  template <size_t INDEX> std::optional<MessageSumType> OnMessage(auto msg) {
+  template <size_t INDEX> void OnMessage(auto msg) {
     std::lock_guard lock(mutex);
     std::get<INDEX>(storage).ApplyMessage(msg);
+  }
 
+  std::optional<MessageSumType> ConsumeIfReady() {
+    std::lock_guard lock(mutex);
     return ConsumeIfReadyNoLock();
   }
 
