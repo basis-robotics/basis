@@ -99,8 +99,9 @@ void Coordinator::Update() {
   }
 }
 
-void Coordinator:: HandleTransportManagerInfoRequest(proto::TransportManagerInfo* transport_manager_info, Connection &client) {
-    client.info = std::unique_ptr<proto::TransportManagerInfo>(transport_manager_info);
+void Coordinator::HandleTransportManagerInfoRequest(proto::TransportManagerInfo *transport_manager_info,
+                                                    Connection &client) {
+  client.info = std::unique_ptr<proto::TransportManagerInfo>(transport_manager_info);
 }
 
 void Coordinator::HandleSchemasRequest(const proto::MessageSchemas &schemas) {
@@ -145,6 +146,5 @@ void Coordinator::HandleRequestSchemasRequest(const proto::RequestSchemas &reque
     client.SendMessage(SerializeMessagePacket(schema_message));
   }
 }
-
 
 } // namespace basis::core::transport
