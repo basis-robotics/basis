@@ -44,48 +44,22 @@ void Coordinator::Update() {
         spdlog::error("Coordinator: failed to deserialize a message");
       } else {
         // todo: break these out into handlers for better unit testing
-        if (msg->has_transport_manager_info()) {
-          client.info = std::unique_ptr<proto::TransportManagerInfo>(msg->release_transport_manager_info());
-        } else if (msg->has_schemas()) {
-          for (auto &schema : msg->schemas().schemas()) {
-            std::string key = schema.serializer() + ":" + schema.name();
-            if (!known_schemas.contains(key)) {
-              spdlog::info("Adding schema {}", key);
-              known_schemas.emplace(std::move(key), std::move(schema));
-            }
-          }
-        } else if (msg->has_request_schemas()) {
-          std::vector<std::string> errors;
-          std::vector<proto::MessageSchema> schemas;
-          for (const auto &request : msg->request_schemas().schema_ids()) {
-            auto it = known_schemas.find(request);
-            if (it == known_schemas.end()) {
-              errors.push_back(request);
-            } else {
-              schemas.push_back(it->second);
-            }
-          }
+        switch (msg->PossibleMessages_case()) {
+        case proto::ClientToCoordinatorMessage::kTransportManagerInfo:
+          HandleTransportManagerInfoRequest(msg->mutable_transport_manager_info(), client);
+          break;
 
-          if (errors.size()) {
-            auto comma_fold = [](std::string a, std::string b) { return std::move(a) + ", " + b; };
+        case proto::ClientToCoordinatorMessage::kSchemas:
+          HandleSchemasRequest(msg->schemas());
+          break;
 
-            std::string s = std::accumulate(std::next(errors.begin()), errors.end(),
-                                            "Missing schemas: " + errors[0], // start with first element
-                                            comma_fold);
-            proto::CoordinatorMessage errors_message;
+        case proto::ClientToCoordinatorMessage::kRequestSchemas:
+          HandleRequestSchemasRequest(msg->request_schemas(), client);
+          break;
 
-            errors_message.set_error(s);
-            auto shared_message = SerializeMessagePacket(errors_message);
-            client.SendMessage(shared_message);
-          }
-          if (schemas.size()) {
-            proto::CoordinatorMessage schema_message;
-            *schema_message.mutable_schemas()->mutable_schemas() = {schemas.begin(), schemas.end()};
-
-            client.SendMessage(SerializeMessagePacket(schema_message));
-          }
-        } else {
+        case proto::ClientToCoordinatorMessage::POSSIBLEMESSAGES_NOT_SET:
           spdlog::error("Unknown message from client!");
+          break;
         }
       }
       // spdlog::debug("Got completed message {}", client.info->DebugString());
@@ -124,5 +98,53 @@ void Coordinator::Update() {
     client.SendMessage(shared_message);
   }
 }
+
+void Coordinator:: HandleTransportManagerInfoRequest(proto::TransportManagerInfo* transport_manager_info, Connection &client) {
+    client.info = std::unique_ptr<proto::TransportManagerInfo>(transport_manager_info);
+}
+
+void Coordinator::HandleSchemasRequest(const proto::MessageSchemas &schemas) {
+  for (auto &schema : schemas.schemas()) {
+    std::string key = schema.serializer() + ":" + schema.name();
+    if (!known_schemas.contains(key)) {
+      spdlog::info("Adding schema {}", key);
+      known_schemas.emplace(std::move(key), std::move(schema));
+    }
+  }
+}
+
+void Coordinator::HandleRequestSchemasRequest(const proto::RequestSchemas &request_schemas, Connection &client) {
+
+  std::vector<std::string> errors;
+  std::vector<proto::MessageSchema> schemas;
+  for (const auto &request : request_schemas.schema_ids()) {
+    auto it = known_schemas.find(request);
+    if (it == known_schemas.end()) {
+      errors.push_back(request);
+    } else {
+      schemas.push_back(it->second);
+    }
+  }
+
+  if (errors.size()) {
+    auto comma_fold = [](std::string a, std::string b) { return std::move(a) + ", " + b; };
+
+    std::string s = std::accumulate(std::next(errors.begin()), errors.end(),
+                                    "Missing schemas: " + errors[0], // start with first element
+                                    comma_fold);
+    proto::CoordinatorMessage errors_message;
+
+    errors_message.set_error(s);
+    auto shared_message = SerializeMessagePacket(errors_message);
+    client.SendMessage(shared_message);
+  }
+  if (schemas.size()) {
+    proto::CoordinatorMessage schema_message;
+    *schema_message.mutable_schemas()->mutable_schemas() = {schemas.begin(), schemas.end()};
+
+    client.SendMessage(SerializeMessagePacket(schema_message));
+  }
+}
+
 
 } // namespace basis::core::transport

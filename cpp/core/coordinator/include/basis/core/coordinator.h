@@ -72,7 +72,7 @@ public:
    */
   static std::optional<Coordinator> Create(uint16_t port = BASIS_PUBLISH_INFO_PORT);
 
-  Coordinator(networking::TcpListenSocket listen_socket) : listen_socket(std::move(listen_socket)) {}
+  Coordinator(networking::TcpListenSocket&& listen_socket) : listen_socket(std::move(listen_socket)) {}
 
   /**
    * Gathers the publisher information from each client and packages it up into one message.
@@ -100,6 +100,11 @@ protected:
     Serializer::SerializeToSpan(message, shared_message->GetMutablePayload());
     return shared_message;
   }
+
+  void HandleTransportManagerInfoRequest(proto::TransportManagerInfo* transport_manager_info, Connection &client);
+  void HandleSchemasRequest(const proto::MessageSchemas &schemas);
+  void HandleRequestSchemasRequest(const proto::RequestSchemas &request_schemas, Connection &client);
+
   /**
    * The TCP listen socket.
    */
