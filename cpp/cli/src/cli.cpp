@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
   // basis launch
   argparse::ArgumentParser launch_command("launch");
   launch_command.add_description("launch a yaml");
-  launch_command.add_argument("--process").help("The process to launch inside the yaml");
+  launch_command.add_argument("--process").help("The process to launch inside the yaml").default_value("");
   launch_command.add_argument("launch_yaml");
   parser.add_subparser(launch_command);
 
@@ -309,14 +309,9 @@ int main(int argc, char *argv[]) {
     }
   } else if (parser.is_subcommand_used("launch")) {
     auto launch_yaml = launch_command.get("launch_yaml");
+    std::vector<std::string> args(argv, argv + argc);
+    LaunchYamlPath(launch_yaml, args, launch_command.get("--process"));
     
-    if(launch_command.present("--process")) {
-      spdlog::info("process {}", launch_command.get("--process"));
-    }
-    else {
-      std::vector<std::string> args(argv, argv + argc);
-      LaunchYamlPath(launch_yaml, args);
-    }
   }
 
   serialization_plugins.clear();
