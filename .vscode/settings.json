@@ -90,5 +90,7 @@
     },
     "yaml.disableAdditionalProperties": true,
     "yaml.disableDefaultProperties": false,
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "C_Cpp.clang_format_fallbackStyle": "Google",
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format-18"
 }

@@ -3,7 +3,8 @@
 #include <dlfcn.h>
 #include <basis/unit.h>
 #include <unistd.h>
-#include <sys/wait.h>
+
+#include "process_manager.h"
 
 struct DlClose {
   void operator()(void* handle) {
@@ -52,6 +53,8 @@ void LaunchSharedObject([[maybe_unused]] const std::filesystem::path& path) {
   if(!unit) {
     return;
   }
+  // TODO: consider passing the coordinator connection in
+  // ...it may have threading bugs, better not, for now
   unit->WaitForCoordinatorConnection();
   unit->CreateTransportManager();
   unit->Initialize();
@@ -65,11 +68,8 @@ void FindUnit([[maybe_unused]] std::string_view unit_name) {
 
 }
 
-struct ManagedProcess {
-  int pid;
-};
 
-void LaunchSublauncher(const std::string& process_name, const std::vector<std::string>& args) {
+[[nodiscard]] Process LaunchSublauncher(const std::string& process_name, const std::vector<std::string>& args) {
   assert(args.size() >= 3);
 
   std::vector<const char*> args_copy;
@@ -88,26 +88,28 @@ void LaunchSublauncher(const std::string& process_name, const std::vector<std::s
   // todo safe SIGHUP
   int pid = fork();
   if(pid == -1) {
-    // error
+    spdlog::error("Error {} launching {}", strerror(errno), process_name);
   }
   else if(pid == 0) {
     execv(args[0].data(), const_cast<char**>(args_copy.data()));
   }
   else {
-    spdlog::info("executed with pid {}", pid);
-    int status = 0;
-    //waitpid(pid, WNOHANG);
-    waitpid(pid, &status, 0);
-    spdlog::info("exited pid {}", pid);
+    spdlog::debug("forked with pid {}", pid);
   }
+
+  return Process(pid);
 }
 
 void LaunchYaml(const YAML::Node& yaml, const std::vector<std::string>& args) {
     // todo
     //LaunchSharedObject("/opt/basis/unit/libunit_wip.so");
+    std::vector<Process> managed_processes;
     const auto processes = yaml["processes"];
     for(const auto& node : processes) {
-      LaunchSublauncher(node.first.as<std::string>(), args);
+      managed_processes.push_back(LaunchSublauncher(node.first.as<std::string>(), args));
+    }
+    for(Process& process : managed_processes) {
+      process.Wait();
     }
 }
 

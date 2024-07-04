@@ -253,19 +253,18 @@ int main(int argc, char *argv[]) {
   }
 
   const uint16_t port = parser.get<uint16_t>("--port");
-spdlog::info("connection =");
+
   auto connection = basis::core::transport::CoordinatorConnector::Create(port);
   if (!connection) {
     spdlog::error("Unable to connect to the basis coordinator at port {}", port);
     return 1;
   }
-spdlog::info("connection wait");
+
   auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
   while (!connection->GetLastNetworkInfo() && std::chrono::steady_clock::now() < end) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     connection->Update();
   }
-  spdlog::info("connection probably connected");
   auto *info = connection->GetLastNetworkInfo();
   if (!info) {
     spdlog::error("Timed out waiting for network info from coordinator");
