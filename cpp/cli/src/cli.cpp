@@ -240,6 +240,7 @@ int main(int argc, char *argv[]) {
   // basis launch
   argparse::ArgumentParser launch_command("launch");
   launch_command.add_description("launch a yaml");
+  launch_command.add_argument("--process").help("The process to launch inside the yaml");
   launch_command.add_argument("launch_yaml");
   parser.add_subparser(launch_command);
 
@@ -252,18 +253,19 @@ int main(int argc, char *argv[]) {
   }
 
   const uint16_t port = parser.get<uint16_t>("--port");
-
+spdlog::info("connection =");
   auto connection = basis::core::transport::CoordinatorConnector::Create(port);
   if (!connection) {
     spdlog::error("Unable to connect to the basis coordinator at port {}", port);
     return 1;
   }
-
+spdlog::info("connection wait");
   auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
   while (!connection->GetLastNetworkInfo() && std::chrono::steady_clock::now() < end) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     connection->Update();
   }
+  spdlog::info("connection probably connected");
   auto *info = connection->GetLastNetworkInfo();
   if (!info) {
     spdlog::error("Timed out waiting for network info from coordinator");
@@ -308,7 +310,14 @@ int main(int argc, char *argv[]) {
     }
   } else if (parser.is_subcommand_used("launch")) {
     auto launch_yaml = launch_command.get("launch_yaml");
-    LaunchYamlPath(launch_yaml);
+    
+    if(launch_command.present("--process")) {
+      spdlog::info("process {}", launch_command.get("--process"));
+    }
+    else {
+      std::vector<std::string> args(argv, argv + argc);
+      LaunchYamlPath(launch_yaml, args);
+    }
   }
 
   serialization_plugins.clear();

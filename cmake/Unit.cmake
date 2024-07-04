@@ -47,6 +47,8 @@ function(generate_unit UNIT_NAME)
 
     target_include_directories(${TARGET_NAME} PUBLIC ${GENERATED_DIR} include)
     target_link_libraries(${TARGET_NAME} basis::unit basis::synchronizers ${PARSED_ARGS_DEPENDS})
+    set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${UNIT_NAME}.unit")
+    set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "")
 
     add_executable(${TARGET_NAME}_bin 
         ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
@@ -56,7 +58,7 @@ function(generate_unit UNIT_NAME)
 
     add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})
 
-    # TODO: install .so file to /opt/basis/unit/
     install(TARGETS ${TARGET_NAME} DESTINATION unit/)
+    install(FILES ${UNIT_FILE_NAME} DESTINATION unit/)   
 
 endfunction()

@@ -2,6 +2,8 @@
 #include <yaml-cpp/yaml.h>
 #include <dlfcn.h>
 #include <basis/unit.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 struct DlClose {
   void operator()(void* handle) {
@@ -63,33 +65,56 @@ void FindUnit([[maybe_unused]] std::string_view unit_name) {
 
 }
 
-void LaunchProcess(const std::string_view process_name, [[maybe_unused]] const YAML::Node& process) {
-  // fork??
-  spdlog::info("{}", process_name);
+struct ManagedProcess {
+  int pid;
+};
+
+void LaunchSublauncher(const std::string& process_name, const std::vector<std::string>& args) {
+  assert(args.size() >= 3);
+
+  std::vector<const char*> args_copy;
+
+  args_copy.push_back(args[0].data());
+  args_copy.push_back(args[1].data());
+
+  args_copy.push_back("--process");
+  args_copy.push_back(process_name.data());
+  
+  for(size_t i = 2; i < args.size(); i++) {
+    args_copy.push_back(args[i].data());
+  }
+  args_copy.push_back(nullptr);
 
   // todo safe SIGHUP
-  if(fork() == -1) {
-    // basically we have to exec here as we have threads elsewhere
+  int pid = fork();
+  if(pid == -1) {
+    // error
+  }
+  else if(pid == 0) {
+    execv(args[0].data(), const_cast<char**>(args_copy.data()));
   }
   else {
-
+    spdlog::info("executed with pid {}", pid);
+    int status = 0;
+    //waitpid(pid, WNOHANG);
+    waitpid(pid, &status, 0);
+    spdlog::info("exited pid {}", pid);
   }
 }
 
-void LaunchYaml(const YAML::Node& yaml) {
+void LaunchYaml(const YAML::Node& yaml, const std::vector<std::string>& args) {
     // todo
     //LaunchSharedObject("/opt/basis/unit/libunit_wip.so");
     const auto processes = yaml["processes"];
     for(const auto& node : processes) {
-
-      LaunchProcess(node.first.as<std::string>(), node.second);
+      LaunchSublauncher(node.first.as<std::string>(), args);
     }
 }
 
 // todo: probably take a std::fs::path here
-void LaunchYamlPath(std::string_view yaml_path) {
+void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& args) {
     std::cout << yaml_path << std::endl;
 
     YAML::Node loaded_yaml = YAML::LoadFile(std::string(yaml_path));
-    LaunchYaml(loaded_yaml);
+    LaunchYaml(loaded_yaml, args);
 }

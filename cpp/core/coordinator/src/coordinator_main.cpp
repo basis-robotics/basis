@@ -17,7 +17,7 @@ int main() {
   auto next_sleep = std::chrono::steady_clock::now();
   while (true) {
     spdlog::trace("Coordinator::Update()");
-    next_sleep += std::chrono::seconds(1);
+    next_sleep += std::chrono::milliseconds(50);
     coordinator->Update();
     std::this_thread::sleep_until(next_sleep);
   }
