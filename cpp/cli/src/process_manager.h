@@ -26,14 +26,18 @@ public:
 
   ~Process() { Shutdown(); }
 
+  int GetPid() const {
+    return pid;
+  }
+
   void Shutdown() {
     if (config.kill_on_shutdown) {
       KillAndWait();
     }
   }
 
-  void Wait(int timeout_s = 0) {
-    int wait_ret = waitpid(pid, nullptr, timeout_s ? WNOHANG : 0);
+  bool Wait(int timeout_s = -1) {
+    int wait_ret = waitpid(pid, nullptr, timeout_s >= 0 ? WNOHANG : 0);
     
     const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_s);
 
@@ -48,6 +52,8 @@ public:
     if (wait_ret > 0) {
       pid = -1;
     }
+
+    return pid == -1;
   }
 
   void KillAndWait() {

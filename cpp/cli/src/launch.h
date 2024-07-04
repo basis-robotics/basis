@@ -109,7 +109,10 @@ void LaunchYaml(const YAML::Node& yaml, const std::vector<std::string>& args) {
       managed_processes.push_back(LaunchSublauncher(node.first.as<std::string>(), args));
     }
     for(Process& process : managed_processes) {
-      process.Wait();
+      bool killed = process.Wait();
+      if(!killed) {
+        spdlog::error("Failed to kill pid {}", process.GetPid());
+      }
     }
 }
 
