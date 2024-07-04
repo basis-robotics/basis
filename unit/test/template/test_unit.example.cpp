@@ -12,17 +12,17 @@ using namespace unit::test_unit;
 
 
 StereoMatch::Output test_unit::StereoMatch(const StereoMatch::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }
 
 AllTest::Output test_unit::AllTest(const AllTest::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }
 
 ApproxTest::Output test_unit::ApproxTest(const ApproxTest::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }
 
 TestEqualOptions::Output test_unit::TestEqualOptions(const TestEqualOptions::Input& input) {
-    static_assert(false, "Impelement me");
+    static_assert(false, "Implement me");
 }

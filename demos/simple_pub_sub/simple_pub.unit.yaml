@@ -1,0 +1,12 @@
+threading_model:
+  single
+cpp_includes:
+  - simple_pub_sub.pb.h
+handlers:
+  PublishAt1Hz:
+    sync:
+      type: all
+      rate: 1
+    outputs:
+      /chatter:
+        type: protobuf:StringMessage

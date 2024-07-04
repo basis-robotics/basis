@@ -4,7 +4,8 @@ project(basis)
 # Allow include() on our cmake directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-set(BASIS_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+set(BASIS_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL STRING)
+message(STATUS "BASIS_SOURCE_ROOT: ${BASIS_SOURCE_ROOT}")
 
 #################################################################################
 # Options

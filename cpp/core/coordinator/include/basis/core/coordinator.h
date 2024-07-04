@@ -54,7 +54,7 @@ class Coordinator {
    * An internal connection to a TransportManager
    */
   struct Connection : public basis::plugins::transport::TcpSender {
-    Connection(core::networking::TcpSocket socket) : TcpSender(std::move(socket)) { socket.SetNonblocking(); }
+    Connection(core::networking::TcpSocket &&socket) : TcpSender(std::move(socket)) { socket.SetNonblocking(); }
 
     IncompleteMessagePacket in_progress_packet;
 
@@ -72,7 +72,7 @@ public:
    */
   static std::optional<Coordinator> Create(uint16_t port = BASIS_PUBLISH_INFO_PORT);
 
-  Coordinator(networking::TcpListenSocket listen_socket) : listen_socket(std::move(listen_socket)) {}
+  Coordinator(networking::TcpListenSocket &&listen_socket) : listen_socket(std::move(listen_socket)) {}
 
   /**
    * Gathers the publisher information from each client and packages it up into one message.
@@ -91,7 +91,8 @@ public:
   const std::unordered_map<std::string, proto::MessageSchema> &GetKnownSchemas() const { return known_schemas; }
 
 protected:
-  std::shared_ptr<basis::core::transport::MessagePacket> SerializeMessagePacket(const proto::CoordinatorMessage& message) {
+  std::shared_ptr<basis::core::transport::MessagePacket>
+  SerializeMessagePacket(const proto::CoordinatorMessage &message) {
     using Serializer = SerializationHandler<proto::CoordinatorMessage>::type;
     const size_t size = Serializer::GetSerializedSize(message);
 
@@ -100,6 +101,11 @@ protected:
     Serializer::SerializeToSpan(message, shared_message->GetMutablePayload());
     return shared_message;
   }
+
+  void HandleTransportManagerInfoRequest(proto::TransportManagerInfo *transport_manager_info, Connection &client);
+  void HandleSchemasRequest(const proto::MessageSchemas &schemas);
+  void HandleRequestSchemasRequest(const proto::RequestSchemas &request_schemas, Connection &client);
+
   /**
    * The TCP listen socket.
    */
