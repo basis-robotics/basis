@@ -4,6 +4,9 @@
 #include <basis/unit.h>
 #include <unistd.h>
 
+#include <linux/prctl.h>  /* Definition of PR_* constants */
+#include <sys/prctl.h>
+
 #include "process_manager.h"
 
 struct DlClose {
@@ -91,6 +94,9 @@ void FindUnit([[maybe_unused]] std::string_view unit_name) {
     spdlog::error("Error {} launching {}", strerror(errno), process_name);
   }
   else if(pid == 0) {
+    // die when the parent dies
+    // todo: might want to assert we are main thread here
+    prctl(PR_SET_PDEATHSIG, SIGHUP);
     execv(args[0].data(), const_cast<char**>(args_copy.data()));
   }
   else {
