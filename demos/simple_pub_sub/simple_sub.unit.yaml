@@ -3,7 +3,7 @@ threading_model:
 cpp_includes:
   - simple_pub_sub.pb.h
 handlers:
-  SimpleSub:
+  OnChatter:
     sync:
       type: all
     inputs:

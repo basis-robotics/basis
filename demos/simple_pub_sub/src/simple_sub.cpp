@@ -2,8 +2,7 @@
 
 using namespace unit::simple_sub;
 
-
-SimpleSub::Output simple_sub::SimpleSub(const SimpleSub::Input& input) {
-    spdlog::info("SimpleSub::SimpleSub: {}", input.chatter->message());
-    return SimpleSub::Output();
+OnChatter::Output simple_sub::OnChatter(const OnChatter::Input &input) {
+  spdlog::info("simple_sub::OnChatter: {}", input.chatter->message());
+  return OnChatter::Output();
 }
