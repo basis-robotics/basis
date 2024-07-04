@@ -11,6 +11,6 @@
 using namespace unit::simple_pub;
 
 
-SimplePub::Output simple_pub::SimplePub(const SimplePub::Input& input) {
+PublishAt1Hz::Output simple_pub::PublishAt1Hz(const PublishAt1Hz::Input& input) {
     static_assert(false, "Implement me");
 }

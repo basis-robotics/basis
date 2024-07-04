@@ -14,6 +14,6 @@ public:
   }
 
 
-    virtual unit::simple_sub::SimpleSub::Output SimpleSub(const unit::simple_sub::SimpleSub::Input& input) override;
+    virtual unit::simple_sub::OnChatter::Output OnChatter(const unit::simple_sub::OnChatter::Input& input) override;
 
 };

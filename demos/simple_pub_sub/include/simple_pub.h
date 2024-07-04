@@ -12,6 +12,6 @@ public:
   }
 
 
-    virtual unit::simple_pub::SimplePub::Output SimplePub(const unit::simple_pub::SimplePub::Input& input) override;
+    virtual unit::simple_pub::PublishAt1Hz::Output PublishAt1Hz(const unit::simple_pub::PublishAt1Hz::Input& input) override;
 
 };

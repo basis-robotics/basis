@@ -11,6 +11,6 @@
 using namespace unit::simple_sub;
 
 
-SimpleSub::Output simple_sub::SimpleSub(const SimpleSub::Input& input) {
+OnChatter::Output simple_sub::OnChatter(const OnChatter::Input& input) {
     static_assert(false, "Implement me");
 }

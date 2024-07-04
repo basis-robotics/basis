@@ -2,12 +2,12 @@
 
 using namespace unit::simple_pub;
 
-
-SimplePub::Output simple_pub::SimplePub(const SimplePub::Input& input) {
-    spdlog::info("SimplePub::SimplePub");
-    SimplePub::Output output;
-    std::shared_ptr<StringMessage> msg{std::make_shared<StringMessage>()};
-    msg->set_message(std::string("Hello, world!"));
-    output.chatter = msg;
-    return output;
+PublishAt1Hz::Output
+simple_pub::PublishAt1Hz(const PublishAt1Hz::Input &input) {
+  spdlog::info("SimplePub::SimplePub");
+  PublishAt1Hz::Output output;
+  std::shared_ptr<StringMessage> msg{std::make_shared<StringMessage>()};
+  msg->set_message(std::string("Hello, world!"));
+  output.chatter = msg;
+  return output;
 }
