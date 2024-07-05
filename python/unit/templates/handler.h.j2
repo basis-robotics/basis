@@ -69,11 +69,6 @@ namespace unit::{{unit_name}}::{{handler_name}} {
     struct PubSub {
         using Callback = std::function<Output(const Input&)>;
         PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr)
-{% if 'rate' in sync %}
-        : rate_subsciber(
-          basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{sync.rate}})),
-          std::bind(&PubSub::OnRateSubscriber, this))
-{% endif %}
         {
             if(!publish_callback) {
                 publish_callback = 
@@ -101,6 +96,14 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             }
             );
         }
+
+        ~PubSub() {
+            {% if 'rate' in sync %}
+            // Ensure that we stop the rate subscriber thread before we destruct the synchronizer
+            rate_subsciber = nullptr;
+            {% endif %}
+        }
+
         void SetupPubSub(
             basis::core::transport::TransportManager* transport_manager,
             basis::core::transport::OutputQueue* output_queue,
@@ -119,6 +122,17 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         {% for topic_name, output in outputs.items() %}
             {{output.cpp_topic_name}}_publisher = transport_manager->Advertise<{{output.cpp_message_type}}>("{{topic_name}}");
         {% endfor %}
+        {% if 'rate' in sync %}
+        rate_subsciber = std::make_unique<basis::core::transport::RateSubscriber>(
+          basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{sync.rate}})),
+          [this, output_queue](basis::core::MonotonicTime time) {
+            output_queue->Emplace([this, time]() {
+                OnRateSubscriber(time);
+            });
+          }
+          
+          );
+        {% endif %}
         }
 
         void OnOutput(const Output& output) {
@@ -127,13 +141,16 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 {%- endfor %}
         }
 
+
+
 {% if 'rate' in sync %}
 private:
-    void OnRateSubscriber() {
+    void OnRateSubscriber(const basis::core::MonotonicTime&) {
+        // TODO: consume the monotonic time
         synchronizer->ConsumeIfReady();
     }
 
-    basis::core::transport::RateSubscriber rate_subsciber;
+    std::unique_ptr<basis::core::transport::RateSubscriber> rate_subsciber;
 
 public:
 {% endif %}

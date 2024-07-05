@@ -23,6 +23,8 @@ std::unique_ptr<basis::Unit> CreateUnit([[maybe_unused]] const std::filesystem::
 
   auto maybe_unit_loader = unit_loaders.find(string_path);
   if(maybe_unit_loader == unit_loaders.end()) {
+    // For now - need to use RTLD_GLOBAL to allow different inproc transports to communicate
+    // This is the opposite of how the protobuf needs things - but no crashes on shutdown (yet?)
     void *handle = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (!handle) {
       std::cerr << "Failed to dlopen " << path << std::endl;

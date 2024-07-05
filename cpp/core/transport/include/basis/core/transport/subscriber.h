@@ -97,14 +97,17 @@ public:
   RateSubscriber() = default;
 
   ~RateSubscriber() {
+    Stop();
+  }
+
+  void Start() { thread = std::thread(&RateSubscriber::ThreadFunction, this); }
+
+  void Stop() {
     stop = true;
     if (thread.joinable()) {
       thread.join();
     }
   }
-
-  void Start() { thread = std::thread(&RateSubscriber::ThreadFunction, this); }
-
 protected:
   void ThreadFunction() {
     MonotonicTime next = MonotonicTime::Now();

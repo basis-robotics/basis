@@ -31,8 +31,8 @@ public:
         for(auto& thread : threads) {
             thread.join();
         }
-        spdlog::info("die");
     }
+
     bool RunProcess(const ProcessDefinition& process) {
         spdlog::info("Running process with {} units", process.units.size());
 
