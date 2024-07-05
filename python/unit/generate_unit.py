@@ -75,7 +75,7 @@ def generate_unit(unit_path, output_dir, source_dir):
     for unit_file in unit_files:
         template = jinja_env.get_template(f"{unit_file}.j2")
         template_output = template.render(unit_name=unit_name, **unit)
-        with open(f'{output_dir}/{unit_file}.h', 'w') as f:
+        with open(f'{output_dir}/{unit_file}', 'w') as f:
             f.write(template_output)
         
     template = jinja_env.get_template("unit.h.j2")
