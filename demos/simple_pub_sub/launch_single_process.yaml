@@ -1,0 +1,5 @@
+processes:
+  demo:
+    units:
+      simple_pub: {}
+      simple_sub: {}

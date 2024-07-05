@@ -104,10 +104,19 @@ protected:
     spdlog::error("Error {} launching {}", strerror(errno), process_name);
   }
   else if(pid == 0) {
+    // It's unsafe to do any allocations here - we may have forked while malloc() was locked
+
     // die when the parent dies
     // todo: might want to assert we are main thread here
     prctl(PR_SET_PDEATHSIG, SIGHUP);
     execv(args[0].data(), const_cast<char**>(args_copy.data()));
+    // Manually print to stderr, don't trust anything
+    int error = errno;
+    fputs("Failed to execv " , stderr);
+    fputs(args[0].data(), stderr);
+    fputs(" ", stderr);
+    fputs(strerror(error), stderr);
+    exit(-1);
   }
   else {
     spdlog::debug("forked with pid {}", pid);

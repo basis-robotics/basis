@@ -19,12 +19,3 @@ public:
   virtual unit::wip::ApproxTest::Output
   ApproxTest(const unit::wip::ApproxTest::Input &input) override;
 };
-
-// TODO: move to template??
-extern "C" {
-
-basis::Unit* CreateUnit() {
-    return new wip();
-}
-
-}
