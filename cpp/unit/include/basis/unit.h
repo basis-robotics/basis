@@ -100,10 +100,6 @@ public:
   using Unit::Initialize;
   using Unit::Unit;
 
-  SingleThreadedUnit(std::string_view unit_name) : Unit(unit_name) {
-
-  }
-
   virtual void Update(const basis::core::Duration& max_sleep_duration) override {
     Unit::Update(max_sleep_duration);
     // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing

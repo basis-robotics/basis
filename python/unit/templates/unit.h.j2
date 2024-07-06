@@ -11,7 +11,6 @@
 
 class {{unit_name}} : public unit::{{unit_name}}::Base {
 public:
-  {{unit_name}}() : unit::{{unit_name}}::Base() {};
 
 {% for handler_name in handlers %}
     virtual unit::{{unit_name}}::{{handler_name}}::Output {{handler_name}}(const unit::{{unit_name}}::{{handler_name}}::Input& input) override;

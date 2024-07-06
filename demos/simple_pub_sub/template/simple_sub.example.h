@@ -9,7 +9,6 @@
 
 class simple_sub : public unit::simple_sub::Base {
 public:
-  simple_sub() : unit::simple_sub::Base() {};
 
 
     virtual unit::simple_sub::OnChatter::Output OnChatter(const unit::simple_sub::OnChatter::Input& input) override;
