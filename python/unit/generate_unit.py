@@ -70,16 +70,14 @@ def generate_unit(unit_path, output_dir, source_dir):
             f.write(template_output)
     
     # Write main unit files
-    template = jinja_env.get_template("unit_base.h.j2")
-    template_output = template.render(unit_name=unit_name, **unit)
-    with open(f'{output_dir}/unit_base.h', 'w') as f:
-        f.write(template_output)
-        
-    template = jinja_env.get_template("unit_base.cpp.j2")
-    template_output = template.render(unit_name=unit_name, **unit)
-    with open(f'{output_dir}/unit_base.cpp', 'w') as f:
-        f.write(template_output)
+    unit_files = ["unit_base.h", "unit_base.cpp", "create_unit.cpp"]
     
+    for unit_file in unit_files:
+        template = jinja_env.get_template(f"{unit_file}.j2")
+        template_output = template.render(unit_name=unit_name, **unit)
+        with open(f'{output_dir}/{unit_file}', 'w') as f:
+            f.write(template_output)
+        
     template = jinja_env.get_template("unit.h.j2")
     template_output = template.render(in_template_dir = True, unit_name=unit_name, **unit)
     with open(f'{source_dir}/template/{unit_name}.example.h', 'w') as f:

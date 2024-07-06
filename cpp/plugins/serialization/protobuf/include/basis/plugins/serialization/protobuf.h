@@ -112,6 +112,7 @@ public:
     return schema;
   }
   
+  // todo: does this need a mutex?
   static bool LoadSchema(std::string_view schema_name, std::string_view schema) {
     const std::string schema_name_str(schema_name);
     if (known_schemas.contains(schema_name_str)) {

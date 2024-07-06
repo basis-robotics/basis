@@ -1,0 +1,64 @@
+# Example future use of jinja
+
+kv_store:
+  key: value
+  other_key: other_value
+
+processes:
+  navigation:
+    {# Specify the units used by the process #}
+    units:
+      {# Unit pathfinder, named pathfinder #}
+      pathfinder: {}
+      {# named alt_pathfinder #}
+      alt_pathfinder:
+        {# Including the same unit twice in one process requires disambigution on the name #}
+        unit: pathfinder
+        env:
+          MAP_DIR: /home/basis/maps/oakland
+        args:
+          - use_experimental_algo=1
+  lidar:
+    units:
+      lidar_driver: {}
+      lidar_segmentation: {}
+  cameras:
+    units:
+{# could also be passed in #}
+{% set cameras = ['left', 'right'] %}
+{% for camera in cameras %}
+      {# this could also be done as an inline block #}
+      {% include 'camera.yaml' %}
+{% endwith %}
+      stereo_match: 
+        cameras: {{cameras}} {# or something like that #}
+
+--- camera.yaml ---
+
+driver_camera_{{camera}}:
+  namespace: camera_{{camera}}
+  unit: camera_driver
+compress_camera_{{camera}}:
+  namespace: camera_{{camera}}
+  unit: jpeg_compression
+
+
+
+processes:
+  robot:
+    units:
+      camera_driver:
+        args:
+            - path=/dev/camera0
+      detector: {}
+
+
+processes:
+  example:
+    units:
+      chatter_pub: {}
+      chatter_sub: {}
+        args:
+            - path=/dev/camera0
+      detector: {}
+    

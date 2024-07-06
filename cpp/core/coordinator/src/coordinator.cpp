@@ -28,6 +28,8 @@ proto::NetworkInfo Coordinator::GenerateNetworkInfo() {
 }
 
 void Coordinator::Update() {
+  // TODO: refactor this to select on all sockets - allows passing in a sleep time to Update()
+
   // Look for new clients
   while (auto maybe_socket = listen_socket.Accept(0)) {
     clients.emplace_back(std::move(maybe_socket.value()));

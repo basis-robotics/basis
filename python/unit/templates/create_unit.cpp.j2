@@ -1,0 +1,12 @@
+#include <basis/unit.h>
+
+#include <{{unit_name}}.h>
+
+// TODO: move to template??
+extern "C" {
+
+basis::Unit* CreateUnit() {
+    return new {{unit_name}}();
+}
+
+}

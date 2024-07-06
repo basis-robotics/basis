@@ -15,12 +15,15 @@
 #include <dlfcn.h>
 #include <unistd.h>
 
+#include "launch.h"
+
 using namespace basis;
 
 template<typename T>
 std::unique_ptr<T> LoadPlugin(const char *path) {
   // Use RTLD_DEEPBIND to avoid the plugin sharing protobuf globals with us and crashing
   void *handle = dlopen(path, RTLD_NOW | RTLD_DEEPBIND);
+  // todo: this handle is leaked
   if (!handle) {
     std::cerr << "Failed to dlopen " << path << std::endl;
     return nullptr;
@@ -225,6 +228,7 @@ int main(int argc, char *argv[]) {
   schema_print_command.add_description("print a schema");
   schema_print_command.add_argument("schema");
   schema_command.add_subparser(schema_print_command);
+  parser.add_subparser(schema_command);
 
   // todo
   // basis plugins ls
@@ -232,7 +236,12 @@ int main(int argc, char *argv[]) {
   // todo
   // basis unit ls?
 
-  parser.add_subparser(schema_command);
+  // basis launch
+  argparse::ArgumentParser launch_command("launch");
+  launch_command.add_description("launch a yaml");
+  launch_command.add_argument("--process").help("The process to launch inside the yaml").default_value("");
+  launch_command.add_argument("launch_yaml");
+  parser.add_subparser(launch_command);
 
   try {
     parser.parse_args(argc, argv);
@@ -297,8 +306,14 @@ int main(int argc, char *argv[]) {
     if (schema_command.is_subcommand_used("print")) {
       PrintSchema(topic, connection.get());
     }
+  } else if (parser.is_subcommand_used("launch")) {
+    auto launch_yaml = launch_command.get("launch_yaml");
+    std::vector<std::string> args(argv, argv + argc);
+    LaunchYamlPath(launch_yaml, args, launch_command.get("--process"));
+    
   }
 
-serialization_plugins.clear();
+  serialization_plugins.clear();
+
   return 0;
 }

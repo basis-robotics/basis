@@ -34,10 +34,10 @@ public:
    * Removes an item out of the queue - or nothing if there's a timeout.
    * @todo I don't see why this can't be used as MPMC
    */
-  std::optional<T> Pop(int sleep_s) {
+  std::optional<T> Pop(const Duration& sleep = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     std::unique_lock lock(queue_mutex);
     if (queue.empty()) {
-      queue_cv.wait_for(lock, std::chrono::seconds(sleep_s), [this] { return !queue.empty(); });
+      queue_cv.wait_for(lock, std::chrono::duration<double>(sleep.ToSeconds()), [this] { return !queue.empty(); });
     }
     std::optional<T> ret;
     if (!queue.empty()) {

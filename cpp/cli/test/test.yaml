@@ -1,0 +1,6 @@
+processes:
+  test:
+    units:
+      wip: {}
+      wip2:
+        unit: wip

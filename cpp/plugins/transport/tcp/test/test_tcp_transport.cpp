@@ -296,7 +296,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_EQ(callback_times, 1);
 
   // Check queue subscriber
-  auto event = output_queue.Pop(10);
+  auto event = output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(10, 0));
   ASSERT_NE(event, std::nullopt);
   (*event)();
   ASSERT_EQ(callback_times, 2);
@@ -542,12 +542,12 @@ TEST_F(TestTcpTransport, MPSCQueue) {
 
   ASSERT_TRUE(poller.AddFd(receiver->GetSocket().GetFd(),
                            std::bind(callback, std::placeholders::_1, std::make_shared<IncompleteMessagePacket>())));
-  ASSERT_EQ(output_queue.Pop(0), std::nullopt);
+  ASSERT_EQ(output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(0, 0)), std::nullopt);
   spdlog::info("Testing with one message");
   sender->SendMessage(shared_message);
 
-  ASSERT_NE(output_queue.Pop(10), std::nullopt);
-  ASSERT_EQ(output_queue.Pop(0), std::nullopt);
+  ASSERT_NE(output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(10, 0)), std::nullopt);
+  ASSERT_EQ(output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(0, 0)), std::nullopt);
   ASSERT_EQ(output_queue.Size(), 0);
   spdlog::info("Got one message");
 
@@ -559,9 +559,9 @@ TEST_F(TestTcpTransport, MPSCQueue) {
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   for (int i = 0; i < 10; i++) {
-    ASSERT_NE(output_queue.Pop(1), std::nullopt) << "Failed on message " << i;
+    ASSERT_NE(output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(1, 0)), std::nullopt) << "Failed on message " << i;
   }
-  ASSERT_EQ(output_queue.Pop(0), std::nullopt);
+  ASSERT_EQ(output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(0, 0)), std::nullopt);
 }
 
 TEST_F(TestTcpTransport, Torture) {
@@ -689,7 +689,7 @@ TEST_F(TestTcpTransport, Torture) {
   std::unordered_map<std::string, size_t> counts;
 
   for (int i = 0; i < MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT; i++) {
-    auto event = output_queue.Pop(0);
+    auto event = output_queue.Pop();
     ASSERT_NE(event, std::nullopt);
     //std::string hello = "Hello, World! " + event->topic_name;
     //ASSERT_STREQ(hello.c_str(), (char *)event->packet->GetPayload().data());
