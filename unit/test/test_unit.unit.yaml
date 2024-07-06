@@ -66,7 +66,7 @@ handlers:
       # require exact field matching
       type: equal
       # buffer at most 2 messages on each channel before dropping
-      buffer_size: 2
+      # buffer_size: 2
     inputs:
       /required_a:
         # TODO: we may end up allowing the `rosmsg:` field to be dropped, either by doing a search in the schemas

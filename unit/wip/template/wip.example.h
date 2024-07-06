@@ -8,6 +8,7 @@
 #include <unit/wip/unit_base.h>
 
 class wip : public unit::wip::Base {
+public:
   wip() {
 
   }

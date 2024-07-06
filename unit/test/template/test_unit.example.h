@@ -8,6 +8,7 @@
 #include <unit/test_unit/unit_base.h>
 
 class test_unit : public unit::test_unit::Base {
+public:
   test_unit() {
 
   }

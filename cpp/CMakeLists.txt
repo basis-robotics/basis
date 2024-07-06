@@ -51,6 +51,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(argparse)
 
 if(BASIS_ENABLE_ROS)
+  set(BUILD_TESTING OFF)
   # TODO: consider using embag instead
   FetchContent_Declare(
     fastcdr
