@@ -11,6 +11,13 @@
 #include "process_manager.h"
 #include "unit_loader.h"
 
+
+namespace {
+/**
+ * Search for a unit in well known directories given a unit name
+ * @param unit_name 
+ * @return std::optional<std::filesystem::path> 
+ */
 std::optional<std::filesystem::path> FindUnit(std::string_view unit_name) {
     const std::filesystem::path basis_unit_dir = "/opt/basis/unit/";
 
@@ -23,6 +30,9 @@ std::optional<std::filesystem::path> FindUnit(std::string_view unit_name) {
     return {};
 }
 
+/**
+ * Responsible for loading and running units
+ */
 class UnitExecutor {
 public:
     UnitExecutor() {}
@@ -33,6 +43,11 @@ public:
         }
     }
 
+    /**
+     * Run a process given a definition - will iterate over each unit in the definition, load, and run.
+     * @param process 
+     * @return bool 
+     */
     bool RunProcess(const ProcessDefinition& process) {
         spdlog::info("Running process with {} units", process.units.size());
 
@@ -51,7 +66,12 @@ public:
         return true;
     }
 
-    bool LaunchSharedObjectInThread([[maybe_unused]] const std::filesystem::path& path) {
+    /**
+     * Given a path to a unit shared object, create the unit and run its main loop in a separate thread
+     * @param path 
+     * @return bool If the launch was successful or not
+     */
+    bool LaunchSharedObjectInThread(const std::filesystem::path& path) {
         std::unique_ptr<basis::Unit> unit(CreateUnit(path));
         
         if(!unit) {
@@ -66,9 +86,11 @@ public:
     }
 
 protected:
+    /**
+     * The thread for running the unit. Will probably be replaced with a shared helper later, this block of code is duplicated three times now.
+     * @param unit 
+     */
     void UnitThread(basis::Unit* unit) {
-
-        // todo: will definitely need to pass in object for inproc transport
         unit->WaitForCoordinatorConnection();
         unit->CreateTransportManager();
         unit->Initialize();
@@ -78,27 +100,41 @@ protected:
         }
     }
 
+    /**
+     * Flag to stop all units from running.
+     */
     std::atomic<bool> stop = false;
+    /**
+     * The threads running the main loop for each unit.
+     */
     std::vector<std::thread> threads;
 };
 
+/**
+ * Fork to create a new launcher
+ * @param process_name The process in the yaml to run post-fork.
+ * @param args The args passed into this launch.
+ * @return Process A handle to the process we ran. When destructed, will kill the process.
+ */
 [[nodiscard]] Process CreateSublauncherProcess(const std::string& process_name, const std::vector<std::string>& args) {
   assert(args.size() >= 3);
 
+  // Construct new arguments to pass in
   std::vector<const char*> args_copy;
 
+  // basis
   args_copy.push_back(args[0].data());
+  // launch
   args_copy.push_back(args[1].data());
-
   args_copy.push_back("--process");
   args_copy.push_back(process_name.data());
-  
+  // <the args>
   for(size_t i = 2; i < args.size(); i++) {
     args_copy.push_back(args[i].data());
   }
+  // null terminator for argv
   args_copy.push_back(nullptr);
 
-  // todo safe SIGHUP
   int pid = fork();
   if(pid == -1) {
     spdlog::error("Error {} launching {}", strerror(errno), process_name);
@@ -107,8 +143,12 @@ protected:
     // It's unsafe to do any allocations here - we may have forked while malloc() was locked
 
     // die when the parent dies
-    // todo: might want to assert we are main thread here
+    // todo: might want to assert we are main thread here. SIGHUP will kill the thread 
     prctl(PR_SET_PDEATHSIG, SIGHUP);
+    // If our parent already died, die anyhow
+    if (getppid() == 1) {
+        exit(1);
+    }
     execv(args[0].data(), const_cast<char**>(args_copy.data()));
     // Manually print to stderr, don't trust anything
     int error = errno;
@@ -116,7 +156,7 @@ protected:
     fputs(args[0].data(), stderr);
     fputs(" ", stderr);
     fputs(strerror(error), stderr);
-    exit(-1);
+    exit(1);
   }
   else {
     spdlog::debug("forked with pid {}", pid);
@@ -125,8 +165,12 @@ protected:
   return Process(pid);
 }
 
+/**
+ * Launch a 
+ * @param launch 
+ * @param args 
+ */
 void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& args) {
-    // todo: parse, then load?
     std::vector<Process> managed_processes;
     for(const auto& [process_name, _] : launch.processes) {
       managed_processes.push_back(CreateSublauncherProcess(process_name, args));
@@ -139,6 +183,7 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
     }
 }
 
+}
 
 // todo: probably take a std::fs::path here
 void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& args, std::string process_name_filter) {

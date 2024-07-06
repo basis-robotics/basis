@@ -236,7 +236,6 @@ int main(int argc, char *argv[]) {
   // todo
   // basis unit ls?
 
-  // todo
   // basis launch
   argparse::ArgumentParser launch_command("launch");
   launch_command.add_description("launch a yaml");

@@ -1,3 +1,8 @@
+/**
+ * @file launch_definition.h
+ *
+ * File responsible for converting from a yaml file to C++ launch definitions
+ */
 #include <string>
 #include <unordered_map>
 
@@ -24,9 +29,12 @@ LaunchDefinition ParseLaunchDefinitionYAML(YAML::Node yaml) {
             const auto& unit_name = unit_name_yaml.first.as<std::string>();
             const auto& unit_yaml = unit_name_yaml.second;
             UnitDefinition unit;
+
             if(unit_yaml["unit"]) {
+                // If we specify a unit type, use that
                 unit.unit_type = unit_yaml["unit"].as<std::string>();
             } else {
+                // By default, the unit name is the unit type
                 unit.unit_type = unit_name;
             }
             process.units.emplace(unit_name, std::move(unit));

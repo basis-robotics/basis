@@ -76,7 +76,7 @@ protected:
 };
 
 /**
- * A simple unit where all are run mutally exclusive from eachother - uses a queue for all outputs, which adds some
+ * A simple unit where all handlers are run mutally exclusive from eachother - uses a queue for all outputs, which adds some
  * amount of latency
  */
 class SingleThreadedUnit : public Unit {

@@ -1,3 +1,4 @@
+# Example of future syntax definitions for the launch system
 kv_store:
   key: value
   other_key: other_value
