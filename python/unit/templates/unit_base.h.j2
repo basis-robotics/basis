@@ -26,6 +26,10 @@ namespace unit::{{unit_name}} {
         }
 
     public:
+        Base() : basis::SingleThreadedUnit("{{unit_name}}") {
+
+        }
+
 {% for handler_name in handlers %}
         virtual {{handler_name}}::Output {{handler_name}}(const {{handler_name}}::Input& input) = 0;
 {% endfor %}
