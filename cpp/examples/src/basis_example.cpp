@@ -34,6 +34,8 @@
  */
 class ExampleUnit : public basis::SingleThreadedUnit {
 public:
+  ExampleUnit() : basis::SingleThreadedUnit("ExampleUnit") {}
+
   void Initialize() {
     using namespace std::placeholders;
 

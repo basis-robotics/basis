@@ -3,12 +3,16 @@
 #include <basis/core/threading/thread_pool.h>
 #include <basis/core/transport/transport_manager.h>
 
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 namespace basis {
 
 class Unit {
 public:
-  Unit(/*std::string_view unit_name*/) {
-
+  Unit(std::string_view unit_name) 
+  : unit_name(unit_name)
+  , logger(std::string(unit_name), std::make_shared<spdlog::sinks::stdout_color_sink_mt>()) 
+  {
   }
 
   void WaitForCoordinatorConnection() {
@@ -30,6 +34,12 @@ public:
 
     transport_manager->RegisterTransport(basis::plugins::transport::TCP_TRANSPORT_NAME,
                                          std::make_unique<basis::plugins::transport::TcpTransport>());
+  }
+
+  const std::string& Name() const { return unit_name; }
+
+  spdlog::logger &Logger() {
+    return logger;
   }
 
   // override this, should be called once by main()
@@ -71,6 +81,8 @@ public:
   }
 
 protected:
+  std::string unit_name;
+  spdlog::logger logger;
   std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 };

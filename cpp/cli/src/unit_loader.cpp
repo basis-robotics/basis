@@ -28,15 +28,17 @@ std::unique_ptr<basis::Unit> CreateUnit([[maybe_unused]] const std::filesystem::
     void *handle = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (!handle) {
       std::cerr << "Failed to dlopen " << path << std::endl;
-      std::cerr << dlerror() << std::endl;
+      std::cerr << "dlerror: " << dlerror() << std::endl;
       return nullptr;
     }
 
     ManagedSharedObject managed_handle(handle);
 
+    dlerror();
     auto load_unit = (CreateUnitCallback)dlsym(handle, "CreateUnit");
     if (!load_unit) {
       std::cerr << "Failed to find unit interface CreateUnit in " << path << std::endl;
+      std::cerr << "dlerror: " << dlerror() << std::endl;
       return nullptr;
     }
     maybe_unit_loader = unit_loaders.emplace(path.string(), UnitLoader{std::move(managed_handle), load_unit}).first;
