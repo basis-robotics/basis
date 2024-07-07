@@ -9,7 +9,10 @@
 
 class simple_sub : public unit::simple_sub::Base {
 public:
-
+  simple_sub(std::optional<std::string> name_override = {}) 
+  : unit::simple_sub::Base(name_override)
+  {}
+  
 
     virtual unit::simple_sub::OnChatter::Output OnChatter(const unit::simple_sub::OnChatter::Input& input) override;
 

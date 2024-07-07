@@ -54,7 +54,7 @@ public:
         for(const auto& [unit_name, unit] : process.units) {
             std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
             if(unit_so_path) {
-                if(!LaunchSharedObjectInThread(*unit_so_path)) {
+                if(!LaunchSharedObjectInThread(*unit_so_path, unit_name)) {
                     return false;
                 }
             }
@@ -71,8 +71,8 @@ public:
      * @param path 
      * @return bool If the launch was successful or not
      */
-    bool LaunchSharedObjectInThread(const std::filesystem::path& path) {
-        std::unique_ptr<basis::Unit> unit(CreateUnit(path));
+    bool LaunchSharedObjectInThread(const std::filesystem::path& path, const std::string unit_name) {
+        std::unique_ptr<basis::Unit> unit(CreateUnit(path, unit_name));
         
         if(!unit) {
             return false;
