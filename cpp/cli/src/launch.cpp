@@ -71,7 +71,7 @@ public:
      * @param path 
      * @return bool If the launch was successful or not
      */
-    bool LaunchSharedObjectInThread(const std::filesystem::path& path, const std::string unit_name) {
+    bool LaunchSharedObjectInThread(const std::filesystem::path& path, std::string_view unit_name) {
         std::unique_ptr<basis::Unit> unit(CreateUnit(path, unit_name));
         
         if(!unit) {

@@ -18,7 +18,7 @@ struct UnitLoader {
 
 std::unordered_map<std::string, UnitLoader> unit_loaders;
 
-std::unique_ptr<basis::Unit> CreateUnit([[maybe_unused]] const std::filesystem::path& path, const std::string unit_name) {
+std::unique_ptr<basis::Unit> CreateUnit(const std::filesystem::path& path, std::string_view unit_name) {
   std::string string_path = path.string();
 
   auto maybe_unit_loader = unit_loaders.find(string_path);
@@ -44,5 +44,5 @@ std::unique_ptr<basis::Unit> CreateUnit([[maybe_unused]] const std::filesystem::
     maybe_unit_loader = unit_loaders.emplace(path.string(), UnitLoader{std::move(managed_handle), load_unit}).first;
   }
 
-  return std::unique_ptr<basis::Unit>(maybe_unit_loader->second.create_unit(unit_name));
+  return std::unique_ptr<basis::Unit>(maybe_unit_loader->second.create_unit(std::string(unit_name)));
 }
