@@ -42,6 +42,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(yaml-cpp)
 
+FetchContent_Declare(mcap
+  GIT_REPOSITORY https://github.com/foxglove/mcap
+  GIT_TAG releases/cpp/v1.4.0
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  )
+
+# mcap doesn't contain a CMakeLists.txt, so create an interface library ourselves
+FetchContent_MakeAvailable(mcap)
+add_library(mcap INTERFACE)
+target_include_directories(mcap INTERFACE ${mcap_SOURCE_DIR}/cpp/mcap/include)
+message(${mcap_SOURCE_DIR})
+
 set(ARGPARSE_BUILD_TESTS OFF CACHE INTERNAL "force argparse tests to off")
 FetchContent_Declare(
   argparse
@@ -89,6 +102,7 @@ add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 add_subdirectory(core)
 add_subdirectory(cli)
 add_subdirectory(examples)
+add_subdirectory(recorder)
 add_subdirectory(synchronizers)
 add_subdirectory(unit)
 

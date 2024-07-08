@@ -84,11 +84,22 @@ public:
   static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
     return {SERIALIZER_ID, ros::message_traits::DataType<T_MSG>::value()};
   };
+  
+  static std::string_view GetMCAPSchemaEncoding() {
+    // https://mcap.dev/spec/registry#ros1msg
+    return "ros1msg";
+  }
+
+  static std::string_view GetMCAPMessageEncoding() {
+    // https://mcap.dev/spec/registry#ros1
+    return "ros1";
+  }
 protected:
   static RosMsgParser::ParsersCollection<RosMsgParser::ROS_Deserializer> parser_collection;
 };
 
 using RosMsgPlugin = core::serialization::AutoSerializationPlugin<RosmsgSerializer>;
+
 
 } // namespace plugins::serialization
 

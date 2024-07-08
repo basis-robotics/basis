@@ -9,9 +9,6 @@
 
 class wip : public unit::wip::Base {
 public:
-  wip() {
-
-  }
 
 
     virtual unit::wip::StereoMatch::Output StereoMatch(const unit::wip::StereoMatch::Input& input) override;

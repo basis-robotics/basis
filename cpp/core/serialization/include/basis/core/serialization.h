@@ -19,6 +19,7 @@ struct MessageSchema {
   std::string serializer;
   std::string name;
   std::string schema;
+  std::string schema_efficient; // Optional - some serializers may have a more efficient representation wanted by the recorder
   std::string hash_id;
 };
 
@@ -65,7 +66,6 @@ private:
           static_assert(false, "Please implement this template function");
     }
 #pragma clang diagnostic pop
-
 };
 
 class SerializationPlugin {

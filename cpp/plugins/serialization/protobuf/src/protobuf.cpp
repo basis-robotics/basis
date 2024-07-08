@@ -8,7 +8,6 @@ std::unordered_set<std::string> ProtobufSerializer::known_schemas;
 
 } // namespace basis::plugins::serialization
 
-
 extern "C" {
 
 basis::core::serialization::SerializationPlugin* LoadPlugin() {

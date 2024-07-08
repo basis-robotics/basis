@@ -9,9 +9,6 @@
 
 class test_unit : public unit::test_unit::Base {
 public:
-  test_unit() {
-
-  }
 
 
     virtual unit::test_unit::StereoMatch::Output StereoMatch(const unit::test_unit::StereoMatch::Input& input) override;

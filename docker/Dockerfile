@@ -54,6 +54,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
         ccache \
         ninja-build
 
+# TODO: https://github.com/foxglove/mcap/releases/download/releases%2Fmcap-cli%2Fv0.0.46/mcap-linux-arm64 ?
+
 RUN useradd -ms /bin/bash basis
 RUN adduser basis sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
