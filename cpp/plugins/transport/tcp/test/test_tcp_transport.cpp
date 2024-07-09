@@ -495,7 +495,7 @@ TEST_F(TestTcpTransport, MPSCQueue) {
   Epoll poller;
   ThreadPool thread_pool(4);
 
-  SimpleMPSCQueue<std::shared_ptr<MessagePacket>> output_queue;
+  basis::core::containers::SimpleMPSCQueue<std::shared_ptr<MessagePacket>> output_queue;
 
   /**
    * Create callback, storing in the bind

@@ -5,6 +5,7 @@ project(basis_core)
 # Not generally intended for end user use, but there are no restrictions against its usage
 
 add_subdirectory(coordinator)
+add_subdirectory(containers)
 add_subdirectory(networking)
 add_subdirectory(serialization)
 add_subdirectory(threading)

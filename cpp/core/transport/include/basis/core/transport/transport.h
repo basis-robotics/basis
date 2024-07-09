@@ -10,7 +10,7 @@
 #include "publisher_info.h"
 #include "subscriber.h"
 
-#include "simple_mpsc.h"
+#include <basis/core/containers/simple_mpsc.h>
 
 #include <basis/core/serialization.h>
 #include <basis/core/threading/thread_pool.h>
@@ -67,7 +67,7 @@ private:
   size_t progress_counter = 0;
 };
 
-using OutputQueue = SimpleMPSCQueue<std::function<void()>>;
+using OutputQueue = containers::SimpleMPSCQueue<std::function<void()>>;
 
 class Transport {
 public:

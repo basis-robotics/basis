@@ -10,19 +10,23 @@
 #include <std_msgs/String.h>
 #endif
 
-class TestRecorder : public testing::Test {
+template<typename RecorderClass>
+class TestRecorderT : public testing::Test {
 public:
-  TestRecorder() {
+  TestRecorderT() {
     char temp_template[] = "/tmp/tmpdir.XXXXXX";
     char *dir_name = mkdtemp(temp_template);
 
     spdlog::info("{} {}", ::testing::UnitTest::GetInstance()->current_test_info()->name(), dir_name);
 
-    recorder = std::make_unique<basis::Recorder>(dir_name);
+    recorder = std::make_unique<RecorderClass>(dir_name);
   }
 
   void RegisterAndWriteProtobuf() {
+    spdlog::info("RegisterAndWriteProtobuf");
+
     TestProtoStruct msg;
+
 
     msg.set_foo(3);
     msg.set_bar(8.5);
@@ -35,11 +39,14 @@ public:
         basis::plugins::serialization::ProtobufSerializer::GetMCAPSchemaEncoding(), basis_schema.schema_efficient);
 
     auto [bytes, size] = basis::SerializeToBytes(msg);
-
-    recorder->WriteMessage("/proto_topic", {bytes.get(), size}, basis::core::MonotonicTime::Now());
+    std::shared_ptr<const std::byte[]> owning_bytes = std::move(bytes);
+    std::span<const std::byte> view(owning_bytes.get(), size);
+    ASSERT_TRUE(recorder->WriteMessage("/proto_topic", {owning_bytes, view}, basis::core::MonotonicTime::Now()));
   }
 
   void RegisterAndWriteRos() {
+    spdlog::info("RegisterAndWriteRos");
+    
     std_msgs::String msg;
     msg.data = "foobar";
 
@@ -51,11 +58,13 @@ public:
 
     auto [bytes, size] = basis::SerializeToBytes(msg);
 
-    recorder->WriteMessage("/ros_topic", {bytes.get(), size}, basis::core::MonotonicTime::Now());
+    ASSERT_TRUE(recorder->WriteMessage("/ros_topic", {bytes.get(), size}, basis::core::MonotonicTime::Now()));
   }
 
-  std::unique_ptr<basis::Recorder> recorder;
+  std::unique_ptr<RecorderClass> recorder;
 };
+
+using TestRecorder = TestRecorderT<basis::Recorder>;
 
 TEST_F(TestRecorder, BasicTest) {
   ASSERT_TRUE(recorder->Start("test"));
@@ -82,6 +91,17 @@ TEST_F(TestRecorder, Mixed) {
 
 
 #endif
+
+using TestAsyncRecorder = TestRecorderT<basis::AsyncRecorder>;
+
+TEST_F(TestAsyncRecorder, BasicTest) {
+  ASSERT_TRUE(recorder->Start("test"));
+
+  RegisterAndWriteProtobuf();
+
+  // TODO: validate output
+}
+
 
 // TestOutOfOrder
 
