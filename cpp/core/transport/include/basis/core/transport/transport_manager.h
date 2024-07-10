@@ -24,9 +24,12 @@ public:
     const std::string schema_id = type_info.SchemaId();
     auto it = known_schemas.find(schema_id);
     if (it == known_schemas.end()) {
-      it = known_schemas.emplace(schema_id, T_Serializer::template DumpSchema<T_MSG>()).first;
-
-      if constexpr (!std::is_same_v<T_Serializer, serialization::RawSerializer>) {
+      if constexpr (std::is_same_v<T_Serializer, serialization::RawSerializer>) {
+        // TODO: it may still be worth implementing this
+        it = known_schemas.emplace(schema_id, serialization::MessageSchema("raw")).first;
+      }
+      else {
+        it = known_schemas.emplace(schema_id, T_Serializer::template DumpSchema<T_MSG>()).first;
         schemas_to_send.push_back(it->second);
       }
     }
@@ -64,17 +67,22 @@ public:
       tps.push_back(transport->Advertise(topic, message_type));
     }
 
-    if(recorder) {
-      recorder->RegisterTopic(topic, T_Serializer::GetMCAPMessageEncoding(),
-                        schema->name, T_Serializer::GetMCAPSchemaEncoding(),
-                        schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient);
+    basis::RecorderInterface* recorder_for_publisher = nullptr;
+    // Ensure we don't
+    if constexpr(!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
+      recorder_for_publisher = recorder;
+      if(recorder) {
+        recorder->RegisterTopic(topic, T_Serializer::GetMCAPMessageEncoding(),
+                          schema->name, T_Serializer::GetMCAPSchemaEncoding(),
+                          schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient);
+      }
     }
 
     SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;
     SerializeWriteSpanCallback<T_MSG> write_span_cb = T_Serializer::template SerializeToSpan<T_MSG>;
 
     auto publisher = std::make_shared<Publisher<T_MSG>>(topic, message_type, std::move(tps), inproc_publisher,
-                                                        std::move(get_size_cb), std::move(write_span_cb), recorder);
+                                                        std::move(get_size_cb), std::move(write_span_cb), recorder_for_publisher);
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }
