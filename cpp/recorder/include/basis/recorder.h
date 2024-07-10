@@ -163,7 +163,6 @@ private:
     while(!stop) {
       auto event = work_queue.Pop(wait_time);
       if(event) {
-        spdlog::info("event");
         recorder.WriteMessage(event->topic, event->payload, event->stamp);
       }
     }

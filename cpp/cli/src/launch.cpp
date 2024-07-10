@@ -1,10 +1,12 @@
 #include <filesystem>
 #include <string_view>
-#include <basis/unit.h>
 #include <unistd.h>
 
 #include <linux/prctl.h>  /* Definition of PR_* constants */
 #include <sys/prctl.h>
+
+#include <basis/unit.h>
+#include <basis/recorder.h>
 
 #include "launch.h"
 #include "launch_definition.h"
@@ -46,15 +48,16 @@ public:
     /**
      * Run a process given a definition - will iterate over each unit in the definition, load, and run.
      * @param process 
+     * @param recorder
      * @return bool 
      */
-    bool RunProcess(const ProcessDefinition& process) {
+    bool RunProcess(const ProcessDefinition& process, basis::RecorderInterface* recorder) {
         spdlog::info("Running process with {} units", process.units.size());
 
         for(const auto& [unit_name, unit] : process.units) {
             std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
             if(unit_so_path) {
-                if(!LaunchSharedObjectInThread(*unit_so_path)) {
+                if(!LaunchSharedObjectInThread(*unit_so_path, recorder)) {
                     return false;
                 }
             }
@@ -71,16 +74,16 @@ public:
      * @param path 
      * @return bool If the launch was successful or not
      */
-    bool LaunchSharedObjectInThread(const std::filesystem::path& path) {
+    bool LaunchSharedObjectInThread(const std::filesystem::path& path, basis::RecorderInterface* recorder) {
         std::unique_ptr<basis::Unit> unit(CreateUnit(path));
         
         if(!unit) {
             return false;
         }
 
-        threads.emplace_back([this, unit = std::move(unit), path]() mutable {
-            spdlog::info("Started thread with unit {}", path.string());
-            UnitThread(unit.get());
+        threads.emplace_back([this, unit = std::move(unit), path = path.string(), recorder]() mutable {
+            spdlog::info("Started thread with unit {}", path);
+            UnitThread(unit.get(), recorder);
         });
         return true;
     }
@@ -90,9 +93,9 @@ protected:
      * The thread for running the unit. Will probably be replaced with a shared helper later, this block of code is duplicated three times now.
      * @param unit 
      */
-    void UnitThread(basis::Unit* unit) {
+    void UnitThread(basis::Unit* unit, basis::RecorderInterface* recorder) {
         unit->WaitForCoordinatorConnection();
-        unit->CreateTransportManager();
+        unit->CreateTransportManager(recorder);
         unit->Initialize();
 
         while (!stop) {
@@ -185,6 +188,11 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
 
 }
 
+std::atomic<bool> global_stop = false;
+void SignalHandler([[maybe_unused]] int signal) {
+    global_stop = true;
+}
+
 // todo: probably take a std::fs::path here
 void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& args, std::string process_name_filter) {
     YAML::Node loaded_yaml = YAML::LoadFile(std::string(yaml_path));
@@ -195,12 +203,28 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
         LaunchYaml(launch, args);
     }
     else {
+        // todo: should pass the name into each process
+        basis::AsyncRecorder recorder("/tmp/");
+        std::string record_name = fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now().ToSeconds());
+
+        spdlog::info("Recording to {}{}.mcap", "/tmp/", record_name);
+
+        recorder.Start(record_name);
+
         UnitExecutor runner;
-        runner.RunProcess(launch.processes.at(process_name_filter));
+        runner.RunProcess(launch.processes.at(process_name_filter), &recorder);
+        
+        struct sigaction act;
+        memset(&act,0,sizeof(act));
+        act.sa_handler = SignalHandler;
+        act.sa_flags = SA_RESETHAND;
+        sigaction(SIGINT, &act, NULL);
+        sigaction(SIGHUP, &act, NULL);
+
         // Sleep until signal
-        // todo: proper shutdown
-        while(true) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+        // TODO: this can be a condition variable now
+        while(!global_stop) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
     }
 }
