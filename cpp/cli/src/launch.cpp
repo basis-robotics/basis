@@ -13,7 +13,6 @@
 #include "process_manager.h"
 #include "unit_loader.h"
 
-
 namespace {
 /**
  * Search for a unit in well known directories given a unit name
@@ -204,15 +203,24 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
     }
     else {
         // todo: should pass the name into each process
-        basis::AsyncRecorder recorder("/tmp/");
-        std::string record_name = fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now().ToSeconds());
+        std::unique_ptr<basis::RecorderInterface> recorder;
+        if(launch.recording_settings && launch.recording_settings->patterns.size()) {
+            std::string recorder_type;
+            if(launch.recording_settings->async) {
+                recorder_type = " (async)";
+                recorder = std::make_unique<basis::AsyncRecorder>(launch.recording_settings->directory, launch.recording_settings->patterns);
+            }
+            else {
+                recorder = std::make_unique<basis::Recorder>(launch.recording_settings->directory, launch.recording_settings->patterns);
+            }
+            std::string record_name = fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now().ToSeconds());
 
-        spdlog::info("Recording to {}{}.mcap", "/tmp/", record_name);
+            spdlog::info("Recording{} to {}.mcap", recorder_type, (launch.recording_settings->directory / record_name).string());
 
-        recorder.Start(record_name);
-
+            recorder->Start(record_name);
+        }
         UnitExecutor runner;
-        runner.RunProcess(launch.processes.at(process_name_filter), &recorder);
+        runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
         
         struct sigaction act;
         memset(&act,0,sizeof(act));

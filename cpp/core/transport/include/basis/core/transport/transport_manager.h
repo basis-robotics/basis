@@ -68,13 +68,15 @@ public:
     }
 
     basis::RecorderInterface* recorder_for_publisher = nullptr;
-    // Ensure we don't
+    // Ensure we don't try to write raw structs to disk
     if constexpr(!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
-      recorder_for_publisher = recorder;
       if(recorder) {
-        recorder->RegisterTopic(topic, T_Serializer::GetMCAPMessageEncoding(),
+        if(recorder->RegisterTopic(std::string(topic), T_Serializer::GetMCAPMessageEncoding(),
                           schema->name, T_Serializer::GetMCAPSchemaEncoding(),
-                          schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient);
+                          schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient)) {
+          // Only pass a recorder down to the publisher if the recording system will handle this topic
+          recorder_for_publisher = recorder;
+        }
       }
     }
 

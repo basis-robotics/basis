@@ -3,6 +3,9 @@
 #include <basis/recorder.h>
 
 
-namespace basis::recorder {
-    
+namespace basis {
+  const std::vector<std::regex> Recorder::RECORD_ALL_TOPICS = {
+    std::regex(".*")
+  };
+ 
 }
