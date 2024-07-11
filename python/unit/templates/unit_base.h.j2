@@ -26,7 +26,8 @@ namespace unit::{{unit_name}} {
         }
 
     public:
-        Base() : basis::SingleThreadedUnit("{{unit_name}}") {
+        Base(std::optional<std::string> name_override = {}) 
+        : basis::SingleThreadedUnit(name_override.value_or("{{unit_name}}")) {
 
         }
 
