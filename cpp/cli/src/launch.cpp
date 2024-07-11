@@ -206,12 +206,14 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
 
     spdlog::info("Top level launcher got kill signal, killing children.");
 
+    // Send signal to all processes
     for(Process& process : managed_processes) {
         process.Kill(SIGINT);
     }
 
+    // TODO: we could just managed_processes.clear() with the same effect
     for(Process& process : managed_processes) {
-      bool killed = process.Wait();
+      bool killed = process.Wait(5);
       if(!killed) {
         spdlog::error("Failed to kill pid {}", process.GetPid());
       }
