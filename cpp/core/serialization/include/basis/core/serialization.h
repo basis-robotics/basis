@@ -115,7 +115,7 @@ class RawSerializer : public Serializer {
 public:
   template <typename T_MSG> static serialization::MessageTypeInfo DeduceMessageTypeInfo() {
     // todo: deprecate
-    return {"raw", "unknown"};
+    return {"raw", "unknown", "", ""};
   }
 
   template <typename T_MSG> static size_t GetSerializedSize(const T_MSG &message) { return sizeof(message); }

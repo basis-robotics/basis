@@ -10,8 +10,9 @@
 #include <mcap/mcap.hpp>
 #include <spdlog/spdlog.h>
 
-#include <basis/core/time.h>
 #include <basis/core/containers/simple_mpsc.h>
+#include <basis/core/serialization/message_type_info.h>
+#include <basis/core/time.h>
 
 namespace basis {
 
@@ -35,11 +36,6 @@ private:
   std::span<const std::byte> span; 
 };
 
-// template<typename T>
-// OwningSpan CreateOwningSpan(std::shared_ptr<T> ptr, const std::span<const std::byte>& span) {
-//   return OwningSpan(std::move(ptr), span);
-// }
-
 /**
  * Basic interface
  *
@@ -56,8 +52,7 @@ public:
 
   virtual bool Start(std::string_view output_name) = 0;
   virtual void Stop() = 0;
-  virtual bool RegisterTopic(std::string topic, std::string_view message_encoding, std::string_view schema_name,
-                     std::string_view schema_encoding, std::string_view schema_data) = 0;
+  virtual bool RegisterTopic(const std::string& topic, const core::serialization::MessageTypeInfo& message_type_info, std::string_view schema_data) = 0;
   virtual bool WriteMessage(const std::string &topic, OwningSpan payload, const basis::core::MonotonicTime &now) = 0;
 };
 
@@ -85,8 +80,7 @@ public:
   // TODO: take in a schema directly
   // TODO: write the additional crud about encodings into the schema
   // todo: we may want to store off schemas and topics for later
-  virtual bool RegisterTopic(std::string topic, std::string_view message_encoding, std::string_view schema_name,
-                     std::string_view schema_encoding, std::string_view schema_data) override {
+  virtual bool RegisterTopic(const std::string& topic, const core::serialization::MessageTypeInfo& message_type_info, std::string_view schema_data) override {
     static const mcap::SchemaId invalid_schema_id = std::numeric_limits<mcap::SchemaId>::max();
     if(auto it = topic_to_channel_id.find(topic); it != topic_to_channel_id.end()) {
       return it->second != invalid_schema_id;
@@ -95,7 +89,6 @@ public:
     bool found_pattern = false;
     for(const std::regex& pattern : topic_patterns) {
       if(std::regex_match(topic, pattern)) {
-        spdlog::info("will log {}", topic);
         found_pattern = true;
         break;
       }
@@ -106,9 +99,9 @@ public:
       return false;
     }
 
-    mcap::Schema schema(schema_name, schema_encoding, schema_data);
+    mcap::Schema schema(message_type_info.name, message_type_info.mcap_schema_encoding, schema_data);
     writer.addSchema(schema);
-    mcap::Channel channel(topic, message_encoding, schema.id);
+    mcap::Channel channel(topic, message_type_info.mcap_message_encoding, schema.id);
     writer.addChannel(channel);
     topic_to_channel_id.emplace(std::move(topic), channel.id);
     return true;
@@ -165,10 +158,9 @@ public:
     }
   }
 
-  virtual bool RegisterTopic(std::string topic, std::string_view message_encoding, std::string_view schema_name,
-                     std::string_view schema_encoding, std::string_view schema_data) {
+  virtual bool RegisterTopic(const std::string& topic, const core::serialization::MessageTypeInfo& message_type_info, std::string_view schema_data) {
     std::lock_guard lock(mutex);
-    return recorder.RegisterTopic(topic, message_encoding, schema_name, schema_encoding, schema_data);
+    return recorder.RegisterTopic(topic, message_type_info, schema_data);
   }
 
   virtual bool WriteMessage(const std::string &topic, OwningSpan payload, const basis::core::MonotonicTime &now) {

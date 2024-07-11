@@ -141,15 +141,15 @@ public:
 
 template <typename T_MSG>
 static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
-  return {SERIALIZER_ID, T_MSG::descriptor()->full_name()};
+  return {SERIALIZER_ID, T_MSG::descriptor()->full_name(), GetMCAPMessageEncoding(), GetMCAPSchemaEncoding()};
 };
 
-  static std::string_view GetMCAPSchemaEncoding() {
+  static const char* GetMCAPSchemaEncoding() {
     // https://mcap.dev/spec/registry#protobuf
     return "protobuf";
   }
 
-  static std::string_view GetMCAPMessageEncoding() {
+  static const char* GetMCAPMessageEncoding() {
     // https://mcap.dev/spec/registry#protobuf
     return "protobuf";
   }

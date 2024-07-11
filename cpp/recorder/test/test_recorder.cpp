@@ -33,10 +33,9 @@ public:
     msg.set_baz("baz");
 
     auto basis_schema = basis::plugins::serialization::ProtobufSerializer::DumpSchema<TestProtoStruct>();
-
+    auto mti = basis::plugins::serialization::ProtobufSerializer::DeduceMessageTypeInfo<TestProtoStruct>();
     recorder->RegisterTopic(
-        "/proto_topic", basis::plugins::serialization::ProtobufSerializer::GetMCAPMessageEncoding(), basis_schema.name,
-        basis::plugins::serialization::ProtobufSerializer::GetMCAPSchemaEncoding(), basis_schema.schema_efficient);
+        "/proto_topic", mti, basis_schema.schema_efficient);
 
     auto [bytes, size] = basis::SerializeToBytes(msg);
     std::shared_ptr<const std::byte[]> owning_bytes = std::move(bytes);
@@ -44,6 +43,7 @@ public:
     ASSERT_TRUE(recorder->WriteMessage("/proto_topic", {owning_bytes, view}, basis::core::MonotonicTime::Now()));
   }
 
+#ifdef BASIS_ENABLE_ROS
   void RegisterAndWriteRos() {
     spdlog::info("RegisterAndWriteRos");
     
@@ -51,15 +51,15 @@ public:
     msg.data = "foobar";
 
     auto basis_schema = basis::plugins::serialization::RosmsgSerializer::DumpSchema<std_msgs::String>();
+    auto mti = basis::plugins::serialization::RosmsgSerializer::DeduceMessageTypeInfo<std_msgs::String>();
 
-    recorder->RegisterTopic("/ros_topic", basis::plugins::serialization::RosmsgSerializer::GetMCAPMessageEncoding(),
-                            basis_schema.name, basis::plugins::serialization::RosmsgSerializer::GetMCAPSchemaEncoding(),
-                            basis_schema.schema);
+    recorder->RegisterTopic("/ros_topic", mti, basis_schema.schema);
 
     auto [bytes, size] = basis::SerializeToBytes(msg);
 
     ASSERT_TRUE(recorder->WriteMessage("/ros_topic", {bytes.get(), size}, basis::core::MonotonicTime::Now()));
   }
+#endif
 
   std::unique_ptr<RecorderClass> recorder;
 };

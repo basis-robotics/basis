@@ -176,7 +176,7 @@ TEST_F(TestTcpTransport, TestPublisher) {
  */
 TEST_F(TestTcpTransport, TestTransport) {
   TcpTransport transport;
-  std::shared_ptr<TransportPublisher> publisher = transport.Advertise("test", {"raw", "int"});
+  std::shared_ptr<TransportPublisher> publisher = transport.Advertise("test", {"raw", "int", "", ""});
   ASSERT_NE(publisher, nullptr);
 }
 

@@ -4,6 +4,8 @@
 #include <optional>
 #include <queue>
 
+#include <basis/core/time.h>
+
 namespace basis::core::containers {
 
 /**

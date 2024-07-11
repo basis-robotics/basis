@@ -71,8 +71,7 @@ public:
     // Ensure we don't try to write raw structs to disk
     if constexpr(!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
       if(recorder) {
-        if(recorder->RegisterTopic(std::string(topic), T_Serializer::GetMCAPMessageEncoding(),
-                          schema->name, T_Serializer::GetMCAPSchemaEncoding(),
+        if(recorder->RegisterTopic(std::string(topic), message_type,
                           schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient)) {
           // Only pass a recorder down to the publisher if the recording system will handle this topic
           recorder_for_publisher = recorder;
