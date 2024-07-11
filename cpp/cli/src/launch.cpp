@@ -167,8 +167,26 @@ protected:
   return Process(pid);
 }
 
+std::atomic<bool> global_stop = false;
+void SignalHandler([[maybe_unused]] int signal) {
+    global_stop = true;
+}
+
+void InstallSignalHandler(int sig) {
+    struct sigaction act;
+    memset(&act,0,sizeof(act));
+    act.sa_handler = SignalHandler;
+    // Note: for now, we can't use SA_RESETHAND here - SIGINT may be delivered multiple times
+    // todo: use SIGUSR1 as custom signal to children
+    // todo: on SIGHUP, install background timer to suicide anyhow
+    // todo: on parent process, track number of SIGINT and hard kill if repeated
+    act.sa_flags = 0;
+
+    sigaction(sig, &act, NULL);
+}
+
 /**
- * Launch a 
+ * Launch a yaml
  * @param launch 
  * @param args 
  */
@@ -177,6 +195,21 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
     for(const auto& [process_name, _] : launch.processes) {
       managed_processes.push_back(CreateSublauncherProcess(process_name, args));
     }
+
+    InstallSignalHandler(SIGINT);
+
+    // Sleep until signal
+    // TODO: this can be a condition variable now
+    while(!global_stop) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    spdlog::info("Top level launcher got kill signal, killing children.");
+
+    for(Process& process : managed_processes) {
+        process.Kill(SIGINT);
+    }
+
     for(Process& process : managed_processes) {
       bool killed = process.Wait();
       if(!killed) {
@@ -187,10 +220,6 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
 
 }
 
-std::atomic<bool> global_stop = false;
-void SignalHandler([[maybe_unused]] int signal) {
-    global_stop = true;
-}
 
 // todo: probably take a std::fs::path here
 void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& args, std::string process_name_filter) {
@@ -219,20 +248,19 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
 
             recorder->Start(record_name);
         }
+        
+        InstallSignalHandler(SIGINT);
+        InstallSignalHandler(SIGHUP);
+        
         UnitExecutor runner;
         runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
         
-        struct sigaction act;
-        memset(&act,0,sizeof(act));
-        act.sa_handler = SignalHandler;
-        act.sa_flags = SA_RESETHAND;
-        sigaction(SIGINT, &act, NULL);
-        sigaction(SIGHUP, &act, NULL);
-
         // Sleep until signal
         // TODO: this can be a condition variable now
         while(!global_stop) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
+
+        spdlog::info("{} got kill signal, exiting...", process_name_filter);        
     }
 }
