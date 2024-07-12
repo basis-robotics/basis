@@ -10,6 +10,8 @@
 #include <std_msgs/String.h>
 #endif
 
+#include "mcap/reader.hpp"
+
 template<typename RecorderClass>
 class TestRecorderT : public testing::Test {
 public:
@@ -20,13 +22,21 @@ public:
     spdlog::info("{} {}", ::testing::UnitTest::GetInstance()->current_test_info()->name(), dir_name);
 
     recorder = std::make_unique<RecorderClass>(dir_name);
+
+    record_dir = dir_name;
+  }
+  
+  ~TestRecorderT() {
+    CheckWrittenMCAP();
+  }
+
+  void WriteMessage(const std::string& topic, const basis::OwningSpan& span) {
+    ASSERT_TRUE(recorder->WriteMessage(topic, span, basis::core::MonotonicTime::Now()));
+    message_counts[topic]++;
   }
 
   void RegisterAndWriteProtobuf() {
-    spdlog::info("RegisterAndWriteProtobuf");
-
     TestProtoStruct msg;
-
 
     msg.set_foo(3);
     msg.set_bar(8.5);
@@ -40,7 +50,7 @@ public:
     auto [bytes, size] = basis::SerializeToBytes(msg);
     std::shared_ptr<const std::byte[]> owning_bytes = std::move(bytes);
     std::span<const std::byte> view(owning_bytes.get(), size);
-    ASSERT_TRUE(recorder->WriteMessage("/proto_topic", {owning_bytes, view}, basis::core::MonotonicTime::Now()));
+    WriteMessage("/proto_topic", {owning_bytes, view});
   }
 
 #ifdef BASIS_ENABLE_ROS
@@ -56,12 +66,39 @@ public:
     recorder->RegisterTopic("/ros_topic", mti, basis_schema.schema);
 
     auto [bytes, size] = basis::SerializeToBytes(msg);
+    std::shared_ptr<const std::byte[]> owning_bytes = std::move(bytes);
+    std::span<const std::byte> view(owning_bytes.get(), size);
 
-    ASSERT_TRUE(recorder->WriteMessage("/ros_topic", {bytes.get(), size}, basis::core::MonotonicTime::Now()));
+    WriteMessage("/ros_topic", {owning_bytes, view});
   }
 #endif
 
+  void CheckWrittenMCAP() {
+    recorder->Stop();
+
+    std::string filename = (record_dir / "test.mcap").string();
+    mcap::McapReader reader;
+    ASSERT_TRUE(reader.open(filename).ok());
+    ASSERT_TRUE(reader.readSummary(mcap::ReadSummaryMethod::NoFallbackScan).ok());
+    auto stats = reader.statistics();
+    ASSERT_NE(stats, std::nullopt);
+
+    ASSERT_EQ(stats->channelMessageCounts.size(), message_counts.size());
+
+    const auto channels = reader.channels(); 
+
+    for(const auto& [channel_id, count] : stats->channelMessageCounts) {
+      const std::string& topic = channels.at(channel_id)->topic;
+      ASSERT_EQ(message_counts[topic], count);
+    }
+    // TODO: it would be even better to compare the message contents, but want to have a proper reader class first
+  }
+
+  std::filesystem::path record_dir;
+
   std::unique_ptr<RecorderClass> recorder;
+
+  std::unordered_map<std::string, size_t> message_counts;
 };
 
 using TestRecorder = TestRecorderT<basis::Recorder>;
@@ -70,8 +107,6 @@ TEST_F(TestRecorder, BasicTest) {
   ASSERT_TRUE(recorder->Start("test"));
 
   RegisterAndWriteProtobuf();
-
-  // TODO: validate output
 }
 
 #ifdef BASIS_ENABLE_ROS
@@ -98,8 +133,6 @@ TEST_F(TestAsyncRecorder, BasicTest) {
   ASSERT_TRUE(recorder->Start("test"));
 
   RegisterAndWriteProtobuf();
-
-  // TODO: validate output
 }
 
 

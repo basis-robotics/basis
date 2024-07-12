@@ -75,7 +75,9 @@ public:
     return status.ok();
   }
 
-  virtual void Stop() override {}
+  virtual void Stop() override {
+    writer.close();
+  }
 
   // TODO: take in a schema directly
   // TODO: write the additional crud about encodings into the schema
@@ -156,6 +158,8 @@ public:
     if(recording_thread.joinable()) {
       recording_thread.join();
     }
+
+    recorder.Stop();
   }
 
   virtual bool RegisterTopic(const std::string& topic, const core::serialization::MessageTypeInfo& message_type_info, std::string_view schema_data) {
