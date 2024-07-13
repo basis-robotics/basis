@@ -53,8 +53,10 @@ function(generate_unit UNIT_NAME)
     set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${UNIT_NAME}.unit")
     set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "")
 
+    make_directory(${GENERATED_DIR}/unit/${UNIT_NAME}/)
+    file(TOUCH ${GENERATED_DIR}/unit/${UNIT_NAME}/dummy.cpp)
     add_executable(${TARGET_NAME}_bin 
-        ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
+        ${GENERATED_DIR}/unit/${UNIT_NAME}/dummy.cpp
     )
     target_link_libraries(${TARGET_NAME}_bin ${TARGET_NAME} basis::unit::main)
     set_target_properties(${TARGET_NAME}_bin PROPERTIES OUTPUT_NAME ${UNIT_NAME})
