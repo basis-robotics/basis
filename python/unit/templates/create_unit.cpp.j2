@@ -4,9 +4,8 @@
 
 extern "C" {
 
-// todo add optional name override
-basis::Unit* CreateUnit() {
-    return new {{unit_name}}();
+basis::Unit* CreateUnit(std::string unit_name) {
+    return new {{unit_name}}(unit_name);
 }
 
 }

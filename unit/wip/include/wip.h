@@ -1,14 +1,16 @@
 /*
 
-  This is the starting point for your Unit. Edit this directly and implement the
-  missing methods!
+  This is the starting point for your Unit. Edit this directly and implement the missing methods!
 
 */
 #include <unit/wip/unit_base.h>
 
 class wip : public unit::wip::Base {
 public:
-  wip() {}
+  wip(std::optional<std::string> name_override = {}) 
+  : unit::wip::Base(name_override)
+  {}
+
 
   virtual unit::wip::StereoMatch::Output
   StereoMatch(const unit::wip::StereoMatch::Input &input) override;
@@ -18,4 +20,5 @@ public:
 
   virtual unit::wip::ApproxTest::Output
   ApproxTest(const unit::wip::ApproxTest::Input &input) override;
+
 };

@@ -9,4 +9,4 @@
  * @param path the path to the shared object
  * @return std::unique_ptr<basis::Unit>
  */
-std::unique_ptr<basis::Unit> CreateUnit([[maybe_unused]] const std::filesystem::path& path);
+std::unique_ptr<basis::Unit> CreateUnit(const std::filesystem::path& path, std::string_view unit_name);
