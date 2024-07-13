@@ -43,8 +43,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(yaml-cpp)
 
 FetchContent_Declare(mcap
-  GIT_REPOSITORY https://github.com/foxglove/mcap
-  GIT_TAG releases/cpp/v1.4.0
+  # GIT_REPOSITORY https://github.com/foxglove/mcap
+  # GIT_TAG releases/cpp/v1.4.0
+  GIT_REPOSITORY https://github.com/kyle-basis/mcap
+  GIT_TAG a70352a60fdf655e68f552a3d472484d7d0201ce
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   )
