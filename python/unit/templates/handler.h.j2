@@ -107,33 +107,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         void SetupPubSub(
             basis::core::transport::TransportManager* transport_manager,
             basis::core::transport::OutputQueue* output_queue,
-            basis::core::threading::ThreadPool* thread_pool) {
-                // todo init sync
-        {% for topic_name, input in inputs.items() %}
-            {{input.cpp_topic_name}}_subscriber = transport_manager->Subscribe<{{input.cpp_message_type}}>("{{topic_name}}", 
-            [this](auto msg){
-                synchronizer->OnMessage<{{loop.index0}}>(msg);
-{% if 'rate' not in sync %}
-                synchronizer->ConsumeIfReady();
-{% endif %}
-            },
-            thread_pool, output_queue);
-        {% endfor %}
-        {% for topic_name, output in outputs.items() %}
-            {{output.cpp_topic_name}}_publisher = transport_manager->Advertise<{{output.cpp_message_type}}>("{{topic_name}}");
-        {% endfor %}
-        {% if 'rate' in sync %}
-        rate_subsciber = std::make_unique<basis::core::transport::RateSubscriber>(
-          basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{sync.rate}})),
-          [this, output_queue](basis::core::MonotonicTime time) {
-            output_queue->Emplace([this, time]() {
-                OnRateSubscriber(time);
-            });
-          }
-          
-          );
-        {% endif %}
-        }
+            basis::core::threading::ThreadPool* thread_pool);
 
         void OnOutput(const Output& output) {
 {% for output_name, output in outputs.items() %}
