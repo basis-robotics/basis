@@ -29,7 +29,6 @@ function(generate_unit UNIT_NAME)
             ${BASIS_SOURCE_ROOT}/python/unit/templates/unit_base.h.j2
             ${BASIS_SOURCE_ROOT}/python/unit/templates/unit_base.cpp.j2
             ${BASIS_SOURCE_ROOT}/python/unit/templates/unit.h.j2
-            ${BASIS_SOURCE_ROOT}/python/unit/templates/unit_main.cpp.j2
             ${BASIS_SOURCE_ROOT}/python/unit/templates/create_unit.cpp.j2
         OUTPUT
             ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_base.h
@@ -39,7 +38,6 @@ function(generate_unit UNIT_NAME)
             ${CMAKE_CURRENT_SOURCE_DIR}/include/${UNIT_NAME}.h
             ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.example.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/template/${UNIT_NAME}.example.h
-            ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
         )
     # TODO: we technically output a bunch of header files also
     # we should just generate the list of files with a --dry-run flag
@@ -55,10 +53,12 @@ function(generate_unit UNIT_NAME)
     set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${UNIT_NAME}.unit")
     set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "")
 
+    make_directory(${GENERATED_DIR}/unit/${UNIT_NAME}/)
+    file(TOUCH ${GENERATED_DIR}/unit/${UNIT_NAME}/dummy.cpp)
     add_executable(${TARGET_NAME}_bin 
-        ${GENERATED_DIR}/unit/${UNIT_NAME}/unit_main.cpp
+        ${GENERATED_DIR}/unit/${UNIT_NAME}/dummy.cpp
     )
-    target_link_libraries(${TARGET_NAME}_bin ${TARGET_NAME})
+    target_link_libraries(${TARGET_NAME}_bin ${TARGET_NAME} basis::unit::main)
     set_target_properties(${TARGET_NAME}_bin PROPERTIES OUTPUT_NAME ${UNIT_NAME})
 
     add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})

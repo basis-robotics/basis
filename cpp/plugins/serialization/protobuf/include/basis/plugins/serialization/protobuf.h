@@ -106,7 +106,7 @@ public:
     schema.name = descriptor->full_name();
     auto msg = fdSet(descriptor);
     // schema.schema = msg.SerializeAsString();
-
+    schema.schema_efficient = msg.SerializeAsString();
     google::protobuf::TextFormat::PrintToString(msg, &schema.schema);
     // schema.human_readable = msg.DebugString();
     return schema;
@@ -141,10 +141,18 @@ public:
 
 template <typename T_MSG>
 static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
-  return {SERIALIZER_ID, T_MSG::descriptor()->full_name()};
+  return {SERIALIZER_ID, T_MSG::descriptor()->full_name(), GetMCAPMessageEncoding(), GetMCAPSchemaEncoding()};
 };
 
-  
+  static const char* GetMCAPSchemaEncoding() {
+    // https://mcap.dev/spec/registry#protobuf
+    return "protobuf";
+  }
+
+  static const char* GetMCAPMessageEncoding() {
+    // https://mcap.dev/spec/registry#protobuf
+    return "protobuf";
+  }
 protected:
   // https://mcap.dev/guides/cpp/protobuf
   // Recursively adds all `fd` dependencies to `fd_set`.
@@ -171,12 +179,6 @@ protected:
     return fd_set;
   }
 
-  struct PrintOnDestruct {
-    ~PrintOnDestruct() {
-      spdlog::error("I'm melting");
-    };
-  };
-  static PrintOnDestruct pod;
   // https://mcap.dev/guides/cpp/protobuf
   // todo: thread safety
   static google::protobuf::DescriptorPool protoPool;

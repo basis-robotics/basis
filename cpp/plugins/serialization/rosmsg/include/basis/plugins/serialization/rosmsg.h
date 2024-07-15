@@ -82,13 +82,24 @@ public:
 
   template <typename T_MSG>
   static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
-    return {SERIALIZER_ID, ros::message_traits::DataType<T_MSG>::value()};
-  };
+    return {SERIALIZER_ID, ros::message_traits::DataType<T_MSG>::value(), GetMCAPMessageEncoding(), GetMCAPSchemaEncoding()};
+  }
+  
+  static const char* GetMCAPSchemaEncoding() {
+    // https://mcap.dev/spec/registry#ros1msg
+    return "ros1msg";
+  }
+
+  static const char* GetMCAPMessageEncoding() {
+    // https://mcap.dev/spec/registry#ros1
+    return "ros1";
+  }
 protected:
   static RosMsgParser::ParsersCollection<RosMsgParser::ROS_Deserializer> parser_collection;
 };
 
 using RosMsgPlugin = core::serialization::AutoSerializationPlugin<RosmsgSerializer>;
+
 
 } // namespace plugins::serialization
 

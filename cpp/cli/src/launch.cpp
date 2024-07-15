@@ -1,16 +1,17 @@
 #include <filesystem>
 #include <string_view>
-#include <basis/unit.h>
 #include <unistd.h>
 
 #include <linux/prctl.h>  /* Definition of PR_* constants */
 #include <sys/prctl.h>
 
+#include <basis/unit.h>
+#include <basis/recorder.h>
+
 #include "launch.h"
 #include "launch_definition.h"
 #include "process_manager.h"
 #include "unit_loader.h"
-
 
 namespace {
 /**
@@ -46,15 +47,16 @@ public:
     /**
      * Run a process given a definition - will iterate over each unit in the definition, load, and run.
      * @param process 
+     * @param recorder
      * @return bool 
      */
-    bool RunProcess(const ProcessDefinition& process) {
+    bool RunProcess(const ProcessDefinition& process, basis::RecorderInterface* recorder) {
         spdlog::info("Running process with {} units", process.units.size());
 
         for(const auto& [unit_name, unit] : process.units) {
             std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
             if(unit_so_path) {
-                if(!LaunchSharedObjectInThread(*unit_so_path, unit_name)) {
+                if(!LaunchSharedObjectInThread(*unit_so_path, unit_name, recorder)) {
                     return false;
                 }
             }
@@ -71,16 +73,17 @@ public:
      * @param path 
      * @return bool If the launch was successful or not
      */
-    bool LaunchSharedObjectInThread(const std::filesystem::path& path, std::string_view unit_name) {
+
+    bool LaunchSharedObjectInThread(const std::filesystem::path& path, std::string_view unit_name, basis::RecorderInterface* recorder) {
         std::unique_ptr<basis::Unit> unit(CreateUnit(path, unit_name));
         
         if(!unit) {
             return false;
         }
 
-        threads.emplace_back([this, unit = std::move(unit), path]() mutable {
-            spdlog::info("Started thread with unit {}", path.string());
-            UnitThread(unit.get());
+        threads.emplace_back([this, unit = std::move(unit), path = path.string(), recorder]() mutable {
+            spdlog::info("Started thread with unit {}", path);
+            UnitThread(unit.get(), recorder);
         });
         return true;
     }
@@ -90,9 +93,9 @@ protected:
      * The thread for running the unit. Will probably be replaced with a shared helper later, this block of code is duplicated three times now.
      * @param unit 
      */
-    void UnitThread(basis::Unit* unit) {
+    void UnitThread(basis::Unit* unit, basis::RecorderInterface* recorder) {
         unit->WaitForCoordinatorConnection();
-        unit->CreateTransportManager();
+        unit->CreateTransportManager(recorder);
         unit->Initialize();
 
         while (!stop) {
@@ -165,8 +168,26 @@ protected:
   return Process(pid);
 }
 
+std::atomic<bool> global_stop = false;
+void SignalHandler([[maybe_unused]] int signal) {
+    global_stop = true;
+}
+
+void InstallSignalHandler(int sig) {
+    struct sigaction act;
+    memset(&act,0,sizeof(act));
+    act.sa_handler = SignalHandler;
+    // Note: for now, we can't use SA_RESETHAND here - SIGINT may be delivered multiple times
+    // todo: use SIGUSR1 as custom signal to children
+    // todo: on SIGHUP, install background timer to suicide anyhow
+    // todo: on parent process, track number of SIGINT and hard kill if repeated
+    act.sa_flags = 0;
+
+    sigaction(sig, &act, NULL);
+}
+
 /**
- * Launch a 
+ * Launch a yaml
  * @param launch 
  * @param args 
  */
@@ -175,8 +196,25 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
     for(const auto& [process_name, _] : launch.processes) {
       managed_processes.push_back(CreateSublauncherProcess(process_name, args));
     }
+
+    InstallSignalHandler(SIGINT);
+
+    // Sleep until signal
+    // TODO: this can be a condition variable now
+    while(!global_stop) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    spdlog::info("Top level launcher got kill signal, killing children.");
+
+    // Send signal to all processes
     for(Process& process : managed_processes) {
-      bool killed = process.Wait();
+        process.Kill(SIGINT);
+    }
+
+    // TODO: we could just managed_processes.clear() with the same effect
+    for(Process& process : managed_processes) {
+      bool killed = process.Wait(5);
       if(!killed) {
         spdlog::error("Failed to kill pid {}", process.GetPid());
       }
@@ -184,6 +222,7 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
 }
 
 }
+
 
 // todo: probably take a std::fs::path here
 void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& args, std::string process_name_filter) {
@@ -195,12 +234,36 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
         LaunchYaml(launch, args);
     }
     else {
-        UnitExecutor runner;
-        runner.RunProcess(launch.processes.at(process_name_filter));
-        // Sleep until signal
-        // todo: proper shutdown
-        while(true) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+        // todo: should pass the name into each process
+        std::unique_ptr<basis::RecorderInterface> recorder;
+        if(launch.recording_settings && launch.recording_settings->patterns.size()) {
+            std::string recorder_type;
+            if(launch.recording_settings->async) {
+                recorder_type = " (async)";
+                recorder = std::make_unique<basis::AsyncRecorder>(launch.recording_settings->directory, launch.recording_settings->patterns);
+            }
+            else {
+                recorder = std::make_unique<basis::Recorder>(launch.recording_settings->directory, launch.recording_settings->patterns);
+            }
+            std::string record_name = fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now().ToSeconds());
+
+            spdlog::info("Recording{} to {}.mcap", recorder_type, (launch.recording_settings->directory / record_name).string());
+
+            recorder->Start(record_name);
         }
+        
+        InstallSignalHandler(SIGINT);
+        InstallSignalHandler(SIGHUP);
+        
+        UnitExecutor runner;
+        runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
+        
+        // Sleep until signal
+        // TODO: this can be a condition variable now
+        while(!global_stop) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+
+        spdlog::info("{} got kill signal, exiting...", process_name_filter);        
     }
 }

@@ -74,13 +74,20 @@ public:
     return pid == -1;
   }
 
-  void KillAndWait() {
+  void Kill(int sig) {
     if (pid == -1) {
       return;
     }
 
+    kill(pid, sig);
+  }
+
+  void KillAndWait() {
+    if (pid == -1) {  
+      return;
+    }
     // todo BASIS-21: Need to work from SIGINT SIGKILL etc
-    kill(pid, SIGINT);
+    Kill(SIGHUP);
 
     Wait(5);
 

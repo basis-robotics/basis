@@ -20,21 +20,26 @@ class SchemaManager {
 public:
   SchemaManager() {}
 
-  template <typename T_MSG, typename T_Serializer> void RegisterType(const serialization::MessageTypeInfo &type_info) {
+  template <typename T_MSG, typename T_Serializer> serialization::MessageSchema* RegisterType(const serialization::MessageTypeInfo &type_info) {
     const std::string schema_id = type_info.SchemaId();
-    if (!known_schemas.contains(schema_id)) {
-      known_schemas.insert(schema_id);
-
-      if constexpr (!std::is_same_v<T_Serializer, serialization::RawSerializer>) {
-        schemas_to_send.push_back(T_Serializer::template DumpSchema<T_MSG>());
+    auto it = known_schemas.find(schema_id);
+    if (it == known_schemas.end()) {
+      if constexpr (std::is_same_v<T_Serializer, serialization::RawSerializer>) {
+        // TODO: it may still be worth implementing this
+        it = known_schemas.emplace(schema_id, serialization::MessageSchema("raw")).first;
+      }
+      else {
+        it = known_schemas.emplace(schema_id, T_Serializer::template DumpSchema<T_MSG>()).first;
+        schemas_to_send.push_back(it->second);
       }
     }
+    return &it->second;
   }
 
   std::vector<serialization::MessageSchema> &&ConsumeSchemasToSend() { return std::move(schemas_to_send); }
 
 protected:
-  std::unordered_set<std::string> known_schemas;
+  std::unordered_map<std::string, serialization::MessageSchema> known_schemas;
 
   std::vector<serialization::MessageSchema> schemas_to_send;
 };
@@ -45,12 +50,13 @@ protected:
 class TransportManager {
 public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
+
   // todo: deducing a raw type should be an error unless requested
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<Publisher<T_MSG>>
   Advertise(std::string_view topic,
             serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
-    schema_manager.RegisterType<T_MSG, T_Serializer>(message_type);
+    auto* schema = schema_manager.RegisterType<T_MSG, T_Serializer>(message_type);
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     if (inproc) {
@@ -61,11 +67,23 @@ public:
       tps.push_back(transport->Advertise(topic, message_type));
     }
 
+    basis::RecorderInterface* recorder_for_publisher = nullptr;
+    // Ensure we don't try to write raw structs to disk
+    if constexpr(!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
+      if(recorder) {
+        if(recorder->RegisterTopic(std::string(topic), message_type,
+                          schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient)) {
+          // Only pass a recorder down to the publisher if the recording system will handle this topic
+          recorder_for_publisher = recorder;
+        }
+      }
+    }
+
     SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;
     SerializeWriteSpanCallback<T_MSG> write_span_cb = T_Serializer::template SerializeToSpan<T_MSG>;
 
     auto publisher = std::make_shared<Publisher<T_MSG>>(topic, message_type, std::move(tps), inproc_publisher,
-                                                        std::move(get_size_cb), std::move(write_span_cb));
+                                                        std::move(get_size_cb), std::move(write_span_cb), recorder_for_publisher);
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }
@@ -179,6 +197,12 @@ public:
 
   SchemaManager &GetSchemaManager() { return schema_manager; }
 
+  void SetRecorder(basis::RecorderInterface* recorder) {
+    assert(this->recorder == nullptr);
+    assert(publishers.size() == 0);
+    this->recorder = recorder;
+  }
+
 protected:
   /**
    * Internal helper used to allow subscribing with a number of different callback signatures.
@@ -266,6 +290,10 @@ protected:
 
   SchemaManager schema_manager;
 
+  /**
+   * 
+   */
+  RecorderInterface* recorder = nullptr;
   /**
    * For testing only - set to false to disable using known subscribers and force a coordinator connection
    */

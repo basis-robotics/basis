@@ -25,15 +25,20 @@ public:
       }
   }
 
-  void CreateTransportManager() {
+  void CreateTransportManager(basis::RecorderInterface* recorder = nullptr) {
     // todo: it may be better to pass these in - do we want one transport manager per unit ?
     // probably yes, so that they each get an ID
 
     transport_manager = std::make_unique<basis::core::transport::TransportManager>(
         std::make_unique<basis::core::transport::InprocTransport>());
 
+    if(recorder) {
+      transport_manager->SetRecorder(recorder);
+    }
+
     transport_manager->RegisterTransport(basis::plugins::transport::TCP_TRANSPORT_NAME,
                                          std::make_unique<basis::plugins::transport::TcpTransport>());
+
   }
 
   const std::string& Name() const { return unit_name; }

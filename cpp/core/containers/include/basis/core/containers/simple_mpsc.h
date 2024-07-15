@@ -4,7 +4,9 @@
 #include <optional>
 #include <queue>
 
-namespace basis::core::transport {
+#include <basis/core/time.h>
+
+namespace basis::core::containers {
 
 /**
  * Simple thread safe Multi-producer Single Consumer Queue
@@ -33,6 +35,7 @@ public:
   /**
    * Removes an item out of the queue - or nothing if there's a timeout.
    * @todo I don't see why this can't be used as MPMC
+   * @todo It would be great if the mspc queue could take an std::atomic bool for when to stop
    */
   std::optional<T> Pop(const Duration& sleep = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     std::unique_lock lock(queue_mutex);
@@ -54,4 +57,4 @@ public:
   std::queue<T> queue;
 };
 
-} // namespace basis::core::transport
+} // namespace basis::core::containers

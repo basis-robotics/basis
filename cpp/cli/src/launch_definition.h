@@ -8,6 +8,8 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <basis/recorder/glob.h>
+
 struct UnitDefinition {
     std::string unit_type;
 };
@@ -16,11 +18,37 @@ struct ProcessDefinition {
     std::unordered_map<std::string, UnitDefinition> units;
 };
 
-struct LaunchDefinition {
-    std::unordered_map<std::string, ProcessDefinition> processes;
+struct RecordingSettings {
+    bool async = true;
+    std::vector<std::regex> patterns;
+    std::filesystem::path directory;
 };
 
-LaunchDefinition ParseLaunchDefinitionYAML(YAML::Node yaml) {
+struct LaunchDefinition {
+    std::optional<RecordingSettings> recording_settings;
+    std::unordered_map<std::string, ProcessDefinition> processes;
+    
+};
+
+RecordingSettings ParseRecordingSettingsYAML(const YAML::Node& yaml) {
+    RecordingSettings settings;
+
+    if(yaml["directory"]) {
+        settings.directory = yaml["directory"].as<std::string>();
+    }
+
+    for(const auto& pattern_yaml : yaml["topics"]) {
+        settings.patterns.emplace_back(glob::GlobToRegex(pattern_yaml.as<std::string>()));
+    }
+
+    if(yaml["async"]) {
+        settings.async = yaml["async"].as<bool>();
+    }
+
+    return settings;
+}
+
+LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node& yaml) {
     LaunchDefinition launch;
 
     for(const auto& process_yaml : yaml["processes"]) {
@@ -40,6 +68,9 @@ LaunchDefinition ParseLaunchDefinitionYAML(YAML::Node yaml) {
             process.units.emplace(unit_name, std::move(unit));
         }
         launch.processes.emplace(process_yaml.first.as<std::string>(), std::move(process));
+    }
+    if(yaml["recording"]) {
+        launch.recording_settings = ParseRecordingSettingsYAML(yaml["recording"]);
     }
     return launch;
 }
