@@ -27,7 +27,7 @@ FetchContent_Declare(foxglove_schemas
 
 FetchContent_MakeAvailable(foxglove_schemas)
 
-set(FOXGLOVE_PROTO_DIR "${GENERATED_DIR}/foxglove")
+set(FOXGLOVE_PROTO_DIR "${GENERATED_DIR}")
 make_directory(${FOXGLOVE_PROTO_DIR})
 
 file(GLOB FOXGLOVE_PROTOS ${foxglove_schemas_SOURCE_DIR}/schemas/proto/foxglove/*.proto)
@@ -41,7 +41,7 @@ protobuf_generate(
   )
 
 # Strip the input tree structure from the output
-list(TRANSFORM FOXGLOVE_GENERATED_SOURCES REPLACE "\\.\\./build/_deps/foxglove_schemas-src/schemas/proto/" "")
+list(TRANSFORM FOXGLOVE_GENERATED_SOURCES REPLACE "\\.\\./.*build/_deps/foxglove_schemas-src/schemas/proto/" "")
 
 add_library(foxglove_schemas_protobuf SHARED ${FOXGLOVE_GENERATED_SOURCES})
 

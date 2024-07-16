@@ -10,7 +10,6 @@
 
 #include "spdlog/async.h"
 #include "spdlog/fmt/bin_to_hex.h"
-#include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
 
@@ -25,28 +24,6 @@
 
 #include <google/protobuf/util/message_differencer.h>
 
-/*
-void init_logger(){
-
-
-    const std::string filename;
-    int size = 10*1024*1024; // 10M
-    int backcount = 5;       // 5
-
-    // create console_sink
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_sink->set_level(spdlog::level::debug);
-
-    // sink's bucket
-    spdlog::sinks_init_list sinks{console_sink};
-
-    // create async logger, and use global threadpool
-    spdlog::init_thread_pool(1024 * 8, 1);
-    auto logger = std::make_shared<spdlog::async_logger>("aslogger", sinks, spdlog::thread_pool());
-    spdlog::set_default_logger(logger);
-
-}
-*/
 using namespace basis::core::threading;
 
 using namespace basis::core::networking;

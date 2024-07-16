@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include <basis/core/coordinator_connector.h>
+#include <basis/core/logging.h>
 #include <basis/core/transport/transport_manager.h>
 
 #include <filesystem>
@@ -187,6 +188,8 @@ void PrintSchema(const std::string &schema_name, basis::core::transport::Coordin
 }
 
 int main(int argc, char *argv[]) {
+  core::logging::InitializeLoggingSystem();
+
   LoadPlugins<basis::core::serialization::SerializationPlugin>();
 
   argparse::ArgumentParser parser("basis");

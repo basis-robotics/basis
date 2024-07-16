@@ -7,6 +7,7 @@
 
 #include <basis/unit.h>
 #include <basis/recorder.h>
+#include <basis/recorder/protobuf_log.h>
 
 #include "launch.h"
 #include "launch_definition.h"
@@ -231,10 +232,11 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
     const LaunchDefinition launch = ParseLaunchDefinitionYAML(loaded_yaml);
 
     if(process_name_filter.empty()) {
+        // We are the parent launcher, will fork here
         LaunchYaml(launch, args);
     }
     else {
-        // todo: should pass the name into each process
+        // We are a child launcher
         std::unique_ptr<basis::RecorderInterface> recorder;
         if(launch.recording_settings && launch.recording_settings->patterns.size()) {
             std::string recorder_type;
@@ -254,16 +256,25 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
         
         InstallSignalHandler(SIGINT);
         InstallSignalHandler(SIGHUP);
-        
-        UnitExecutor runner;
-        runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
-        
-        // Sleep until signal
-        // TODO: this can be a condition variable now
-        while(!global_stop) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+        // Used for things like /log and /time
+        auto system_transport_manager = basis::CreateStandardTransportManager(recorder.get());
+        basis::CreateLogHandler(*system_transport_manager);
+
+        {
+            UnitExecutor runner;
+            runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
+
+            // Sleep until signal
+            // TODO: this can be a condition variable now
+            while(!global_stop) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                system_transport_manager->Update();
+            }
+
+            spdlog::info("{} got kill signal, exiting...", process_name_filter);
         }
 
-        spdlog::info("{} got kill signal, exiting...", process_name_filter);        
+        basis::DestroyLogHandler();
     }
 }

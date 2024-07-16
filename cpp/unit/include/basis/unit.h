@@ -1,5 +1,6 @@
 #pragma once
 #include <basis/core/coordinator_connector.h>
+#include <basis/core/logging.h>
 #include <basis/core/threading/thread_pool.h>
 #include <basis/core/transport/transport_manager.h>
 
@@ -7,13 +8,20 @@
 
 namespace basis {
 
+std::unique_ptr<basis::core::transport::TransportManager> CreateStandardTransportManager(basis::RecorderInterface* recorder = nullptr);
+
 class Unit {
 public:
   Unit(std::string_view unit_name) 
   : unit_name(unit_name)
-  , logger(std::string(unit_name), std::make_shared<spdlog::sinks::stdout_color_sink_mt>()) 
+  , logger(basis::core::logging::CreateLogger(std::string(unit_name))) 
   {
   }
+  
+  virtual ~Unit() {
+    spdlog::drop(std::string(unit_name));
+  }
+
 
   void WaitForCoordinatorConnection() {
      while (!coordinator_connector) {
@@ -29,28 +37,19 @@ public:
     // todo: it may be better to pass these in - do we want one transport manager per unit ?
     // probably yes, so that they each get an ID
 
-    transport_manager = std::make_unique<basis::core::transport::TransportManager>(
-        std::make_unique<basis::core::transport::InprocTransport>());
-
-    if(recorder) {
-      transport_manager->SetRecorder(recorder);
-    }
-
-    transport_manager->RegisterTransport(basis::plugins::transport::TCP_TRANSPORT_NAME,
-                                         std::make_unique<basis::plugins::transport::TcpTransport>());
+    transport_manager = CreateStandardTransportManager(recorder);
 
   }
 
   const std::string& Name() const { return unit_name; }
 
   spdlog::logger &Logger() {
-    return logger;
+    return *logger;
   }
 
   // override this, should be called once by main()
   virtual void Initialize() = 0;
 
-  virtual ~Unit() = default;
   virtual void Update([[maybe_unused]] const basis::core::Duration& max_sleep_duration = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     transport_manager->Update();
     // send it off to the coordinator
@@ -87,7 +86,7 @@ public:
 
 protected:
   std::string unit_name;
-  spdlog::logger logger;
+  std::shared_ptr<spdlog::logger> logger;
   std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 };

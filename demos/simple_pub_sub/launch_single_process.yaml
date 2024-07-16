@@ -3,6 +3,7 @@ recording:
   # list of glob expressions to match topics to
   topics:
     - /chatter
+    - /log
 processes:
   demo:
     units:
