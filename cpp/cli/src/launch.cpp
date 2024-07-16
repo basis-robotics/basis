@@ -17,8 +17,8 @@
 namespace {
 /**
  * Search for a unit in well known directories given a unit name
- * @param unit_name 
- * @return std::optional<std::filesystem::path> 
+ * @param unit_name
+ * @return std::optional<std::filesystem::path>
  */
 std::optional<std::filesystem::path> FindUnit(std::string_view unit_name) {
     const std::filesystem::path basis_unit_dir = "/opt/basis/unit/";
@@ -47,9 +47,9 @@ public:
 
     /**
      * Run a process given a definition - will iterate over each unit in the definition, load, and run.
-     * @param process 
+     * @param process
      * @param recorder
-     * @return bool 
+     * @return bool
      */
     bool RunProcess(const ProcessDefinition& process, basis::RecorderInterface* recorder) {
         spdlog::info("Running process with {} units", process.units.size());
@@ -71,13 +71,13 @@ public:
 
     /**
      * Given a path to a unit shared object, create the unit and run its main loop in a separate thread
-     * @param path 
+     * @param path
      * @return bool If the launch was successful or not
      */
 
     bool LaunchSharedObjectInThread(const std::filesystem::path& path, std::string_view unit_name, basis::RecorderInterface* recorder) {
         std::unique_ptr<basis::Unit> unit(CreateUnit(path, unit_name));
-        
+
         if(!unit) {
             return false;
         }
@@ -92,7 +92,7 @@ public:
 protected:
     /**
      * The thread for running the unit. Will probably be replaced with a shared helper later, this block of code is duplicated three times now.
-     * @param unit 
+     * @param unit
      */
     void UnitThread(basis::Unit* unit, basis::RecorderInterface* recorder) {
         unit->WaitForCoordinatorConnection();
@@ -147,7 +147,7 @@ protected:
     // It's unsafe to do any allocations here - we may have forked while malloc() was locked
 
     // die when the parent dies
-    // todo: might want to assert we are main thread here. SIGHUP will kill the thread 
+    // todo: might want to assert we are main thread here. SIGHUP will kill the thread
     prctl(PR_SET_PDEATHSIG, SIGHUP);
     // If our parent already died, die anyhow
     if (getppid() == 1) {
@@ -189,8 +189,8 @@ void InstallSignalHandler(int sig) {
 
 /**
  * Launch a yaml
- * @param launch 
- * @param args 
+ * @param launch
+ * @param args
  */
 void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& args) {
     std::vector<Process> managed_processes;
@@ -253,7 +253,16 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
 
             recorder->Start(record_name);
         }
-        
+
+        std::unique_ptr<basis::core::transport::CoordinatorConnector> system_coordinator_connector;
+        while (!system_coordinator_connector) {
+            system_coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
+            if (!system_coordinator_connector) {
+                spdlog::warn("No connection to the coordinator, waiting 1 second and trying again");
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+        }
+
         InstallSignalHandler(SIGINT);
         InstallSignalHandler(SIGHUP);
 
@@ -269,7 +278,7 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
             // TODO: this can be a condition variable now
             while(!global_stop) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                system_transport_manager->Update();
+                basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
             }
 
             spdlog::info("{} got kill signal, exiting...", process_name_filter);

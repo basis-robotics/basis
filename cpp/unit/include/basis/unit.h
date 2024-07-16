@@ -10,6 +10,9 @@ namespace basis {
 
 std::unique_ptr<basis::core::transport::TransportManager> CreateStandardTransportManager(basis::RecorderInterface* recorder = nullptr);
 
+void StandardUpdate(basis::core::transport::TransportManager* transport_manager, basis::core::transport::CoordinatorConnector* coordinator_connector);
+
+
 class Unit {
 public:
   Unit(std::string_view unit_name) 
@@ -51,21 +54,7 @@ public:
   virtual void Initialize() = 0;
 
   virtual void Update([[maybe_unused]] const basis::core::Duration& max_sleep_duration = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
-    transport_manager->Update();
-    // send it off to the coordinator
-    if (coordinator_connector) {
-      std::vector<basis::core::serialization::MessageSchema> new_schemas =
-          transport_manager->GetSchemaManager().ConsumeSchemasToSend();
-      if (new_schemas.size()) {
-        coordinator_connector->SendSchemas(new_schemas);
-      }
-      coordinator_connector->SendTransportManagerInfo(transport_manager->GetTransportManagerInfo());
-      coordinator_connector->Update();
-
-      if (coordinator_connector->GetLastNetworkInfo()) {
-        transport_manager->HandleNetworkInfo(*coordinator_connector->GetLastNetworkInfo());
-      }
-    }
+    StandardUpdate(transport_manager.get(), coordinator_connector.get());
   }
 
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
