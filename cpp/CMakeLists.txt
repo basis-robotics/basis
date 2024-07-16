@@ -45,6 +45,7 @@ FetchContent_MakeAvailable(yaml-cpp)
 FetchContent_Declare(mcap
   # GIT_REPOSITORY https://github.com/foxglove/mcap
   # GIT_TAG releases/cpp/v1.4.0
+  # Fork until https://github.com/foxglove/mcap/pull/1194 is merged
   GIT_REPOSITORY https://github.com/kyle-basis/mcap
   GIT_TAG a70352a60fdf655e68f552a3d472484d7d0201ce
   CONFIGURE_COMMAND ""
@@ -55,7 +56,6 @@ FetchContent_Declare(mcap
 FetchContent_MakeAvailable(mcap)
 add_library(mcap INTERFACE)
 target_include_directories(mcap INTERFACE ${mcap_SOURCE_DIR}/cpp/mcap/include)
-message(${mcap_SOURCE_DIR})
 
 set(ARGPARSE_BUILD_TESTS OFF CACHE INTERNAL "force argparse tests to off")
 FetchContent_Declare(
