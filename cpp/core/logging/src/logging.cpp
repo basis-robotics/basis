@@ -7,6 +7,10 @@
 namespace basis::core::logging {
 
 std::shared_ptr<LogHandler> global_logging_handler;
+// Lock, mainly to prevent issues with shutting down while logging
+// this may later go away - we may write the log handler in such a way as to allow for writing to disk all the way up to shutdown
+// This will mainly require the recorder interface to be carried as a shared pointer
+std::mutex global_logging_handler_mutex;
 
 namespace internal {
   void RecorderSink::sink_it_(const spdlog::details::log_msg &msg) {
@@ -16,11 +20,12 @@ namespace internal {
     spdlog::memory_buf_t formatted;
     spdlog::sinks::base_sink<std::mutex>::formatter_->format(msg, formatted);
     // Take a reference here
-    auto handler = global_logging_handler;
-    if(handler) {
+    
+    std::unique_lock lock(global_logging_handler_mutex);
+    if(global_logging_handler) {
       // TODO the time here is slightly inaccurate, given the logging system is async
       // need to do math to convert the system clock embedded inside the message into a monotonic time
-      handler->HandleLog(basis::core::MonotonicTime::Now(), msg, fmt::to_string(formatted));
+      global_logging_handler->HandleLog(basis::core::MonotonicTime::Now(), msg, fmt::to_string(formatted));
     }
   }
 }
@@ -42,6 +47,7 @@ void InitializeLoggingSystem() {
 }
 
 void SetLogHandler(std::shared_ptr<LogHandler> handler) {
+  std::unique_lock lock(global_logging_handler_mutex);
   global_logging_handler = handler;
 }
 
