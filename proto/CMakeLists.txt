@@ -7,14 +7,14 @@ target_link_libraries(basis_proto basis::plugins::serialization::protobuf)
 
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
-set(BASIS_PROTO_DIR "${GENERATED_DIR}/basis_proto")
-make_directory(${BASIS_PROTO_DIR})
-target_include_directories(basis_proto SYSTEM PUBLIC "$<BUILD_INTERFACE:${BASIS_PROTO_DIR}>")
+set(BASIS_GENERATED_DIR "${GENERATED_DIR}/basis_proto")
+make_directory(${BASIS_GENERATED_DIR})
+target_include_directories(basis_proto SYSTEM PUBLIC "$<BUILD_INTERFACE:${BASIS_GENERATED_DIR}>")
 
 protobuf_generate(
   LANGUAGE cpp
   TARGET basis_proto 
-  PROTOC_OUT_DIR "${BASIS_PROTO_DIR}"
+  PROTOC_OUT_DIR "${BASIS_GENERATED_DIR}"
   )
 
 # Import the foxglove protobuf files
@@ -30,12 +30,12 @@ FetchContent_MakeAvailable(foxglove_schemas)
 set(FOXGLOVE_GENERATED_DIR "${GENERATED_DIR}")
 make_directory(${FOXGLOVE_GENERATED_DIR})
 
-# Need to copy in the foxglove protobufs to get protoc to be happy about paths
-set(FOXGLOVE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+set(FOXGLOVE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+# Need to copy in the foxglove protobufs to get protoc to be happy about paths - everything breaks if the protos aren't in a directory relative to the current one
 file(COPY ${foxglove_schemas_SOURCE_DIR}/schemas/proto/foxglove DESTINATION ${FOXGLOVE_SOURCE_DIR})
 file(GLOB FOXGLOVE_PROTOS ${FOXGLOVE_SOURCE_DIR}/foxglove/*.proto)
-message(${FOXGLOVE_SOURCE_DIR})
+
 add_library(foxglove_schemas_protobuf SHARED ${FOXGLOVE_PROTOS})
 
 protobuf_generate(
