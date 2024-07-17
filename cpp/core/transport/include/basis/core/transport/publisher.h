@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include "inproc.h"
+#include "logger.h"
 #include "message_packet.h"
 #include "publisher_info.h"
 
@@ -100,7 +101,7 @@ public:
     // Serialize directly to the packet
     std::span<std::byte> payload = packet->GetMutablePayload();
     if (!write_message_to_span_cb(*msg, payload)) {
-      spdlog::error("Unable to serialize message on topic {}", topic);
+      BASIS_LOG_ERROR("Unable to serialize message on topic {}", topic);
       return;
     }
 

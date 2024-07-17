@@ -91,7 +91,7 @@ protected:
     msg->set_time(time.ToSeconds());
     // Publish
     time_test_pub->Publish(msg);
-    Logger().info("Published message [\n{}]", msg->DebugString());
+    BASIS_LOG_INFO("Published message [\n{}]", msg->DebugString());
 
 #ifdef BASIS_ENABLE_ROS
     // TODO: move this out to an ExternalCallback, to simulate a sensor
@@ -108,7 +108,7 @@ protected:
                          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     // Publish it
     pc2_pub->Publish(pc2_message);
-    Logger().info("Published ROS message");
+    BASIS_LOG_INFO("Published ROS message");
 #endif
   }
 
@@ -139,7 +139,7 @@ protected:
   void OnTimeTest(std::shared_ptr<const TimeTest> msg) {
     auto now = basis::core::MonotonicTime::Now();
     // Note that latency numbers will vary depending on the transport
-    Logger().info("Got message with {:f}ms latency\n[\n{}]", ((now.ToSeconds() - msg->time()) * 1000),
+    BASIS_LOG_INFO("Got message with {:f}ms latency\n[\n{}]", ((now.ToSeconds() - msg->time()) * 1000),
                  msg->DebugString());
     time_test_pub_forwarded->Publish(msg);
   }

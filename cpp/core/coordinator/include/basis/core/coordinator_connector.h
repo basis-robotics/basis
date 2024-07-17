@@ -87,7 +87,7 @@ public:
 
         switch (message->PossibleMessages_case()) {
         case proto::CoordinatorMessage::PossibleMessagesCase::kError: {
-          spdlog::debug("Error: {}", message->error());
+          BASIS_LOG_DEBUG("Error: {}", message->error());
           errors_from_coordinator.push_back(std::move(message->error()));
           break;
         }
@@ -102,7 +102,7 @@ public:
           break;
         }
         default: {
-          spdlog::error("Unknown message from coordinator! {}", message->DebugString());
+          BASIS_LOG_ERROR("Unknown message from coordinator! {}", message->DebugString());
         }
         }
         break;
@@ -112,7 +112,7 @@ public:
         break;
       }
       case plugins::transport::TcpConnection::ReceiveStatus::ERROR: {
-        spdlog::error("connection error after bytes {} - got error {} {}", in_progress_packet.GetCurrentProgress(),
+        BASIS_LOG_ERROR("connection error after bytes {} - got error {} {}", in_progress_packet.GetCurrentProgress(),
                       errno, strerror(errno));
       }
       case plugins::transport::TcpConnection::ReceiveStatus::DISCONNECTED: {

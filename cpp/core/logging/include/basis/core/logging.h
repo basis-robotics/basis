@@ -34,7 +34,7 @@ void InitializeLoggingSystem();
 
 void SetLogHandler(std::shared_ptr<LogHandler> log_handler);
 
-std::shared_ptr<spdlog::logger> CreateLogger(std::string logger_name);
+std::shared_ptr<spdlog::logger> CreateLogger(std::string&& logger_name);
 
 
 } // namespace basis::core::logging

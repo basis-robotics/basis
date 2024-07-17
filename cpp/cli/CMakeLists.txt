@@ -3,6 +3,7 @@ add_executable(
   src/cli.cpp
   src/launch.cpp
   src/unit_loader.cpp
+  src/process_manager.cpp
 )
 
 target_link_libraries(

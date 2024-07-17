@@ -30,12 +30,21 @@ namespace internal {
   }
 }
 
+std::mutex create_log_mutex;
+
 // TODO: we could instead enforce that the logger has the recorder pointer pushed in
 // but then it would be fairly useless for system level functions
-std::shared_ptr<spdlog::logger> CreateLogger(std::string logger_name) {
-  auto logger = spdlog::create_async_nb<spdlog::sinks::stdout_color_sink_mt>(std::move(logger_name));
+std::shared_ptr<spdlog::logger> CreateLogger(std::string&& logger_name) {
+  std::unique_lock lock(create_log_mutex);
+  auto logger = spdlog::get(logger_name);
+  
+  if(logger) {
+    return logger;
+  }
+  logger = spdlog::create_async_nb<spdlog::sinks::stdout_color_sink_mt>(std::move(logger_name));
 
   logger->sinks().push_back(std::make_shared<internal::RecorderSink>());
+
   return logger;
 }
 

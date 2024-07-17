@@ -9,12 +9,14 @@
 #include <basis/recorder.h>
 #include <basis/recorder/protobuf_log.h>
 
+#include "cli_logger.h"
 #include "launch.h"
 #include "launch_definition.h"
 #include "process_manager.h"
 #include "unit_loader.h"
 
-namespace {
+namespace basis::cli {
+
 /**
  * Search for a unit in well known directories given a unit name
  * @param unit_name
@@ -25,7 +27,7 @@ std::optional<std::filesystem::path> FindUnit(std::string_view unit_name) {
 
     std::filesystem::path so_path = basis_unit_dir / (std::string(unit_name) + ".unit.so");
 
-    spdlog::debug("Searching for unit {} at {}", unit_name, so_path.string());
+    BASIS_LOG_DEBUG("Searching for unit {} at {}", unit_name, so_path.string());
     if(std::filesystem::is_regular_file(so_path)) {
         return so_path;
     }
@@ -52,7 +54,7 @@ public:
      * @return bool
      */
     bool RunProcess(const ProcessDefinition& process, basis::RecorderInterface* recorder) {
-        spdlog::info("Running process with {} units", process.units.size());
+        BASIS_LOG_INFO("Running process with {} units", process.units.size());
 
         for(const auto& [unit_name, unit] : process.units) {
             std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
@@ -62,7 +64,7 @@ public:
                 }
             }
             else {
-                spdlog::error("Failed to find unit type {}", unit.unit_type);
+                BASIS_LOG_ERROR("Failed to find unit type {}", unit.unit_type);
                 return false;
             }
         }
@@ -83,7 +85,7 @@ public:
         }
 
         threads.emplace_back([this, unit = std::move(unit), path = path.string(), recorder]() mutable {
-            spdlog::info("Started thread with unit {}", path);
+            BASIS_LOG_INFO("Started thread with unit {}", path);
             UnitThread(unit.get(), recorder);
         });
         return true;
@@ -141,7 +143,7 @@ protected:
 
   int pid = fork();
   if(pid == -1) {
-    spdlog::error("Error {} launching {}", strerror(errno), process_name);
+    BASIS_LOG_ERROR("Error {} launching {}", strerror(errno), process_name);
   }
   else if(pid == 0) {
     // It's unsafe to do any allocations here - we may have forked while malloc() was locked
@@ -163,7 +165,7 @@ protected:
     exit(1);
   }
   else {
-    spdlog::debug("forked with pid {}", pid);
+    BASIS_LOG_DEBUG("forked with pid {}", pid);
   }
 
   return Process(pid);
@@ -206,7 +208,7 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
-    spdlog::info("Top level launcher got kill signal, killing children.");
+    BASIS_LOG_INFO("Top level launcher got kill signal, killing children.");
 
     // Send signal to all processes
     for(Process& process : managed_processes) {
@@ -217,11 +219,9 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
     for(Process& process : managed_processes) {
       bool killed = process.Wait(5);
       if(!killed) {
-        spdlog::error("Failed to kill pid {}", process.GetPid());
+        BASIS_LOG_ERROR("Failed to kill pid {}", process.GetPid());
       }
     }
-}
-
 }
 
 
@@ -249,7 +249,7 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
             }
             std::string record_name = fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now().ToSeconds());
 
-            spdlog::info("Recording{} to {}.mcap", recorder_type, (launch.recording_settings->directory / record_name).string());
+            BASIS_LOG_INFO("Recording{} to {}.mcap", recorder_type, (launch.recording_settings->directory / record_name).string());
 
             recorder->Start(record_name);
         }
@@ -258,7 +258,7 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
         while (!system_coordinator_connector) {
             system_coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
             if (!system_coordinator_connector) {
-                spdlog::warn("No connection to the coordinator, waiting 1 second and trying again");
+                BASIS_LOG_WARN("No connection to the coordinator, waiting 1 second and trying again");
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
         }
@@ -281,9 +281,11 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
                 basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
             }
 
-            spdlog::info("{} got kill signal, exiting...", process_name_filter);
+            BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);
         }
 
         basis::DestroyLogHandler();
     }
+}
+
 }

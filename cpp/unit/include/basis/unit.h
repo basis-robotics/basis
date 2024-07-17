@@ -76,6 +76,7 @@ public:
 protected:
   std::string unit_name;
   std::shared_ptr<spdlog::logger> logger;
+  const std::shared_ptr<spdlog::logger>& AUTO_LOGGER = logger;
   std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 };
