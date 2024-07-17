@@ -1,5 +1,6 @@
 #include <basis/core/logging.h>
-
+#include <basis/plugins/serialization/protobuf.h>
+#include <basis/core/transport/transport_manager.h>
 #include <foxglove/Log.pb.h>
 
 // Helper to initialize the basis log with protobuf

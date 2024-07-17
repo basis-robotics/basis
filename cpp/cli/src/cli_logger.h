@@ -1,6 +1,7 @@
 #pragma once
 
 #include <basis/core/logging/macros.h>
+
 namespace basis::cli {
 
 extern std::shared_ptr<spdlog::logger> basis_logger;

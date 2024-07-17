@@ -9,7 +9,7 @@
 #include <basis/recorder/protobuf_log.h>
 #include <basis/unit.h>
 
-#include "cli_logger.h"
+#include "cli_logger.h" // IWYU pragma: keep AUTO_LOGGER
 #include "launch.h"
 #include "launch_definition.h"
 #include "process_manager.h"
