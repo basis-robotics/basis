@@ -7,24 +7,27 @@
 
 #include <basis/unit.h>
 #include <basis/recorder.h>
+#include <basis/recorder/protobuf_log.h>
 
+#include "cli_logger.h"
 #include "launch.h"
 #include "launch_definition.h"
 #include "process_manager.h"
 #include "unit_loader.h"
 
-namespace {
+namespace basis::cli {
+
 /**
  * Search for a unit in well known directories given a unit name
- * @param unit_name 
- * @return std::optional<std::filesystem::path> 
+ * @param unit_name
+ * @return std::optional<std::filesystem::path>
  */
 std::optional<std::filesystem::path> FindUnit(std::string_view unit_name) {
     const std::filesystem::path basis_unit_dir = "/opt/basis/unit/";
 
     std::filesystem::path so_path = basis_unit_dir / (std::string(unit_name) + ".unit.so");
 
-    spdlog::debug("Searching for unit {} at {}", unit_name, so_path.string());
+    BASIS_LOG_DEBUG("Searching for unit {} at {}", unit_name, so_path.string());
     if(std::filesystem::is_regular_file(so_path)) {
         return so_path;
     }
@@ -46,12 +49,12 @@ public:
 
     /**
      * Run a process given a definition - will iterate over each unit in the definition, load, and run.
-     * @param process 
+     * @param process
      * @param recorder
-     * @return bool 
+     * @return bool
      */
     bool RunProcess(const ProcessDefinition& process, basis::RecorderInterface* recorder) {
-        spdlog::info("Running process with {} units", process.units.size());
+        BASIS_LOG_INFO("Running process with {} units", process.units.size());
 
         for(const auto& [unit_name, unit] : process.units) {
             std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
@@ -61,7 +64,7 @@ public:
                 }
             }
             else {
-                spdlog::error("Failed to find unit type {}", unit.unit_type);
+                BASIS_LOG_ERROR("Failed to find unit type {}", unit.unit_type);
                 return false;
             }
         }
@@ -70,19 +73,19 @@ public:
 
     /**
      * Given a path to a unit shared object, create the unit and run its main loop in a separate thread
-     * @param path 
+     * @param path
      * @return bool If the launch was successful or not
      */
 
     bool LaunchSharedObjectInThread(const std::filesystem::path& path, std::string_view unit_name, basis::RecorderInterface* recorder) {
         std::unique_ptr<basis::Unit> unit(CreateUnit(path, unit_name));
-        
+
         if(!unit) {
             return false;
         }
 
         threads.emplace_back([this, unit = std::move(unit), path = path.string(), recorder]() mutable {
-            spdlog::info("Started thread with unit {}", path);
+            BASIS_LOG_INFO("Started thread with unit {}", path);
             UnitThread(unit.get(), recorder);
         });
         return true;
@@ -91,7 +94,7 @@ public:
 protected:
     /**
      * The thread for running the unit. Will probably be replaced with a shared helper later, this block of code is duplicated three times now.
-     * @param unit 
+     * @param unit
      */
     void UnitThread(basis::Unit* unit, basis::RecorderInterface* recorder) {
         unit->WaitForCoordinatorConnection();
@@ -140,13 +143,13 @@ protected:
 
   int pid = fork();
   if(pid == -1) {
-    spdlog::error("Error {} launching {}", strerror(errno), process_name);
+    BASIS_LOG_ERROR("Error {} launching {}", strerror(errno), process_name);
   }
   else if(pid == 0) {
     // It's unsafe to do any allocations here - we may have forked while malloc() was locked
 
     // die when the parent dies
-    // todo: might want to assert we are main thread here. SIGHUP will kill the thread 
+    // todo: might want to assert we are main thread here. SIGHUP will kill the thread
     prctl(PR_SET_PDEATHSIG, SIGHUP);
     // If our parent already died, die anyhow
     if (getppid() == 1) {
@@ -162,7 +165,7 @@ protected:
     exit(1);
   }
   else {
-    spdlog::debug("forked with pid {}", pid);
+    BASIS_LOG_DEBUG("forked with pid {}", pid);
   }
 
   return Process(pid);
@@ -188,8 +191,8 @@ void InstallSignalHandler(int sig) {
 
 /**
  * Launch a yaml
- * @param launch 
- * @param args 
+ * @param launch
+ * @param args
  */
 void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& args) {
     std::vector<Process> managed_processes;
@@ -205,7 +208,7 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
-    spdlog::info("Top level launcher got kill signal, killing children.");
+    BASIS_LOG_INFO("Top level launcher got kill signal, killing children.");
 
     // Send signal to all processes
     for(Process& process : managed_processes) {
@@ -216,11 +219,9 @@ void LaunchYaml(const LaunchDefinition& launch, const std::vector<std::string>& 
     for(Process& process : managed_processes) {
       bool killed = process.Wait(5);
       if(!killed) {
-        spdlog::error("Failed to kill pid {}", process.GetPid());
+        BASIS_LOG_ERROR("Failed to kill pid {}", process.GetPid());
       }
     }
-}
-
 }
 
 
@@ -231,10 +232,11 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
     const LaunchDefinition launch = ParseLaunchDefinitionYAML(loaded_yaml);
 
     if(process_name_filter.empty()) {
+        // We are the parent launcher, will fork here
         LaunchYaml(launch, args);
     }
     else {
-        // todo: should pass the name into each process
+        // We are a child launcher
         std::unique_ptr<basis::RecorderInterface> recorder;
         if(launch.recording_settings && launch.recording_settings->patterns.size()) {
             std::string recorder_type;
@@ -247,23 +249,43 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string>& 
             }
             std::string record_name = fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now().ToSeconds());
 
-            spdlog::info("Recording{} to {}.mcap", recorder_type, (launch.recording_settings->directory / record_name).string());
+            BASIS_LOG_INFO("Recording{} to {}.mcap", recorder_type, (launch.recording_settings->directory / record_name).string());
 
             recorder->Start(record_name);
         }
-        
-        InstallSignalHandler(SIGINT);
-        InstallSignalHandler(SIGHUP);
-        
-        UnitExecutor runner;
-        runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
-        
-        // Sleep until signal
-        // TODO: this can be a condition variable now
-        while(!global_stop) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+        std::unique_ptr<basis::core::transport::CoordinatorConnector> system_coordinator_connector;
+        while (!system_coordinator_connector) {
+            system_coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
+            if (!system_coordinator_connector) {
+                BASIS_LOG_WARN("No connection to the coordinator, waiting 1 second and trying again");
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
         }
 
-        spdlog::info("{} got kill signal, exiting...", process_name_filter);        
+        InstallSignalHandler(SIGINT);
+        InstallSignalHandler(SIGHUP);
+
+        // Used for things like /log and /time
+        auto system_transport_manager = basis::CreateStandardTransportManager(recorder.get());
+        basis::CreateLogHandler(*system_transport_manager);
+
+        {
+            UnitExecutor runner;
+            runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
+
+            // Sleep until signal
+            // TODO: this can be a condition variable now
+            while(!global_stop) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
+            }
+
+            BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);
+        }
+
+        basis::DestroyLogHandler();
     }
+}
+
 }

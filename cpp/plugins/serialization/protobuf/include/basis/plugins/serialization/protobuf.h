@@ -25,8 +25,13 @@
 #include <basis/core/serialization.h>
 #include <basis/core/serialization/message_type_info.h>
 
+#include <basis/core/logging/macros.h>
+
+DEFINE_AUTO_LOGGER_PLUGIN(serialization, protobuf)
+
 namespace basis {
-namespace plugins::serialization {
+namespace plugins::serialization::protobuf {
+
 /**
  * Main class, implementing the Serializer interface.
  */
@@ -51,7 +56,7 @@ public:
 
     if (!parsed_message->ParseFromArray(bytes.data(), bytes.size())) {
       // note: this is pretty liberal in what it accepts
-      spdlog::error("Unable to parse a message");
+      BASIS_LOG_ERROR("Unable to parse a message");
       return nullptr;
     }
 
@@ -66,13 +71,13 @@ public:
     auto descriptor = protoPool.FindMessageTypeByName(std::string(schema_name));
 
     if(!descriptor) {
-      spdlog::error("Haven't seen schema {} before", schema_name);
+      BASIS_LOG_ERROR("Haven't seen schema {} before", schema_name);
       return {};
     }
 
     auto read_message = std::unique_ptr<google::protobuf::Message>( protoFactory.GetPrototype(descriptor)->New());
     if (!read_message->ParseFromArray(span.data(), span.size())){
-      spdlog::error("failed to parse message using included schema");
+      BASIS_LOG_ERROR("failed to parse message using included schema");
       return {};
     }
     return read_message;
@@ -131,7 +136,7 @@ public:
       const auto &file = fdSet.file(i);
       if (!protoDb.FindFileByName(file.name(), &unused)) {
         if (!protoDb.Add(file)) {
-          spdlog::error("failed to add definition {} to protoDB", file.name());
+          BASIS_LOG_ERROR("failed to add definition {} to protoDB", file.name());
         }
       }
     }
@@ -197,7 +202,7 @@ using ProtobufPlugin = core::serialization::AutoSerializationPlugin<ProtobufSeri
  */
 template <typename T_MSG>
 struct SerializationHandler<T_MSG, std::enable_if_t<std::is_base_of_v<google::protobuf::Message, T_MSG>>> {
-  using type = plugins::serialization::ProtobufSerializer;
+  using type = plugins::serialization::protobuf::ProtobufSerializer;
 };
 
 } // namespace basis

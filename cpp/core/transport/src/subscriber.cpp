@@ -1,14 +1,16 @@
+#include <basis/core/transport/logger.h>
 #include <basis/core/transport/subscriber.h>
 
 #include <spdlog/spdlog.h>
 
 #include <unistd.h>
 
+
 namespace basis::core::transport {
 void SubscriberBase::HandlePublisherInfo(const std::vector<PublisherInfo> &info) {
   for (const PublisherInfo &publisher_info : info) {
     if (publisher_info.topic != topic) {
-      spdlog::error("Skipping because no topic");
+      BASIS_LOG_ERROR("Skipping publisher info because no topic");
       continue;
     }
     const __uint128_t &publisher_id = publisher_info.publisher_id;

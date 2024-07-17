@@ -11,8 +11,11 @@
 #include <spdlog/spdlog.h>
 
 #include <basis/core/containers/simple_mpsc.h>
+#include <basis/core/logging/macros.h>
 #include <basis/core/serialization/message_type_info.h>
 #include <basis/core/time.h>
+
+DEFINE_AUTO_LOGGER_NS(basis::recorder)
 
 namespace basis {
 
@@ -35,6 +38,8 @@ private:
   std::shared_ptr<const void> owning_object;
   std::span<const std::byte> span; 
 };
+
+namespace recorder {
 
 /**
  * Basic interface
@@ -71,7 +76,7 @@ public:
 
     auto status = writer.open((recording_dir / output_filename).string(), mcap::McapWriterOptions("basis"));
     if (!status.ok()) {
-      spdlog::error(status.message);
+      BASIS_LOG_ERROR(status.message);
     }
     return status.ok();
   }
@@ -166,4 +171,10 @@ private:
   std::mutex mutex;
   Recorder recorder;
 };
+}
+
+using recorder::RecorderInterface;
+using recorder::Recorder;
+using recorder::AsyncRecorder;
+
 } // namespace basis

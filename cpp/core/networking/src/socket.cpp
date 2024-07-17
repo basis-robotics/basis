@@ -10,6 +10,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <basis/core/networking/logger.h>
+
 namespace basis {
 namespace core {
 namespace networking {
@@ -21,7 +24,7 @@ Socket::~Socket() { Close(); }
 void Socket::Close() { close(fd); }
 int Socket::Send(const std::byte *data, size_t len) {
   if (fd == -1) {
-    spdlog::critical("Trying to send() on an invalid socket");
+    BASIS_LOG_CRITICAL("Trying to send() on an invalid socket");
   }
   return send(fd, data, len, MSG_NOSIGNAL);
 }

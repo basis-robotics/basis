@@ -7,7 +7,7 @@ basis::Unit* CreateUnit();
 }
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
-  spdlog::cfg::load_env_levels();
+  basis::core::logging::InitializeLoggingSystem();
 
   auto unit = std::unique_ptr<basis::Unit>(CreateUnit());
   unit->WaitForCoordinatorConnection();

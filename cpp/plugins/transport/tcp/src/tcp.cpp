@@ -5,8 +5,9 @@
 #include <spdlog/spdlog.h>
 
 namespace basis::plugins::transport {
+using namespace tcp;
 void TcpSender::StartThread() {
-  spdlog::trace("Starting TcpSender thread");
+  BASIS_LOG_TRACE("Starting TcpSender thread");
 
   send_thread = std::thread([this]() {
     while (!stop_thread) {
@@ -23,15 +24,15 @@ void TcpSender::StartThread() {
       }
 
       for (auto &message : buffer) {
-        spdlog::trace("Sending a message of size {}", message->GetPacket().size());
+        BASIS_LOG_TRACE("Sending a message of size {}", message->GetPacket().size());
         std::span<const std::byte> packet = message->GetPacket();
         if (!Send(packet.data(), packet.size())) {
-          spdlog::trace("Stopping send thread due to {}: {}", errno, strerror(errno));
+          BASIS_LOG_TRACE("Stopping send thread due to {}: {}", errno, strerror(errno));
           stop_thread = true;
         }
-        spdlog::trace("Sent");
+        BASIS_LOG_TRACE("Sent");
         if (stop_thread) {
-          spdlog::trace("stop TcpSender");
+          BASIS_LOG_TRACE("stop TcpSender");
           return;
         }
       }
@@ -40,7 +41,7 @@ void TcpSender::StartThread() {
 }
 
 void TcpSender::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
-  spdlog::trace("Queueing a message of size {}", message->GetPacket().size());
+  BASIS_LOG_TRACE("Queueing a message of size {}", message->GetPacket().size());
 
   std::lock_guard lock(send_mutex);
   send_buffer.emplace_back(std::move(message));
@@ -48,7 +49,7 @@ void TcpSender::SendMessage(std::shared_ptr<core::transport::MessagePacket> mess
 }
 
 nonstd::expected<std::shared_ptr<TcpPublisher>, core::networking::Socket::Error> TcpPublisher::Create(uint16_t port) {
-  spdlog::debug("Create TcpListenSocket");
+  BASIS_LOG_DEBUG("Create TcpListenSocket");
   auto maybe_listen_socket = core::networking::TcpListenSocket::Create(port);
   if (!maybe_listen_socket) {
     return nonstd::make_unexpected(maybe_listen_socket.error());

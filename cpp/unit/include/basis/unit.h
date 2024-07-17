@@ -1,5 +1,6 @@
 #pragma once
 #include <basis/core/coordinator_connector.h>
+#include <basis/core/logging.h>
 #include <basis/core/threading/thread_pool.h>
 #include <basis/core/transport/transport_manager.h>
 
@@ -7,19 +8,29 @@
 
 namespace basis {
 
+std::unique_ptr<basis::core::transport::TransportManager> CreateStandardTransportManager(basis::RecorderInterface* recorder = nullptr);
+
+void StandardUpdate(basis::core::transport::TransportManager* transport_manager, basis::core::transport::CoordinatorConnector* coordinator_connector);
+
+
 class Unit {
 public:
   Unit(std::string_view unit_name) 
   : unit_name(unit_name)
-  , logger(std::string(unit_name), std::make_shared<spdlog::sinks::stdout_color_sink_mt>()) 
+  , logger(basis::core::logging::CreateLogger(std::string(unit_name))) 
   {
   }
+  
+  virtual ~Unit() {
+    spdlog::drop(std::string(unit_name));
+  }
+
 
   void WaitForCoordinatorConnection() {
      while (!coordinator_connector) {
         coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
         if (!coordinator_connector) {
-          spdlog::warn("No connection to the coordinator, waiting 1 second and trying again");
+          BASIS_LOG_WARN("No connection to the coordinator, waiting 1 second and trying again");
           std::this_thread::sleep_for(std::chrono::seconds(1));
         }
       }
@@ -29,44 +40,20 @@ public:
     // todo: it may be better to pass these in - do we want one transport manager per unit ?
     // probably yes, so that they each get an ID
 
-    transport_manager = std::make_unique<basis::core::transport::TransportManager>(
-        std::make_unique<basis::core::transport::InprocTransport>());
-
-    if(recorder) {
-      transport_manager->SetRecorder(recorder);
-    }
-
-    transport_manager->RegisterTransport(basis::plugins::transport::TCP_TRANSPORT_NAME,
-                                         std::make_unique<basis::plugins::transport::TcpTransport>());
-
+    transport_manager = CreateStandardTransportManager(recorder);
   }
 
   const std::string& Name() const { return unit_name; }
 
   spdlog::logger &Logger() {
-    return logger;
+    return *logger;
   }
 
   // override this, should be called once by main()
   virtual void Initialize() = 0;
 
-  virtual ~Unit() = default;
   virtual void Update([[maybe_unused]] const basis::core::Duration& max_sleep_duration = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
-    transport_manager->Update();
-    // send it off to the coordinator
-    if (coordinator_connector) {
-      std::vector<basis::core::serialization::MessageSchema> new_schemas =
-          transport_manager->GetSchemaManager().ConsumeSchemasToSend();
-      if (new_schemas.size()) {
-        coordinator_connector->SendSchemas(new_schemas);
-      }
-      coordinator_connector->SendTransportManagerInfo(transport_manager->GetTransportManagerInfo());
-      coordinator_connector->Update();
-
-      if (coordinator_connector->GetLastNetworkInfo()) {
-        transport_manager->HandleNetworkInfo(*coordinator_connector->GetLastNetworkInfo());
-      }
-    }
+    StandardUpdate(transport_manager.get(), coordinator_connector.get());
   }
 
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
@@ -87,7 +74,8 @@ public:
 
 protected:
   std::string unit_name;
-  spdlog::logger logger;
+  std::shared_ptr<spdlog::logger> logger;
+  const std::shared_ptr<spdlog::logger>& AUTO_LOGGER = logger;
   std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 };

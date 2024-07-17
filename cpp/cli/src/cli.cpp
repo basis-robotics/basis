@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include <basis/core/coordinator_connector.h>
+#include <basis/core/logging.h>
 #include <basis/core/transport/transport_manager.h>
 
 #include <filesystem>
@@ -15,9 +16,13 @@
 #include <dlfcn.h>
 #include <unistd.h>
 
+#include "cli_logger.h"
 #include "launch.h"
 
-using namespace basis;
+namespace basis::cli {
+
+std::shared_ptr<spdlog::logger> basis_logger = basis::core::logging::CreateLogger("basis");
+// TODO: set up a special CLI logger that prints to stderr
 
 template<typename T>
 std::unique_ptr<T> LoadPlugin(const char *path) {
@@ -186,7 +191,14 @@ void PrintSchema(const std::string &schema_name, basis::core::transport::Coordin
   }
 }
 
+}
+
 int main(int argc, char *argv[]) {
+  using namespace basis;
+  using namespace basis::cli;
+
+  core::logging::InitializeLoggingSystem();
+
   LoadPlugins<basis::core::serialization::SerializationPlugin>();
 
   argparse::ArgumentParser parser("basis");
@@ -255,7 +267,7 @@ int main(int argc, char *argv[]) {
 
   auto connection = basis::core::transport::CoordinatorConnector::Create(port);
   if (!connection) {
-    spdlog::error("Unable to connect to the basis coordinator at port {}", port);
+    BASIS_LOG_ERROR("Unable to connect to the basis coordinator at port {}", port);
     return 1;
   }
 
@@ -266,7 +278,7 @@ int main(int argc, char *argv[]) {
   }
   auto *info = connection->GetLastNetworkInfo();
   if (!info) {
-    spdlog::error("Timed out waiting for network info from coordinator");
+    BASIS_LOG_ERROR("Timed out waiting for network info from coordinator");
     return 1;
   }
   if (parser.is_subcommand_used("topic")) {

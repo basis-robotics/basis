@@ -65,7 +65,8 @@ LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node& yaml) {
                 // By default, the unit name is the unit type
                 unit.unit_type = unit_name;
             }
-            process.units.emplace(unit_name, std::move(unit));
+            
+            process.units.emplace("/" + unit_name, std::move(unit));
         }
         launch.processes.emplace(process_yaml.first.as<std::string>(), std::move(process));
     }

@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <basis/plugins/transport/logger.h>
+
 namespace basis::plugins::transport {
 
 /**

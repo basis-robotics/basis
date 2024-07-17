@@ -171,7 +171,7 @@ public:
 
 private:
   std::mutex publishers_mutex;
-  // TODO: this doesn't appear to actually be used - we can probably remove it
+
   std::unordered_multimap<std::string, std::weak_ptr<TcpPublisher>> publishers;
 
   std::mutex subscribers_mutex;

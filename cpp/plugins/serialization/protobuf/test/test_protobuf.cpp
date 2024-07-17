@@ -31,7 +31,7 @@ TEST(TestProto, Basic) {
  */
 TEST(TestProto, TestSerializer) {
   static_assert(std::is_same_v<basis::SerializationHandler<TestExampleMessage>::type,
-                               basis::plugins::serialization::ProtobufSerializer>);
+                               basis::plugins::serialization::protobuf::ProtobufSerializer>);
 
   TestExampleMessage message;
   message.set_email("test@example.com");
@@ -45,7 +45,7 @@ TEST(TestProto, TestSerializer) {
 }
 
 TEST(TestProto, Schema) {
-  using namespace basis::plugins::serialization;
+  using namespace basis::plugins::serialization::protobuf;
 
   basis::core::serialization::MessageSchema schema = ProtobufSerializer::DumpSchema<SchemaTestMessage>();
 

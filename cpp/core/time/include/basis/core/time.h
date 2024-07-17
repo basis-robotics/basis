@@ -110,13 +110,6 @@ struct MonotonicTime : public TimePoint {
 
 protected:
   using TimePoint::TimePoint;
-
-#if 0
-
-    static double ToUnixWallTime() {
-
-    }
-#endif
 };
 
 #if 0

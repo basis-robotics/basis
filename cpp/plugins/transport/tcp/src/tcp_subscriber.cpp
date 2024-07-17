@@ -1,9 +1,12 @@
+#include <basis/plugins/transport/logger.h>
 #include <basis/plugins/transport/tcp_subscriber.h>
 #include <basis/plugins/transport/tcp_transport_name.h>
 
 #include <charconv>
 
 namespace basis::plugins::transport {
+
+using namespace tcp;
 
 nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
 TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
@@ -27,7 +30,7 @@ bool TcpSubscriber::Connect(std::string_view host, std::string_view endpoint,
   uint16_t port;
   auto result = std::from_chars(endpoint.data(), endpoint.data() + endpoint.size(), port);
   if (result.ec != std::errc()) {
-    spdlog::error("TcpSubscriber::Connect: '{}' is not a valid port", endpoint);
+    BASIS_LOG_ERROR("TcpSubscriber::Connect: '{}' is not a valid port", endpoint);
     return false;
   }
 
@@ -40,13 +43,13 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
   std::pair<std::string, uint16_t> key(address, port);
   {
     if (receivers.count(key) != 0) {
-      spdlog::warn("Already have address {}:{}", address, port);
+      BASIS_LOG_WARN("Already have address {}:{}", address, port);
       return true;
     }
 
     auto receiver = TcpReceiver(address, port);
     if (!receiver.Connect()) {
-      spdlog::error("Unable to connect to {}:{}", address, port);
+      BASIS_LOG_ERROR("Unable to connect to {}:{}", address, port);
 
       return false;
     }
@@ -57,7 +60,7 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
 
   auto on_epoll_callback = [this](int fd, std::unique_lock<std::mutex> lock, TcpReceiver *receiver_ptr,
                                   std::shared_ptr<core::transport::IncompleteMessagePacket> incomplete) {
-    spdlog::debug("Queuing work for socket {}", fd);
+    BASIS_LOG_DEBUG("Queuing work for socket {}", fd);
 
     worker_pool->enqueue([this, fd, incomplete = std::move(incomplete), receiver_ptr, lock = std::move(lock)] {
       // It's an error to actually call this with multiple threads.
@@ -73,13 +76,13 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
       }
       case TcpReceiver::ReceiveStatus::ERROR: {
         // TODO
-        spdlog::error("{}, {}: bytes {} - got error {} {}", fd, (void *)incomplete.get(),
+        BASIS_LOG_ERROR("{}, {}: bytes {} - got error {} {}", fd, (void *)incomplete.get(),
                       incomplete->GetCurrentProgress(), errno, strerror(errno));
       }
       case TcpReceiver::ReceiveStatus::DISCONNECTED: {
 
         // TODO
-        spdlog::error("Disconnecting from topic {}", topic_name);
+        BASIS_LOG_ERROR("Disconnecting from topic {}", topic_name);
         return;
       }
       }
