@@ -50,11 +50,12 @@ public:
   }
 
   void RegisterProtobuf(std::string topic_name = "/proto_topic") {
-    auto basis_schema = basis::plugins::serialization::ProtobufSerializer::DumpSchema<TestProtoStruct>();
-    auto mti = basis::plugins::serialization::ProtobufSerializer::DeduceMessageTypeInfo<TestProtoStruct>();
+    auto basis_schema = basis::plugins::serialization::protobuf::ProtobufSerializer::DumpSchema<TestProtoStruct>();
+    auto mti = basis::plugins::serialization::protobuf::ProtobufSerializer::DeduceMessageTypeInfo<TestProtoStruct>();
     recorder->RegisterTopic(
        topic_name, mti, basis_schema.schema_efficient);
   }
+  
   void WriteProtobuf(std::string topic_name = "/proto_topic") {
     TestProtoStruct msg;
 

@@ -41,7 +41,6 @@ public:
     // probably yes, so that they each get an ID
 
     transport_manager = CreateStandardTransportManager(recorder);
-
   }
 
   const std::string& Name() const { return unit_name; }

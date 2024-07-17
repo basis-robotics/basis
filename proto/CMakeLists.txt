@@ -27,22 +27,23 @@ FetchContent_Declare(foxglove_schemas
 
 FetchContent_MakeAvailable(foxglove_schemas)
 
-set(FOXGLOVE_PROTO_DIR "${GENERATED_DIR}")
-make_directory(${FOXGLOVE_PROTO_DIR})
+set(FOXGLOVE_GENERATED_DIR "${GENERATED_DIR}")
+make_directory(${FOXGLOVE_GENERATED_DIR})
 
-file(GLOB FOXGLOVE_PROTOS ${foxglove_schemas_SOURCE_DIR}/schemas/proto/foxglove/*.proto)
+# Need to copy in the foxglove protobufs to get protoc to be happy about paths
+set(FOXGLOVE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+file(COPY ${foxglove_schemas_SOURCE_DIR}/schemas/proto/foxglove DESTINATION ${FOXGLOVE_SOURCE_DIR})
+file(GLOB FOXGLOVE_PROTOS ${FOXGLOVE_SOURCE_DIR}/foxglove/*.proto)
+message(${FOXGLOVE_SOURCE_DIR})
+add_library(foxglove_schemas_protobuf SHARED ${FOXGLOVE_PROTOS})
 
 protobuf_generate(
   LANGUAGE cpp
-  PROTOS ${FOXGLOVE_PROTOS}
-  OUT_VAR FOXGLOVE_GENERATED_SOURCES
-  PROTOC_OUT_DIR ${FOXGLOVE_PROTO_DIR}
-  IMPORT_DIRS ${foxglove_schemas_SOURCE_DIR}/schemas/proto/
+  TARGET foxglove_schemas_protobuf
+  OUT_VAR FOOBAR
+  PROTOC_OUT_DIR ${FOXGLOVE_GENERATED_DIR}
+  IMPORT_DIRS ${FOXGLOVE_SOURCE_DIR}
   )
 
-# Strip the input tree structure from the output
-list(TRANSFORM FOXGLOVE_GENERATED_SOURCES REPLACE ".*/_deps/foxglove_schemas-src/schemas/proto/foxglove/(.*)\\.pb\\.(.*)" "${FOXGLOVE_PROTO_DIR}/foxglove/\\1.pb.\\2")
-
-add_library(foxglove_schemas_protobuf SHARED ${FOXGLOVE_GENERATED_SOURCES})
-
-target_include_directories(foxglove_schemas_protobuf SYSTEM PUBLIC "$<BUILD_INTERFACE:${FOXGLOVE_PROTO_DIR}>")
+target_include_directories(foxglove_schemas_protobuf SYSTEM PUBLIC "$<BUILD_INTERFACE:${GENERATED_DIR}>")
