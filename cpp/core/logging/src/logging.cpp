@@ -51,8 +51,9 @@ std::shared_ptr<spdlog::logger> CreateLogger(std::string&& logger_name) {
 void InitializeLoggingSystem() {
   // https://github.com/gabime/spdlog/blob/v1.x/include/spdlog/cfg/env.h
   spdlog::cfg::load_env_levels();
-
-  //set_default_logger here
+  // TODO - the time shown here is system over monotonic
+  spdlog::set_pattern("[%E.%F] [%n] [%^%l%$] %v");
+  // TODO: should we set a default logger here?
 }
 
 void SetLogHandler(std::shared_ptr<LogHandler> handler) {
