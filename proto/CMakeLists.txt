@@ -41,7 +41,7 @@ protobuf_generate(
   )
 
 # Strip the input tree structure from the output
-list(TRANSFORM FOXGLOVE_GENERATED_SOURCES REPLACE "\\.\\./.*build/_deps/foxglove_schemas-src/schemas/proto/" "")
+list(TRANSFORM FOXGLOVE_GENERATED_SOURCES REPLACE ".*/_deps/foxglove_schemas-src/schemas/proto/foxglove/(.*)\\.pb\\.(.*)" "${FOXGLOVE_PROTO_DIR}/foxglove/\\1.pb.\\2")
 
 add_library(foxglove_schemas_protobuf SHARED ${FOXGLOVE_GENERATED_SOURCES})
 
