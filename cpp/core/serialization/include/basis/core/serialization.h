@@ -1,14 +1,14 @@
 #pragma once
 /**
  * @file serialization.h
- * 
+ *
  * Contains the serialization interface used by the transport layer.
  */
 
 #include <cassert>
 #include <functional>
-#include <span>
 #include <memory>
+#include <span>
 
 #include "serialization/message_type_info.h"
 
@@ -19,7 +19,8 @@ struct MessageSchema {
   std::string serializer;
   std::string name;
   std::string schema;
-  std::string schema_efficient; // Optional - some serializers may have a more efficient representation wanted by the recorder
+  std::string
+      schema_efficient; // Optional - some serializers may have a more efficient representation wanted by the recorder
   std::string hash_id;
 };
 
@@ -31,16 +32,17 @@ struct MessageSchema {
 class Serializer {
 private:
   Serializer() = default;
+
 public:
   virtual ~Serializer() = default;
+
 private:
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
   /**
    * Returns the size in bytes required for a message to be serialized to disk or as a network packet.
    */
-  template <typename T_MSG> 
-  static size_t GetSerializedSize(const T_MSG &message) {
+  template <typename T_MSG> static size_t GetSerializedSize(const T_MSG &message) {
     static_assert(false, "Please implement this template function");
   }
 
@@ -49,8 +51,7 @@ private:
    *
    * @returns true on success, false on failure.
    */
-  template <typename T_MSG> 
-  static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> bytes) {
+  template <typename T_MSG> static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> bytes) {
     static_assert(false, "Please implement this template function");
   }
 
@@ -61,10 +62,9 @@ private:
    *
    * @todo this forces a heap allocation of the message, there may be a desire for stack allocated messages
    */
-    template <typename T_MSG> static std::unique_ptr<T_MSG>
-    DeserializeFromSpan(std::span<const std::byte> bytes) {
-          static_assert(false, "Please implement this template function");
-    }
+  template <typename T_MSG> static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
+    static_assert(false, "Please implement this template function");
+  }
 #pragma clang diagnostic pop
 };
 
@@ -73,36 +73,37 @@ public:
   static constexpr char PLUGIN_TYPE[] = "serialization";
 
   virtual ~SerializationPlugin() = default;
-  
+
   virtual std::string_view GetPluginName() = 0;
 
   virtual bool LoadSchema(std::string_view schema_name, std::string_view schema) = 0;
 
-  virtual std::optional<std::string> DumpMessageString(std::span<const std::byte> span, std::string_view schema_name) = 0;
+  virtual std::optional<std::string> DumpMessageString(std::span<const std::byte> span,
+                                                       std::string_view schema_name) = 0;
 
-  virtual std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span, std::string_view schema_name) = 0;
+  virtual std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span,
+                                                           std::string_view schema_name) = 0;
 };
 
-template<typename T_Serializer>
-class AutoSerializationPlugin : public SerializationPlugin {
-  public:
-    AutoSerializationPlugin() = default;
-    
-    std::string_view GetPluginName() override {
-      return T_Serializer::SERIALIZER_ID;
-    }
+template <typename T_Serializer> class AutoSerializationPlugin : public SerializationPlugin {
+public:
+  AutoSerializationPlugin() = default;
 
-    virtual bool LoadSchema(std::string_view schema_name, std::string_view schema) override {
-      return T_Serializer::LoadSchema(schema_name, schema);
-    }
+  std::string_view GetPluginName() override { return T_Serializer::SERIALIZER_ID; }
 
-    virtual std::optional<std::string> DumpMessageString(std::span<const std::byte> span, std::string_view schema_name) override {
-      return T_Serializer::DumpMessageString(span, schema_name);
-    }
+  virtual bool LoadSchema(std::string_view schema_name, std::string_view schema) override {
+    return T_Serializer::LoadSchema(schema_name, schema);
+  }
 
-    virtual std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span, std::string_view schema_name) override {
-      return T_Serializer::DumpMessageJSONString(span, schema_name);
-    }
+  virtual std::optional<std::string> DumpMessageString(std::span<const std::byte> span,
+                                                       std::string_view schema_name) override {
+    return T_Serializer::DumpMessageString(span, schema_name);
+  }
+
+  virtual std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span,
+                                                           std::string_view schema_name) override {
+    return T_Serializer::DumpMessageJSONString(span, schema_name);
+  }
 };
 
 /**
@@ -143,15 +144,15 @@ public:
  * Helper to query the Serializer used for a message.
  * Will never assume RawSerializer.
  *
- * @example 
+ * @example
  *   typename T_Serializer = SerializationHandler<T_MSG>::type;
  *   std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
  */
 template <typename T_MSG, typename Enable = void> struct SerializationHandler {
   using type = core::serialization::Serializer;
 
-  static_assert(false,
-                "Serialization handler for this type not found - please make sure you've included the proper serialization plugin");
+  static_assert(false, "Serialization handler for this type not found - please make sure you've included the proper "
+                       "serialization plugin");
 };
 
 /**
@@ -163,7 +164,7 @@ template <typename T_MSG> using SerializeWriteSpanCallback = std::function<bool(
 /**
  * Helper to serialize a message to bytes.
  *
- * @returns {message_pointer, size} on success 
+ * @returns {message_pointer, size} on success
  * @returns {nullptr, 0} on failure
  */
 template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
@@ -175,7 +176,6 @@ static std::pair<std::unique_ptr<std::byte[]>, size_t> SerializeToBytes(const T_
   }
   return {nullptr, 0};
 }
-
 
 /**
  * Helper to standardize callback used by the transport layer for deserialization.

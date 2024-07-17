@@ -37,7 +37,7 @@ public:
    * @todo I don't see why this can't be used as MPMC
    * @todo It would be great if the mspc queue could take an std::atomic bool for when to stop
    */
-  std::optional<T> Pop(const Duration& sleep = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
+  std::optional<T> Pop(const Duration &sleep = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     std::unique_lock lock(queue_mutex);
     if (queue.empty()) {
       queue_cv.wait_for(lock, std::chrono::duration<double>(sleep.ToSeconds()), [this] { return !queue.empty(); });

@@ -74,9 +74,10 @@ public:
 
       [&]<std::size_t... I>(std::index_sequence<I...>) {
         const auto syncs =
-            std::tuple(
-              FindMatchingFieldNoLock<std::get<I>(fields)>(field_to_check, std::get<I>(sync_buffers))...);
-        const bool is_synced = ((std::get<I>(this->storage).metadata.is_optional || std::get<I>(fields) == nullptr || std::get<I>(syncs) != -1) && ...);
+            std::tuple(FindMatchingFieldNoLock<std::get<I>(fields)>(field_to_check, std::get<I>(sync_buffers))...);
+        const bool is_synced = ((std::get<I>(this->storage).metadata.is_optional || std::get<I>(fields) == nullptr ||
+                                 std::get<I>(syncs) != -1) &&
+                                ...);
         if (is_synced) {
           [[maybe_unused]] auto t = ((ApplySync<I>(std::get<I>(syncs)), true) && ...);
         }
@@ -139,7 +140,7 @@ protected:
 
   template <auto INDEX> void ApplySync(int sync_index) {
     if constexpr (std::get<INDEX>(fields)) {
-      if(sync_index >= 0) {
+      if (sync_index >= 0) {
         auto &sync = std::get<INDEX>(sync_buffers);
         std::get<INDEX>(this->storage).ApplyMessage(sync[sync_index]);
         sync.erase(sync.begin(), sync.begin() + sync_index + 1);

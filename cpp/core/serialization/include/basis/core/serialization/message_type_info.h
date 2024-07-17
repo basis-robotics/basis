@@ -11,10 +11,8 @@ struct MessageTypeInfo {
   std::string mcap_message_encoding;
   std::string mcap_schema_encoding;
 
-  std::string SchemaId() const {
-    return serializer + ":" + name;
-  }
-  //size_t type_size = 0; // Required for raw types, to help ensure safety
+  std::string SchemaId() const { return serializer + ":" + name; }
+  // size_t type_size = 0; // Required for raw types, to help ensure safety
 };
 
-} // namespace basis::core::transport
+} // namespace basis::core::serialization

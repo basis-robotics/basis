@@ -17,7 +17,6 @@ class TestTcpTransport;
 
 namespace basis::plugins::transport {
 
-
 /**
  * Used to send serialized data over TCP.
  *
@@ -32,8 +31,7 @@ public:
   /**
    * Construct a sender, given an already created+valid socket.
    */
-  TcpSender(core::networking::TcpSocket socket) :  TcpConnection(std::move(socket)) { 
-    StartThread(); }
+  TcpSender(core::networking::TcpSocket socket) : TcpConnection(std::move(socket)) { StartThread(); }
 
   /**
    * Destruct.
@@ -130,12 +128,12 @@ public:
 
   virtual std::shared_ptr<basis::core::transport::TransportSubscriber>
   Subscribe(std::string_view topic, core::transport::TypeErasedSubscriberCallback callback,
-            basis::core::threading::ThreadPool* work_thread_pool,
+            basis::core::threading::ThreadPool *work_thread_pool,
             [[maybe_unused]] core::serialization::MessageTypeInfo type_info) override {
     // TODO: pass in the thread pool every time
     // TODO: error handling
-    std::shared_ptr<TcpSubscriber> subscriber = *TcpSubscriber::Create(
-        topic, std::move(callback), &epoll, work_thread_pool);
+    std::shared_ptr<TcpSubscriber> subscriber =
+        *TcpSubscriber::Create(topic, std::move(callback), &epoll, work_thread_pool);
     {
       std::lock_guard lock(subscribers_mutex);
       subscribers.emplace(std::string(topic), subscriber);

@@ -21,9 +21,7 @@ public:
   Process(const Process &) = delete;
   Process &operator=(const Process &) = delete;
   // Moving is fine
-  Process(Process &&other) {
-    *this = std::move(other);
-  }
+  Process(Process &&other) { *this = std::move(other); }
   Process &operator=(Process &&other) {
     if (this != &other) {
       // When we do move, if we have a process, kill it.
@@ -39,9 +37,7 @@ public:
 
   ~Process() { Shutdown(); }
 
-  int GetPid() const {
-    return pid;
-  }
+  int GetPid() const { return pid; }
 
   void Shutdown() {
     if (config.kill_on_shutdown) {
@@ -60,4 +56,4 @@ private:
   ProcessConfig config;
 };
 
-}
+} // namespace basis::cli

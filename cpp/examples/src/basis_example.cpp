@@ -140,7 +140,7 @@ protected:
     auto now = basis::core::MonotonicTime::Now();
     // Note that latency numbers will vary depending on the transport
     BASIS_LOG_INFO("Got message with {:f}ms latency\n[\n{}]", ((now.ToSeconds() - msg->time()) * 1000),
-                 msg->DebugString());
+                   msg->DebugString());
     time_test_pub_forwarded->Publish(msg);
   }
 

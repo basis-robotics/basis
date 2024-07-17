@@ -8,51 +8,45 @@
 
 namespace basis {
 
-std::unique_ptr<basis::core::transport::TransportManager> CreateStandardTransportManager(basis::RecorderInterface* recorder = nullptr);
+std::unique_ptr<basis::core::transport::TransportManager>
+CreateStandardTransportManager(basis::RecorderInterface *recorder = nullptr);
 
-void StandardUpdate(basis::core::transport::TransportManager* transport_manager, basis::core::transport::CoordinatorConnector* coordinator_connector);
-
+void StandardUpdate(basis::core::transport::TransportManager *transport_manager,
+                    basis::core::transport::CoordinatorConnector *coordinator_connector);
 
 class Unit {
 public:
-  Unit(std::string_view unit_name) 
-  : unit_name(unit_name)
-  , logger(basis::core::logging::CreateLogger(std::string(unit_name))) 
-  {
-  }
-  
-  virtual ~Unit() {
-    spdlog::drop(std::string(unit_name));
-  }
+  Unit(std::string_view unit_name)
+      : unit_name(unit_name), logger(basis::core::logging::CreateLogger(std::string(unit_name))) {}
 
+  virtual ~Unit() { spdlog::drop(std::string(unit_name)); }
 
   void WaitForCoordinatorConnection() {
-     while (!coordinator_connector) {
-        coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
-        if (!coordinator_connector) {
-          BASIS_LOG_WARN("No connection to the coordinator, waiting 1 second and trying again");
-          std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
+    while (!coordinator_connector) {
+      coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
+      if (!coordinator_connector) {
+        BASIS_LOG_WARN("No connection to the coordinator, waiting 1 second and trying again");
+        std::this_thread::sleep_for(std::chrono::seconds(1));
       }
+    }
   }
 
-  void CreateTransportManager(basis::RecorderInterface* recorder = nullptr) {
+  void CreateTransportManager(basis::RecorderInterface *recorder = nullptr) {
     // todo: it may be better to pass these in - do we want one transport manager per unit ?
     // probably yes, so that they each get an ID
 
     transport_manager = CreateStandardTransportManager(recorder);
   }
 
-  const std::string& Name() const { return unit_name; }
+  const std::string &Name() const { return unit_name; }
 
-  spdlog::logger &Logger() {
-    return *logger;
-  }
+  spdlog::logger &Logger() { return *logger; }
 
   // override this, should be called once by main()
   virtual void Initialize() = 0;
 
-  virtual void Update([[maybe_unused]] const basis::core::Duration& max_sleep_duration = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
+  virtual void Update([[maybe_unused]] const basis::core::Duration &max_sleep_duration =
+                          basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     StandardUpdate(transport_manager.get(), coordinator_connector.get());
   }
 
@@ -75,14 +69,14 @@ public:
 protected:
   std::string unit_name;
   std::shared_ptr<spdlog::logger> logger;
-  const std::shared_ptr<spdlog::logger>& AUTO_LOGGER = logger;
+  const std::shared_ptr<spdlog::logger> &AUTO_LOGGER = logger;
   std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 };
 
 /**
- * A simple unit where all handlers are run mutally exclusive from eachother - uses a queue for all outputs, which adds some
- * amount of latency
+ * A simple unit where all handlers are run mutally exclusive from eachother - uses a queue for all outputs, which adds
+ * some amount of latency
  */
 class SingleThreadedUnit : public Unit {
 protected:
@@ -93,7 +87,7 @@ public:
   using Unit::Initialize;
   using Unit::Unit;
 
-  virtual void Update(const basis::core::Duration& max_sleep_duration) override {
+  virtual void Update(const basis::core::Duration &max_sleep_duration) override {
     Unit::Update(max_sleep_duration);
     // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing
 

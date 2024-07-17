@@ -77,29 +77,29 @@ public:
   static bool LoadSchema(std::string_view schema_name, std::string_view schema) {
     // Unsure why rosx_introspection keys by topic rather than schema
     parser_collection.registerParser(std::string(schema_name), std::string(schema_name), std::string(schema));
-    return true; 
+    return true;
   }
 
-  template <typename T_MSG>
-  static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
-    return {SERIALIZER_ID, ros::message_traits::DataType<T_MSG>::value(), GetMCAPMessageEncoding(), GetMCAPSchemaEncoding()};
+  template <typename T_MSG> static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
+    return {SERIALIZER_ID, ros::message_traits::DataType<T_MSG>::value(), GetMCAPMessageEncoding(),
+            GetMCAPSchemaEncoding()};
   }
-  
-  static const char* GetMCAPSchemaEncoding() {
+
+  static const char *GetMCAPSchemaEncoding() {
     // https://mcap.dev/spec/registry#ros1msg
     return "ros1msg";
   }
 
-  static const char* GetMCAPMessageEncoding() {
+  static const char *GetMCAPMessageEncoding() {
     // https://mcap.dev/spec/registry#ros1
     return "ros1";
   }
+
 protected:
   static RosMsgParser::ParsersCollection<RosMsgParser::ROS_Deserializer> parser_collection;
 };
 
 using RosMsgPlugin = core::serialization::AutoSerializationPlugin<RosmsgSerializer>;
-
 
 } // namespace plugins::serialization
 

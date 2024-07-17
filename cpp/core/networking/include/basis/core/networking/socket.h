@@ -87,8 +87,6 @@ public:
    */
   std::optional<Error> Select(int timeout_s, int timeout_ns);
 
-  
-
   /**
    * Receives data into the requested buffer,
    *

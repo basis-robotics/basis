@@ -22,7 +22,7 @@ wip::TimeTest(const unit::wip::TimeTest::Input &input) {
   return out;
 }
 
-ApproxTest::Output wip::ApproxTest(const ApproxTest::Input& input) {
+ApproxTest::Output wip::ApproxTest(const ApproxTest::Input &input) {
   BASIS_LOG_INFO("Got approximate output");
   return {};
 }

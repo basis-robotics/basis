@@ -90,15 +90,13 @@ class RateSubscriber {
 public:
   RateSubscriber(const Duration &tick_length, std::function<void(MonotonicTime)> callback)
       : tick_length(tick_length), callback(std::move(callback)) {
-        // auto start?
-        Start();
-      }
+    // auto start?
+    Start();
+  }
 
   RateSubscriber() = default;
 
-  ~RateSubscriber() {
-    Stop();
-  }
+  ~RateSubscriber() { Stop(); }
 
   void Start() { thread = std::thread(&RateSubscriber::ThreadFunction, this); }
 
@@ -108,6 +106,7 @@ public:
       thread.join();
     }
   }
+
 protected:
   void ThreadFunction() {
     MonotonicTime next = MonotonicTime::Now();
@@ -115,7 +114,7 @@ protected:
       next += tick_length;
       next.SleepUntil();
       // Don't use next here - it will be affected by the scheduler
-      callback( MonotonicTime::Now());
+      callback(MonotonicTime::Now());
     }
   }
 

@@ -24,7 +24,7 @@ struct AddressPortHash {
  *
  * @todo these could be pooled. If multiple subscribers to the same topic are created, we should only have to recieve
  * once. It's a bit of an early optimization, though.
- * 
+ *
  * @todo this class is fairly useless, now - we can juts utilize TcpConnection's Socket constructor
  */
 class TcpReceiver : public TcpConnection {
@@ -52,8 +52,7 @@ public:
   // todo: error condition
   static nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
   Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
-         core::threading::ThreadPool *worker_pool,
-         std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
+         core::threading::ThreadPool *worker_pool, std::vector<std::pair<std::string_view, uint16_t>> addresses = {});
 
   virtual bool Connect(std::string_view host, std::string_view endpoint, __uint128_t publisher_id) override;
 
@@ -61,6 +60,7 @@ public:
   bool ConnectToPort(std::string_view address, uint16_t port);
 
   virtual size_t GetPublisherCount() override;
+
 protected:
   TcpSubscriber(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
                 core::threading::ThreadPool *worker_pool);

@@ -536,7 +536,8 @@ TEST_F(TestTcpTransport, MPSCQueue) {
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   for (int i = 0; i < 10; i++) {
-    ASSERT_NE(output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(1, 0)), std::nullopt) << "Failed on message " << i;
+    ASSERT_NE(output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(1, 0)), std::nullopt)
+        << "Failed on message " << i;
   }
   ASSERT_EQ(output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(0, 0)), std::nullopt);
 }
@@ -576,10 +577,10 @@ TEST_F(TestTcpTransport, Torture) {
         std::string expected_msg = "Hello, World! ";
         expected_msg += channel_name;
         ASSERT_STREQ((char *)msg->GetPayload().data(), expected_msg.c_str());
-        //OutputQueueEvent event = {
-        //    .topic_name = channel_name, .packet = std::move(msg), .callback = TypeErasedSubscriberCallback()};
-        // todo
-        output_queue.Emplace([](){});
+        // OutputQueueEvent event = {
+        //     .topic_name = channel_name, .packet = std::move(msg), .callback = TypeErasedSubscriberCallback()};
+        //  todo
+        output_queue.Emplace([]() {});
 
         // TODO: peek
         break;
@@ -668,11 +669,11 @@ TEST_F(TestTcpTransport, Torture) {
   for (int i = 0; i < MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT; i++) {
     auto event = output_queue.Pop();
     ASSERT_NE(event, std::nullopt);
-    //std::string hello = "Hello, World! " + event->topic_name;
-    //ASSERT_STREQ(hello.c_str(), (char *)event->packet->GetPayload().data());
-    //TODO?
+    // std::string hello = "Hello, World! " + event->topic_name;
+    // ASSERT_STREQ(hello.c_str(), (char *)event->packet->GetPayload().data());
+    // TODO?
     (*event)();
-    //counts[hello]++;
+    // counts[hello]++;
   }
 
   for (auto p : counts) {

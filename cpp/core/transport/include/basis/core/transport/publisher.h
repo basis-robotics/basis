@@ -45,8 +45,9 @@ public:
 class PublisherBase {
 protected:
   PublisherBase(std::string_view topic, serialization::MessageTypeInfo type_info, bool has_inproc,
-                std::vector<std::shared_ptr<TransportPublisher>> transport_publishers, RecorderInterface* recorder)
-      : topic(topic), type_info(type_info), has_inproc(has_inproc), transport_publishers(transport_publishers), recorder(recorder) {}
+                std::vector<std::shared_ptr<TransportPublisher>> transport_publishers, RecorderInterface *recorder)
+      : topic(topic), type_info(type_info), has_inproc(has_inproc), transport_publishers(transport_publishers),
+        recorder(recorder) {}
 
 public:
   virtual ~PublisherBase() = default;
@@ -60,7 +61,7 @@ protected:
   const bool has_inproc;
   // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
   std::vector<std::shared_ptr<TransportPublisher>> transport_publishers;
-  RecorderInterface* recorder;
+  RecorderInterface *recorder;
 };
 
 template <typename T_MSG> class Publisher : public PublisherBase {
@@ -68,7 +69,7 @@ public:
   Publisher(std::string_view topic, serialization::MessageTypeInfo type_info,
             std::vector<std::shared_ptr<TransportPublisher>> transport_publishers,
             std::shared_ptr<InprocPublisher<T_MSG>> inproc, SerializeGetSizeCallback<T_MSG> get_message_size_cb,
-            SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb, basis::RecorderInterface* recorder = nullptr)
+            SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb, basis::RecorderInterface *recorder = nullptr)
 
       : PublisherBase(topic, type_info, inproc != nullptr, transport_publishers, recorder), inproc(inproc),
         get_message_size_cb(std::move(get_message_size_cb)),
@@ -109,7 +110,7 @@ public:
     for (auto &pub : transport_publishers) {
       pub->SendMessage(packet);
     }
-    if(recorder) {
+    if (recorder) {
       recorder->WriteMessage(topic, {packet, packet->GetPayload()}, now);
     }
   }

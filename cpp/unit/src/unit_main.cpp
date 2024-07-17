@@ -3,7 +3,7 @@
 #include <basis/unit.h>
 
 extern "C" {
-basis::Unit* CreateUnit();
+basis::Unit *CreateUnit();
 }
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {

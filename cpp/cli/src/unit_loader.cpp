@@ -2,14 +2,12 @@
 #include <dlfcn.h>
 
 struct DlClose {
-  void operator()(void* handle) {
-    dlclose(handle);
-  }
+  void operator()(void *handle) { dlclose(handle); }
 };
 
 using ManagedSharedObject = std::unique_ptr<void, DlClose>;
 
-using CreateUnitCallback = basis::Unit*(*)(std::string);
+using CreateUnitCallback = basis::Unit *(*)(std::string);
 
 struct UnitLoader {
   ManagedSharedObject handle;
@@ -18,11 +16,11 @@ struct UnitLoader {
 
 std::unordered_map<std::string, UnitLoader> unit_loaders;
 
-std::unique_ptr<basis::Unit> CreateUnit(const std::filesystem::path& path, std::string_view unit_name) {
+std::unique_ptr<basis::Unit> CreateUnit(const std::filesystem::path &path, std::string_view unit_name) {
   std::string string_path = path.string();
 
   auto maybe_unit_loader = unit_loaders.find(string_path);
-  if(maybe_unit_loader == unit_loaders.end()) {
+  if (maybe_unit_loader == unit_loaders.end()) {
     // For now - need to use RTLD_GLOBAL to allow different inproc transports to communicate
     // This is the opposite of how the protobuf needs things - but no crashes on shutdown (yet?)
     void *handle = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);

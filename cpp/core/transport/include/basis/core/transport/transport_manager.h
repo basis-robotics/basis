@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <span>
 
 #include <spdlog/spdlog.h>
 
@@ -20,15 +19,15 @@ class SchemaManager {
 public:
   SchemaManager() {}
 
-  template <typename T_MSG, typename T_Serializer> serialization::MessageSchema* RegisterType(const serialization::MessageTypeInfo &type_info) {
+  template <typename T_MSG, typename T_Serializer>
+  serialization::MessageSchema *RegisterType(const serialization::MessageTypeInfo &type_info) {
     const std::string schema_id = type_info.SchemaId();
     auto it = known_schemas.find(schema_id);
     if (it == known_schemas.end()) {
       if constexpr (std::is_same_v<T_Serializer, serialization::RawSerializer>) {
         // TODO: it may still be worth implementing this
         it = known_schemas.emplace(schema_id, serialization::MessageSchema("raw")).first;
-      }
-      else {
+      } else {
         it = known_schemas.emplace(schema_id, T_Serializer::template DumpSchema<T_MSG>()).first;
         schemas_to_send.push_back(it->second);
       }
@@ -56,7 +55,7 @@ public:
   [[nodiscard]] std::shared_ptr<Publisher<T_MSG>>
   Advertise(std::string_view topic,
             serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
-    auto* schema = schema_manager.RegisterType<T_MSG, T_Serializer>(message_type);
+    auto *schema = schema_manager.RegisterType<T_MSG, T_Serializer>(message_type);
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     if (inproc) {
@@ -67,12 +66,12 @@ public:
       tps.push_back(transport->Advertise(topic, message_type));
     }
 
-    basis::RecorderInterface* recorder_for_publisher = nullptr;
+    basis::RecorderInterface *recorder_for_publisher = nullptr;
     // Ensure we don't try to write raw structs to disk
-    if constexpr(!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
-      if(recorder) {
-        if(recorder->RegisterTopic(std::string(topic), message_type,
-                          schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient)) {
+    if constexpr (!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
+      if (recorder) {
+        if (recorder->RegisterTopic(std::string(topic), message_type,
+                                    schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient)) {
           // Only pass a recorder down to the publisher if the recording system will handle this topic
           recorder_for_publisher = recorder;
         }
@@ -82,8 +81,9 @@ public:
     SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;
     SerializeWriteSpanCallback<T_MSG> write_span_cb = T_Serializer::template SerializeToSpan<T_MSG>;
 
-    auto publisher = std::make_shared<Publisher<T_MSG>>(topic, message_type, std::move(tps), inproc_publisher,
-                                                        std::move(get_size_cb), std::move(write_span_cb), recorder_for_publisher);
+    auto publisher =
+        std::make_shared<Publisher<T_MSG>>(topic, message_type, std::move(tps), inproc_publisher,
+                                           std::move(get_size_cb), std::move(write_span_cb), recorder_for_publisher);
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }
@@ -197,7 +197,7 @@ public:
 
   SchemaManager &GetSchemaManager() { return schema_manager; }
 
-  void SetRecorder(basis::RecorderInterface* recorder) {
+  void SetRecorder(basis::RecorderInterface *recorder) {
     assert(this->recorder == nullptr);
     assert(publishers.size() == 0);
     this->recorder = recorder;
@@ -223,14 +223,13 @@ protected:
                     serialization::MessageTypeInfo message_type,
                     std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
 
-    std::vector<std::shared_ptr<TransportSubscriber>> tps;        
+    std::vector<std::shared_ptr<TransportSubscriber>> tps;
 
-    TypeErasedSubscriberCallback outer_callback = output_queue ? [callback, output_queue](std::shared_ptr<basis::core::transport::MessagePacket> message) { 
-       output_queue->Emplace(
-        [callback, message]() { 
-          callback(message);
-        });
-    } : callback;
+    TypeErasedSubscriberCallback outer_callback =
+        output_queue ? [callback, output_queue](
+                           std::shared_ptr<basis::core::transport::MessagePacket>
+                               message) { output_queue->Emplace([callback, message]() { callback(message); }); }
+                     : callback;
 
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Subscribe(topic, outer_callback, work_thread_pool, message_type));
@@ -291,9 +290,9 @@ protected:
   SchemaManager schema_manager;
 
   /**
-   * 
+   *
    */
-  RecorderInterface* recorder = nullptr;
+  RecorderInterface *recorder = nullptr;
   /**
    * For testing only - set to false to disable using known subscribers and force a coordinator connection
    */
