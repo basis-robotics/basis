@@ -30,7 +30,7 @@ public:
      while (!coordinator_connector) {
         coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
         if (!coordinator_connector) {
-          spdlog::warn("No connection to the coordinator, waiting 1 second and trying again");
+          BASIS_LOG_WARN("No connection to the coordinator, waiting 1 second and trying again");
           std::this_thread::sleep_for(std::chrono::seconds(1));
         }
       }

@@ -113,7 +113,7 @@ public:
       std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
       if (!message) {
         // todo: change the callback to take the topic as well?
-        spdlog::error("Unable to deserialize message on topic {}", topic);
+        BASIS_LOG_ERROR("Unable to deserialize message on topic {}", topic);
         return;
       }
       callback(std::move(message));

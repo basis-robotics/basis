@@ -175,7 +175,7 @@ protected:
 };
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
-  spdlog::cfg::load_env_levels();
+  basis::core::logging::InitializeLoggingSystem();
 
   ExampleUnit example_unit;
   example_unit.WaitForCoordinatorConnection();

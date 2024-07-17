@@ -12,19 +12,23 @@
 #define BASIS_LOG_ERROR(...) SPDLOG_LOGGER_ERROR(AUTO_LOGGER, __VA_ARGS__)
 #define BASIS_LOG_CRITICAL(...) SPDLOG_LOGGER_CRITICAL(AUTO_LOGGER, __VA_ARGS__)
 #define BASIS_LOG_FATAL(...) SPDLOG_LOGGER_CRITICAL(AUTO_LOGGER, __VA_ARGS__)
-
-
-
-#define DEFINE_AUTO_LOGGER_NS(NAMESPACE) \
-namespace NAMESPACE { \
-  extern std::shared_ptr<spdlog::logger> global_logger; \
-  inline const std::shared_ptr<spdlog::logger>& AUTO_LOGGER(global_logger); \
-}
+//#define ASSERT(...)
 
 namespace basis::core::logging {
   consteval std::string_view StripLeadingNamespace(std::string_view ns) {
     return ns;
   }
+}
+
+// TODO: these macros never call spdlog::drop - not a huge deal though
+
+#define DEFINE_AUTO_LOGGER_COMMON \
+  extern std::shared_ptr<spdlog::logger> global_logger; \
+  inline const std::shared_ptr<spdlog::logger>& AUTO_LOGGER(global_logger); \
+
+#define DEFINE_AUTO_LOGGER_NS(NAMESPACE) \
+namespace NAMESPACE { \
+  DEFINE_AUTO_LOGGER_COMMON \
 }
 
 #define DECLARE_AUTO_LOGGER_NS(NAMESPACE) \
@@ -34,4 +38,15 @@ namespace NAMESPACE { \
   ); \
 }
 
-//#define ASSERT(...)
+#define DEFINE_AUTO_LOGGER_PLUGIN(PLUGIN_TYPE, PLUGIN_NAME) \
+namespace basis::plugins:: PLUGIN_TYPE :: PLUGIN_NAME { \
+  DEFINE_AUTO_LOGGER_COMMON \
+}
+
+#define DECLARE_AUTO_LOGGER_PLUGIN(PLUGIN_TYPE, PLUGIN_NAME) \
+namespace basis::plugins:: PLUGIN_TYPE :: PLUGIN_NAME { \
+  std::shared_ptr<spdlog::logger> global_logger = basis::core::logging::CreateLogger( \
+    #PLUGIN_TYPE "::" #PLUGIN_NAME \
+  ); \
+}
+

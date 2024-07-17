@@ -3,7 +3,9 @@
 #include <basis/recorder.h>
 
 
-namespace basis {
+DECLARE_AUTO_LOGGER_NS(basis::recorder)
+
+namespace basis::recorder {
   const std::vector<std::regex> Recorder::RECORD_ALL_TOPICS = {
     std::regex(".*")
   };
@@ -24,7 +26,7 @@ namespace basis {
     msg.dataSize = payload.size();
     auto status = writer.write(msg);
     if (!status.ok()) {
-      spdlog::error(status.message);
+      BASIS_LOG_ERROR(status.message);
     }
     return status.ok();
   }
