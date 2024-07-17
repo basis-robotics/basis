@@ -46,7 +46,8 @@ private:
 template <typename T_MSG> class InprocSubscriber {
   // TODO: buffer size
 public:
-  InprocSubscriber(std::string_view topic_name, const std::function<void(const MessageEvent<T_MSG> &message)> callback) : callback(callback), topic_name(topic_name) {}
+  InprocSubscriber(std::string_view topic_name, const std::function<void(const MessageEvent<T_MSG> &message)> callback)
+      : callback(callback), topic_name(topic_name) {}
 
   void OnMessage(std::shared_ptr<const T_MSG> msg) {
     MessageEvent<T_MSG> event;

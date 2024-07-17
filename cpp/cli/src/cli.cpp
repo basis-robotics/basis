@@ -24,8 +24,7 @@ namespace basis::cli {
 std::shared_ptr<spdlog::logger> basis_logger = basis::core::logging::CreateLogger("basis");
 // TODO: set up a special CLI logger that prints to stderr
 
-template<typename T>
-std::unique_ptr<T> LoadPlugin(const char *path) {
+template <typename T> std::unique_ptr<T> LoadPlugin(const char *path) {
   // Use RTLD_DEEPBIND to avoid the plugin sharing protobuf globals with us and crashing
   void *handle = dlopen(path, RTLD_NOW | RTLD_DEEPBIND);
   // todo: this handle is leaked
@@ -45,31 +44,30 @@ std::unique_ptr<T> LoadPlugin(const char *path) {
   return plugin;
 }
 
-template<typename T>
-void LoadPluginsAtPath(std::filesystem::path search_path, std::unordered_map<std::string, std::unique_ptr<T>>& out) {
-  if(!std::filesystem::exists(search_path)) {
+template <typename T>
+void LoadPluginsAtPath(std::filesystem::path search_path, std::unordered_map<std::string, std::unique_ptr<T>> &out) {
+  if (!std::filesystem::exists(search_path)) {
     return;
   }
   for (auto entry : std::filesystem::directory_iterator(search_path)) {
     std::filesystem::path plugin_path = entry.path();
-    if(entry.is_directory()) {
+    if (entry.is_directory()) {
       plugin_path /= plugin_path.filename();
       plugin_path.replace_extension(".so");
     }
-    
+
     std::unique_ptr<T> plugin(LoadPlugin<T>(plugin_path.string().c_str()));
-    if(!plugin) {
+    if (!plugin) {
       std::cerr << "Failed to load plugin at " << plugin_path.string() << std::endl;
       continue;
     }
 
     std::string name(plugin->GetPluginName());
-    if(!out.contains(name)) {
+    if (!out.contains(name)) {
       out.emplace(name, std::move(plugin));
     }
   }
 }
-
 
 std::unordered_map<std::string, std::unique_ptr<core::serialization::SerializationPlugin>> serialization_plugins;
 
@@ -78,8 +76,7 @@ std::unordered_map<std::string, std::unique_ptr<core::serialization::Serializati
  *
  * @todo: this won't work well for things other than cli - it's assuming the build system layout, for one
  */
-template<typename T>
-void LoadPlugins() {
+template <typename T> void LoadPlugins() {
   char buf[1024] = {};
   readlink("/proc/self/exe", buf, 1024);
 
@@ -93,7 +90,6 @@ void LoadPlugins() {
 
   serialization_plugins = std::move(out);
 }
-
 
 std::optional<basis::core::transport::proto::MessageSchema>
 FetchSchema(const std::string &schema_id, basis::core::transport::CoordinatorConnector *connector, int timeout_s) {
@@ -191,7 +187,7 @@ void PrintSchema(const std::string &schema_name, basis::core::transport::Coordin
   }
 }
 
-}
+} // namespace basis::cli
 
 int main(int argc, char *argv[]) {
   using namespace basis;
@@ -322,7 +318,6 @@ int main(int argc, char *argv[]) {
     auto launch_yaml = launch_command.get("launch_yaml");
     std::vector<std::string> args(argv, argv + argc);
     LaunchYamlPath(launch_yaml, args, launch_command.get("--process"));
-    
   }
 
   serialization_plugins.clear();

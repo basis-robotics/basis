@@ -1,6 +1,6 @@
+#include <basis/unit.h>
 #include <filesystem>
 #include <memory>
-#include <basis/unit.h>
 
 /**
  * Creates a unit given a path to a shared object.
@@ -9,4 +9,4 @@
  * @param path the path to the shared object
  * @return std::unique_ptr<basis::Unit>
  */
-std::unique_ptr<basis::Unit> CreateUnit(const std::filesystem::path& path, std::string_view unit_name);
+std::unique_ptr<basis::Unit> CreateUnit(const std::filesystem::path &path, std::string_view unit_name);

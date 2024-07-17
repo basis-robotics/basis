@@ -12,12 +12,9 @@
 
 #include "mcap/reader.hpp"
 
-template<typename RecorderClass>
-class TestRecorderT : public testing::Test {
+template <typename RecorderClass> class TestRecorderT : public testing::Test {
 public:
-  TestRecorderT() {
-    InitializeMCAP();
-  }
+  TestRecorderT() { InitializeMCAP(); }
 
   void InitializeMCAP() {
     char temp_template[] = "/tmp/tmpdir.XXXXXX";
@@ -34,17 +31,15 @@ public:
     current_mcap_name = std::string(output_name);
     return recorder->Start(output_name);
   }
-  
+
   bool Split(std::string_view output_name) {
     current_mcap_name = std::string(output_name);
     return recorder->Split(output_name);
   }
 
-  ~TestRecorderT() {
-    CheckWrittenMCAP();
-  }
+  ~TestRecorderT() { CheckWrittenMCAP(); }
 
-  void WriteMessage(const std::string& topic, const basis::OwningSpan& span) {
+  void WriteMessage(const std::string &topic, const basis::OwningSpan &span) {
     ASSERT_TRUE(recorder->WriteMessage(topic, span, basis::core::MonotonicTime::Now()));
     message_counts_by_file_by_topic[current_mcap_name][topic]++;
   }
@@ -52,10 +47,9 @@ public:
   void RegisterProtobuf(std::string topic_name = "/proto_topic") {
     auto basis_schema = basis::plugins::serialization::protobuf::ProtobufSerializer::DumpSchema<TestProtoStruct>();
     auto mti = basis::plugins::serialization::protobuf::ProtobufSerializer::DeduceMessageTypeInfo<TestProtoStruct>();
-    recorder->RegisterTopic(
-       topic_name, mti, basis_schema.schema_efficient);
+    recorder->RegisterTopic(topic_name, mti, basis_schema.schema_efficient);
   }
-  
+
   void WriteProtobuf(std::string topic_name = "/proto_topic") {
     TestProtoStruct msg;
 
@@ -77,7 +71,7 @@ public:
 #ifdef BASIS_ENABLE_ROS
   void RegisterAndWriteRos() {
     spdlog::info("RegisterAndWriteRos");
-    
+
     std_msgs::String msg;
     msg.data = "foobar";
 
@@ -97,7 +91,7 @@ public:
   void CheckWrittenMCAP() {
     recorder->Stop();
 
-    for(auto& [name, counts] : message_counts_by_file_by_topic) {
+    for (auto &[name, counts] : message_counts_by_file_by_topic) {
       std::string filename = (record_dir / (name + ".mcap")).string();
       mcap::McapReader reader;
       ASSERT_TRUE(reader.open(filename).ok());
@@ -107,10 +101,10 @@ public:
 
       ASSERT_EQ(stats->channelMessageCounts.size(), counts.size());
 
-      const auto channels = reader.channels(); 
+      const auto channels = reader.channels();
 
-      for(const auto& [channel_id, count] : stats->channelMessageCounts) {
-        const std::string& topic = channels.at(channel_id)->topic;
+      for (const auto &[channel_id, count] : stats->channelMessageCounts) {
+        const std::string &topic = channels.at(channel_id)->topic;
         ASSERT_EQ(counts[topic], count);
       }
       // TODO: it would be even better to compare the message contents, but want to have a proper reader class first
@@ -143,23 +137,22 @@ TEST_F(TestRecorder, OutOfOrder) {
 }
 
 TEST_F(TestRecorder, Split) {
-  for(char c = 'a'; c <= 'z'; c++) {
+  for (char c = 'a'; c <= 'z'; c++) {
     RegisterProtobuf(fmt::format("/{}", c));
   }
 
   ASSERT_TRUE(Start());
 
-  for(char c = 'a'; c <= 'z'; c++) {
+  for (char c = 'a'; c <= 'z'; c++) {
     WriteProtobuf(fmt::format("/{}", c));
   }
 
   Split("test2");
 
-  for(char c = 'z'; c >= 'a'; c--) {
+  for (char c = 'z'; c >= 'a'; c--) {
     WriteProtobuf(fmt::format("/{}", c));
     WriteProtobuf(fmt::format("/{}", c));
   }
-  
 }
 
 #ifdef BASIS_ENABLE_ROS
@@ -177,7 +170,6 @@ TEST_F(TestRecorder, Mixed) {
   RegisterAndWriteRos();
 }
 
-
 #endif
 
 using TestAsyncRecorder = TestRecorderT<basis::AsyncRecorder>;
@@ -187,7 +179,6 @@ TEST_F(TestAsyncRecorder, BasicTest) {
 
   RegisterAndWriteProtobuf();
 }
-
 
 // TestOutOfOrder
 

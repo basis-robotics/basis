@@ -29,8 +29,7 @@ SOFTWARE.
 #include <string_view>
 
 namespace glob {
-static inline 
-bool StringReplace(std::string &str, const std::string &from, const std::string &to) {
+static inline bool StringReplace(std::string &str, const std::string &from, const std::string &to) {
   std::size_t start_pos = str.find(from);
   if (start_pos == std::string::npos)
     return false;
@@ -38,9 +37,7 @@ bool StringReplace(std::string &str, const std::string &from, const std::string 
   return true;
 }
 
-
-static inline 
-std::regex GlobToRegex(const std::string &pattern) {
+static inline std::regex GlobToRegex(const std::string &pattern) {
   std::size_t i = 0, n = pattern.size();
   std::string result_string;
 
@@ -128,8 +125,7 @@ std::regex GlobToRegex(const std::string &pattern) {
       static std::map<int, std::string> special_characters_map;
       if (special_characters_map.empty()) {
         for (auto &sc : special_characters) {
-          special_characters_map.insert(
-              std::make_pair(static_cast<int>(sc), std::string{"\\"} + std::string(1, sc)));
+          special_characters_map.insert(std::make_pair(static_cast<int>(sc), std::string{"\\"} + std::string(1, sc)));
         }
       }
 
@@ -142,4 +138,4 @@ std::regex GlobToRegex(const std::string &pattern) {
   }
   return std::regex(std::string{"(("} + result_string + std::string{R"()|[\r\n])$)"}, std::regex::ECMAScript);
 }
-}
+} // namespace glob

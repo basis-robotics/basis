@@ -1,21 +1,23 @@
 #include "basis/unit.h"
 
 namespace basis {
-std::unique_ptr<basis::core::transport::TransportManager> CreateStandardTransportManager(basis::RecorderInterface* recorder) {
+std::unique_ptr<basis::core::transport::TransportManager>
+CreateStandardTransportManager(basis::RecorderInterface *recorder) {
   auto transport_manager = std::make_unique<basis::core::transport::TransportManager>(
       std::make_unique<basis::core::transport::InprocTransport>());
 
-  if(recorder) {
+  if (recorder) {
     transport_manager->SetRecorder(recorder);
   }
 
   transport_manager->RegisterTransport(basis::plugins::transport::TCP_TRANSPORT_NAME,
-                                        std::make_unique<basis::plugins::transport::TcpTransport>());
+                                       std::make_unique<basis::plugins::transport::TcpTransport>());
 
   return transport_manager;
 }
 
-void StandardUpdate(basis::core::transport::TransportManager* transport_manager, basis::core::transport::CoordinatorConnector* coordinator_connector) {
+void StandardUpdate(basis::core::transport::TransportManager *transport_manager,
+                    basis::core::transport::CoordinatorConnector *coordinator_connector) {
   transport_manager->Update();
   // send it off to the coordinator
   if (coordinator_connector) {
@@ -32,4 +34,4 @@ void StandardUpdate(basis::core::transport::TransportManager* transport_manager,
     }
   }
 }
-}
+} // namespace basis

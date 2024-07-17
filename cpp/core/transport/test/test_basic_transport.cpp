@@ -1,6 +1,6 @@
+#include <basis/core/threading/thread_pool.h>
 #include <basis/core/transport/inproc.h>
 #include <basis/core/transport/transport_manager.h>
-#include <basis/core/threading/thread_pool.h>
 
 #include <gtest/gtest.h>
 #include <thread>
@@ -54,7 +54,6 @@ struct TestStruct {
 };
 
 TEST(TransportManager, Basic) {
-  
 
   TransportManager transport_manager(std::make_unique<InprocTransport>());
 

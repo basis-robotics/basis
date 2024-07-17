@@ -113,7 +113,7 @@ public:
       }
       case plugins::transport::TcpConnection::ReceiveStatus::ERROR: {
         BASIS_LOG_ERROR("connection error after bytes {} - got error {} {}", in_progress_packet.GetCurrentProgress(),
-                      errno, strerror(errno));
+                        errno, strerror(errno));
       }
       case plugins::transport::TcpConnection::ReceiveStatus::DISCONNECTED: {
         finished = true;

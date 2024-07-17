@@ -4,6 +4,6 @@
 namespace basis::cli {
 
 extern std::shared_ptr<spdlog::logger> basis_logger;
-inline const std::shared_ptr<spdlog::logger>& AUTO_LOGGER(basis_logger);
+inline const std::shared_ptr<spdlog::logger> &AUTO_LOGGER(basis_logger);
 
-}
+} // namespace basis::cli

@@ -5,7 +5,6 @@
 
 #include <unistd.h>
 
-
 namespace basis::core::transport {
 void SubscriberBase::HandlePublisherInfo(const std::vector<PublisherInfo> &info) {
   for (const PublisherInfo &publisher_info : info) {

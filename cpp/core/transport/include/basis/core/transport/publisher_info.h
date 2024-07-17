@@ -12,7 +12,7 @@ namespace basis::core::transport {
 
 /**
  * Contains information needed to subscribe to a publisher
- * 
+ *
  * @todo: should we remove this and deal in raw proto? Would be faster.
  */
 struct PublisherInfo {
@@ -28,7 +28,7 @@ struct PublisherInfo {
    */
   std::string topic;
   /**
-   * The schema ID associated with the messages sent over the topic. 
+   * The schema ID associated with the messages sent over the topic.
    * ie "protobuf:Pose"
    */
   std::string schema_id;
@@ -38,7 +38,7 @@ struct PublisherInfo {
   std::unordered_map<std::string, std::string> transport_info;
 
   /**
-   * Converts to a proto::PublisherInfo 
+   * Converts to a proto::PublisherInfo
    */
   proto::PublisherInfo ToProto() {
     proto::PublisherInfo out;
@@ -47,26 +47,26 @@ struct PublisherInfo {
     out.set_topic(topic);
     out.set_schema_id(schema_id);
 
-    for(auto& p : transport_info) {
+    for (auto &p : transport_info) {
       out.mutable_transport_info()->insert({p.first, p.second});
     }
     return out;
   }
-  
+
   /**
-   * Converts from a proto::PublisherInfo 
+   * Converts from a proto::PublisherInfo
    */
-  static PublisherInfo FromProto(const proto::PublisherInfo& proto) {
+  static PublisherInfo FromProto(const proto::PublisherInfo &proto) {
     PublisherInfo out;
     out.publisher_id_64s[0] = proto.publisher_id_high();
     out.publisher_id_64s[1] = proto.publisher_id_low();
     out.topic = proto.topic();
     out.schema_id = proto.schema_id();
-    for(auto& [topic, endpoint] : proto.transport_info()) {
+    for (auto &[topic, endpoint] : proto.transport_info()) {
       out.transport_info[topic] = endpoint;
     }
     return out;
   }
 };
 
-}
+} // namespace basis::core::transport

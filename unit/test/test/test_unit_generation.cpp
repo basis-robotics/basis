@@ -239,7 +239,6 @@ TEST(TestUnitGeneration, TestEqualOptions) {
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
 
-
   pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
   pubsub.synchronizer->ConsumeIfReady();
   ASSERT_TRUE(callback_called);
@@ -249,7 +248,7 @@ TEST(TestUnitGeneration, TestEqualOptions) {
   ASSERT_EQ(gotten_input.optional, nullptr);
   ASSERT_NE(gotten_input.required_a, nullptr);
   ASSERT_NE(gotten_input.required_b, nullptr);
-    callback_called = false;
+  callback_called = false;
   pub_callback_called = false;
   gotten_input = {};
 
@@ -292,5 +291,4 @@ TEST(TestUnitGeneration, TestEqualOptions) {
   ASSERT_NE(gotten_input.optional, nullptr);
   ASSERT_NE(gotten_input.required_a, nullptr);
   ASSERT_NE(gotten_input.required_b, nullptr);
-
 }

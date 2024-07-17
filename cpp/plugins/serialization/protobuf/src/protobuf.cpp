@@ -12,8 +12,7 @@ std::unordered_set<std::string> ProtobufSerializer::known_schemas;
 
 extern "C" {
 
-basis::core::serialization::SerializationPlugin* LoadPlugin() {
-    return new basis::plugins::serialization::protobuf::ProtobufPlugin();
+basis::core::serialization::SerializationPlugin *LoadPlugin() {
+  return new basis::plugins::serialization::protobuf::ProtobufPlugin();
 }
-
 }

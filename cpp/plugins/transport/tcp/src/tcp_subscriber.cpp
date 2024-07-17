@@ -12,8 +12,8 @@ nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error
 TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
                       core::threading::ThreadPool *worker_pool,
                       std::vector<std::pair<std::string_view, uint16_t>> addresses) {
-  auto subscriber = std::shared_ptr<TcpSubscriber>(
-      new TcpSubscriber(topic_name, std::move(callback), epoll, worker_pool));
+  auto subscriber =
+      std::shared_ptr<TcpSubscriber>(new TcpSubscriber(topic_name, std::move(callback), epoll, worker_pool));
   for (auto &[address, port] : addresses) {
     subscriber->ConnectToPort(address, port);
   }
@@ -68,7 +68,7 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
       switch (receiver_ptr->ReceiveMessage(*incomplete)) {
 
       case TcpReceiver::ReceiveStatus::DONE: {
-          this->callback(incomplete->GetCompletedMessage());
+        this->callback(incomplete->GetCompletedMessage());
       }
       case TcpReceiver::ReceiveStatus::DOWNLOADING: {
         // No work to be done
@@ -77,7 +77,7 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
       case TcpReceiver::ReceiveStatus::ERROR: {
         // TODO
         BASIS_LOG_ERROR("{}, {}: bytes {} - got error {} {}", fd, (void *)incomplete.get(),
-                      incomplete->GetCurrentProgress(), errno, strerror(errno));
+                        incomplete->GetCurrentProgress(), errno, strerror(errno));
       }
       case TcpReceiver::ReceiveStatus::DISCONNECTED: {
 

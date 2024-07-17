@@ -1,5 +1,5 @@
 #pragma once
-#include <spdlog/spdlog.h>
 #include <basis/core/logging/macros.h>
+#include <spdlog/spdlog.h>
 
 DEFINE_AUTO_LOGGER_NS(basis::core::networking)

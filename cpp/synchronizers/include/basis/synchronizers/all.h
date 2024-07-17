@@ -10,9 +10,7 @@ public:
   using Base::Base;
 
 protected:
-  virtual bool IsReadyNoLock() override {
-    return Base::AreAllNonOptionalFieldsFilledNoLock();
-  }
+  virtual bool IsReadyNoLock() override { return Base::AreAllNonOptionalFieldsFilledNoLock(); }
 };
 
 } // namespace basis::synchronizers

@@ -156,8 +156,8 @@ TEST(TestCoordinator, TestPubSubOrder) {
 
     {
       std::shared_ptr<Subscriber<TestRawStruct>> after_sub =
-          transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct",
-                                                                                                callback, &work_thread_pool);
+          transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
+                                                                                                &work_thread_pool);
       update(1);
       ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
       auto send_msg = std::make_shared<const TestRawStruct>();

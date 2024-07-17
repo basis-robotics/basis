@@ -39,15 +39,11 @@ class ProtobufSerializer : public core::serialization::Serializer {
 public:
   static constexpr char SERIALIZER_ID[] = "protobuf";
 
-  template <typename T_MSG>
-  static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> span) {
+  template <typename T_MSG> static bool SerializeToSpan(const T_MSG &message, std::span<std::byte> span) {
     return message.SerializeToArray(span.data(), span.size());
   }
 
-  template <typename T_MSG>
-  static size_t GetSerializedSize(const T_MSG &message) {
-    return message.ByteSizeLong();
-  }
+  template <typename T_MSG> static size_t GetSerializedSize(const T_MSG &message) { return message.ByteSizeLong(); }
 
   template <typename T_MSG> static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
     // TODO: https://protobuf.dev/reference/cpp/arenas/
@@ -60,23 +56,24 @@ public:
       return nullptr;
     }
 
-    if(!parsed_message->IsInitialized()) {
+    if (!parsed_message->IsInitialized()) {
       return nullptr;
     }
 
     return parsed_message;
   }
 
-  static std::unique_ptr<google::protobuf::Message> LoadMessageFromSchema(std::span<const std::byte> span, std::string_view schema_name) {
+  static std::unique_ptr<google::protobuf::Message> LoadMessageFromSchema(std::span<const std::byte> span,
+                                                                          std::string_view schema_name) {
     auto descriptor = protoPool.FindMessageTypeByName(std::string(schema_name));
 
-    if(!descriptor) {
+    if (!descriptor) {
       BASIS_LOG_ERROR("Haven't seen schema {} before", schema_name);
       return {};
     }
 
-    auto read_message = std::unique_ptr<google::protobuf::Message>( protoFactory.GetPrototype(descriptor)->New());
-    if (!read_message->ParseFromArray(span.data(), span.size())){
+    auto read_message = std::unique_ptr<google::protobuf::Message>(protoFactory.GetPrototype(descriptor)->New());
+    if (!read_message->ParseFromArray(span.data(), span.size())) {
       BASIS_LOG_ERROR("failed to parse message using included schema");
       return {};
     }
@@ -86,17 +83,18 @@ public:
   static std::optional<std::string> DumpMessageString(std::span<const std::byte> span, std::string_view schema_name) {
     // TODO: we could use TextFormat here, but this might be easier to read
     std::unique_ptr<google::protobuf::Message> message = LoadMessageFromSchema(span, schema_name);
-    if(message) {
+    if (message) {
       return message->DebugString();
     }
     return {};
   }
 
-  static std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span, std::string_view schema_name) {
+  static std::optional<std::string> DumpMessageJSONString(std::span<const std::byte> span,
+                                                          std::string_view schema_name) {
     // TODO: we could likely use TypeResolver and BinaryToJsonStream here
-    // but neither DebugString nor TextFormat have implementations  
+    // but neither DebugString nor TextFormat have implementations
     std::unique_ptr<google::protobuf::Message> message = LoadMessageFromSchema(span, schema_name);
-    if(message) {
+    if (message) {
       std::string out;
       google::protobuf::util::MessageToJsonString(*message, &out, {});
       return out;
@@ -116,7 +114,7 @@ public:
     // schema.human_readable = msg.DebugString();
     return schema;
   }
-  
+
   // todo: does this need a mutex?
   static bool LoadSchema(std::string_view schema_name, std::string_view schema) {
     const std::string schema_name_str(schema_name);
@@ -144,20 +142,20 @@ public:
     return true;
   }
 
-template <typename T_MSG>
-static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
-  return {SERIALIZER_ID, T_MSG::descriptor()->full_name(), GetMCAPMessageEncoding(), GetMCAPSchemaEncoding()};
-};
+  template <typename T_MSG> static basis::core::serialization::MessageTypeInfo DeduceMessageTypeInfo() {
+    return {SERIALIZER_ID, T_MSG::descriptor()->full_name(), GetMCAPMessageEncoding(), GetMCAPSchemaEncoding()};
+  };
 
-  static const char* GetMCAPSchemaEncoding() {
+  static const char *GetMCAPSchemaEncoding() {
     // https://mcap.dev/spec/registry#protobuf
     return "protobuf";
   }
 
-  static const char* GetMCAPMessageEncoding() {
+  static const char *GetMCAPMessageEncoding() {
     // https://mcap.dev/spec/registry#protobuf
     return "protobuf";
   }
+
 protected:
   // https://mcap.dev/guides/cpp/protobuf
   // Recursively adds all `fd` dependencies to `fd_set`.
@@ -190,12 +188,11 @@ protected:
   static google::protobuf::SimpleDescriptorDatabase protoDb;
   static google::protobuf::DynamicMessageFactory protoFactory;
   static std::unordered_set<std::string> known_schemas;
-
 };
 
 using ProtobufPlugin = core::serialization::AutoSerializationPlugin<ProtobufSerializer>;
 
-} // namespace plugins::serialization
+} // namespace plugins::serialization::protobuf
 
 /**
  * Helper to enable protobuf serializer by default for all `protobuf::Message`.

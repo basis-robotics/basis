@@ -12,21 +12,22 @@ namespace basis::plugins::transport {
 
 /**
  * Common class for unifying TcpSender and Receiver functionality.
- * 
+ *
  * @todo send and recv should take a span - pointer + size isn't great.
  */
 class TcpConnection {
 
 protected:
-    TcpConnection() {}
+  TcpConnection() {}
 
-    explicit TcpConnection(basis::core::networking::TcpSocket socket) : socket(std::move(socket)) {
-      this->socket.SetNonblocking();
-    }
+  explicit TcpConnection(basis::core::networking::TcpSocket socket) : socket(std::move(socket)) {
+    this->socket.SetNonblocking();
+  }
+
 public:
   /**
-   * Checks if this socket is likely connection. The state is 
-   * 
+   * Checks if this socket is likely connection. The state is
+   *
    * @todo this isn't strictly true, due to socket not having an error flag.
    */
   bool IsConnected() const { return socket.IsValid(); }
@@ -44,19 +45,20 @@ public:
    */
   enum class ReceiveStatus {
     /// This message is in progress
-    DOWNLOADING, 
+    DOWNLOADING,
     /// This message is done - please extract it
-    DONE, 
+    DONE,
     /// An error occured
-    ERROR, 
+    ERROR,
     /// A disconnection occured
     DISCONNECTED
   };
 
   /**
    * Receives as much data for a message as the underlying socket has.
-   * 
-   * @todo There's a fair amount of duplicated code for dealing with ReceiveStatus - we should be able to wrap it in a common handler.
+   *
+   * @todo There's a fair amount of duplicated code for dealing with ReceiveStatus - we should be able to wrap it in a
+   * common handler.
    */
   ReceiveStatus ReceiveMessage(basis::core::transport::IncompleteMessagePacket &message);
 
@@ -70,10 +72,10 @@ public:
 
   /**
    * Sends the data pointed at in the buffer over the socket.
-   * 
-   * @param data 
-   * @param len 
-   * @return bool 
+   *
+   * @param data
+   * @param len
+   * @return bool
    */
   bool Send(const std::byte *data, size_t len);
 
@@ -84,4 +86,4 @@ protected:
   basis::core::networking::TcpSocket socket;
 };
 
-}
+} // namespace basis::plugins::transport
