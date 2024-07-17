@@ -11,6 +11,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(
     -D__cpp_concepts=202002 -Wno-builtin-macro-redefined
   )
+  # For now, work around issue with protobuf on ubuntu 20 using std::is_pod
+  add_compile_options(-Wno-deprecated-declarations)
 endif()
 
 include(FetchContent)
