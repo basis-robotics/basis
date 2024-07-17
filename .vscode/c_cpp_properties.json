@@ -6,7 +6,7 @@
                 "${workspaceFolder}/**"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/clang-18",
+            "compilerPath": "/usr/bin/clang++",
             "cppStandard": "c++20"
         }
     ],

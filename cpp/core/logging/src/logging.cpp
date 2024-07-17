@@ -58,7 +58,7 @@ void InitializeLoggingSystem() {
 
 void SetLogHandler(std::shared_ptr<LogHandler> handler) {
   std::unique_lock lock(global_logging_handler_mutex);
-  global_logging_handler = handler;
+    global_logging_handler = handler;
 }
 
 
