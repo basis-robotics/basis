@@ -15,15 +15,6 @@
 namespace basis {
 namespace core::serialization {
 
-struct MessageSchema {
-  std::string serializer;
-  std::string name;
-  std::string schema;
-  std::string
-      schema_efficient; // Optional - some serializers may have a more efficient representation wanted by the recorder
-  std::string hash_id;
-};
-
 /**
  * Base interface, used by all serializers. Will later contain ToJSON and other utilities.
  *

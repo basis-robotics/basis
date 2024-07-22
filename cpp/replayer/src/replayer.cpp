@@ -1,4 +1,5 @@
 #include "basis/core/logging/macros.h"
+#include "basis/core/serialization.h"
 #include "basis/core/time.h"
 #include "basis/core/transport/publisher.h"
 #include "mcap/errors.hpp"
@@ -13,12 +14,9 @@
 
 DECLARE_AUTO_LOGGER_NS(basis::replayer)
 
-
 namespace basis {
 using namespace replayer;
-void LogMcapFailure(mcap::Status status) {
-  BASIS_LOG_ERROR("Mcap failure: {}", status.message);
-}
+void LogMcapFailure(mcap::Status status) { BASIS_LOG_ERROR("Mcap failure: {}", status.message); }
 
 bool Replayer::LoadRecording(std::filesystem::path recording_path) {
   auto status = mcap_reader.open(std::string(recording_path));
@@ -27,16 +25,23 @@ bool Replayer::LoadRecording(std::filesystem::path recording_path) {
   for (const auto &[channel_id, channel] : mcap_reader.channels()) {
     [[maybe_unused]] const std::string &topic = channel->topic;
     core::serialization::MessageTypeInfo message_type;
-    std::shared_ptr<mcap::Schema> schema = mcap_reader.schema(channel->schemaId);
-    message_type.name = schema->name;
+    std::shared_ptr<mcap::Schema> mcap_schema = mcap_reader.schema(channel->schemaId);
+
+    message_type.name = mcap_schema->name;
     message_type.serializer = channel->metadata[core::serialization::MCAP_CHANNEL_METADATA_SERIALIZER];
-
     message_type.mcap_message_encoding = channel->messageEncoding;
+    message_type.mcap_schema_encoding = mcap_schema->encoding;
 
-    message_type.mcap_schema_encoding = schema->encoding;
+    core::serialization::MessageSchema basis_schema;
+    basis_schema.name = message_type.name;
+    basis_schema.serializer = message_type.serializer;
+    basis_schema.schema = channel->metadata[core::serialization::MCAP_CHANNEL_METADATA_READABLE_SCHEMA];
+    basis_schema.hash_id = channel->metadata[core::serialization::MCAP_CHANNEL_METADATA_HASH_ID];
+    basis_schema.schema_efficient = std::string((const char *)mcap_schema->data.data(), mcap_schema->data.size());
+// {(const char *)schema->data.data(), schema->data.size()}
 
     std::shared_ptr<core::transport::PublisherRaw> publisher =
-        transport_manager.AdvertiseRaw(topic, message_type, {(char *)schema->data.data(), schema->data.size()});
+        transport_manager.AdvertiseRaw(topic, message_type, basis_schema);
 
     if (!publisher) {
       BASIS_LOG_ERROR("Failed to create raw publisher on {}", topic);
@@ -59,11 +64,9 @@ bool Replayer::Run() {
     return false;
   }
 
-
   const auto &statistics = mcap_reader.statistics();
   basis::core::MonotonicTime now;
   now.nsecs = (int64_t)statistics->messageStartTime;
-
 
   mcap::ReadMessageOptions options;
   options.readOrder = mcap::ReadMessageOptions::ReadOrder::LogTimeOrder;
@@ -72,17 +75,17 @@ bool Replayer::Run() {
 
   basis::StandardUpdate(&transport_manager, &coordinator_connector);
 
-  for(const mcap::MessageView& message : message_view) {
-    while(now.nsecs < (int64_t)message.message.publishTime) {
+  for (const mcap::MessageView &message : message_view) {
+    while (now.nsecs < (int64_t)message.message.publishTime) {
       constexpr int64_t NSECS_PER_TICK = 1000000; // 1ms
       now.nsecs += NSECS_PER_TICK;
       std::this_thread::sleep_for(std::chrono::nanoseconds(NSECS_PER_TICK));
       basis::StandardUpdate(&transport_manager, &coordinator_connector);
-
     }
     BASIS_LOG_INFO("Publishing on {}", message.channel->topic);
 
-    auto packet = std::make_shared<core::transport::MessagePacket>(core::transport::MessageHeader::DataType::MESSAGE, message.message.dataSize);
+    auto packet = std::make_shared<core::transport::MessagePacket>(core::transport::MessageHeader::DataType::MESSAGE,
+                                                                   message.message.dataSize);
     memcpy(packet->GetMutablePayload().data(), message.message.data, message.message.dataSize);
     publishers.at(message.channel->topic)->PublishRaw(packet, now);
   }

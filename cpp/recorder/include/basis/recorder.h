@@ -54,7 +54,7 @@ public:
   virtual bool Start(std::string_view output_name) = 0;
   virtual void Stop() = 0;
   virtual bool RegisterTopic(const std::string &topic, const core::serialization::MessageTypeInfo &message_type_info,
-                             std::string_view schema_data) = 0;
+                             const core::serialization::MessageSchema& basis_schema) = 0;
   virtual bool WriteMessage(const std::string &topic, OwningSpan payload, const basis::core::MonotonicTime &now) = 0;
 };
 
@@ -83,7 +83,7 @@ public:
   bool Split(std::string_view new_name);
 
   virtual bool RegisterTopic(const std::string &topic, const core::serialization::MessageTypeInfo &message_type_info,
-                             std::string_view schema_data) override;
+                             const core::serialization::MessageSchema& basis_schema) override;
 
   virtual bool WriteMessage(const std::string &topic, OwningSpan payload,
                             const basis::core::MonotonicTime &now) override {
@@ -130,9 +130,9 @@ public:
   }
 
   virtual bool RegisterTopic(const std::string &topic, const core::serialization::MessageTypeInfo &message_type_info,
-                             std::string_view schema_data) {
+                             const core::serialization::MessageSchema& basis_schema) {
     std::lock_guard lock(mutex);
-    return recorder.RegisterTopic(topic, message_type_info, schema_data);
+    return recorder.RegisterTopic(topic, message_type_info, basis_schema);
   }
 
   virtual bool WriteMessage(const std::string &topic, OwningSpan payload, const basis::core::MonotonicTime &now) {

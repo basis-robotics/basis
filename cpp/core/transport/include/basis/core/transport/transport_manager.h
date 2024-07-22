@@ -21,6 +21,15 @@ class SchemaManager {
 public:
   SchemaManager() {}
 
+
+  void RegisterType(const serialization::MessageTypeInfo &type_info, const serialization::MessageSchema& schema) {
+    const std::string schema_id = type_info.SchemaId();
+    auto it = known_schemas.find(schema_id);
+    if (it == known_schemas.end()) {
+        known_schemas.emplace(schema_id, schema); 
+    }
+  }
+
   template <typename T_MSG, typename T_Serializer>
   serialization::MessageSchema *RegisterType(const serialization::MessageTypeInfo &type_info) {
     const std::string schema_id = type_info.SchemaId();
@@ -64,8 +73,8 @@ protected:
 
   basis::RecorderInterface *RegisterTopicWithRecorder(std::string_view topic,
                                                       const serialization::MessageTypeInfo &message_type,
-                                                      std::string_view schema_data) {
-    if (recorder && recorder->RegisterTopic(std::string(topic), message_type, schema_data)) {
+                                                      const serialization::MessageSchema& basis_schema) {
+    if (recorder && recorder->RegisterTopic(std::string(topic), message_type, basis_schema)) {
       // Only pass a recorder down to the publisher if the recording system will handle this topic
       return recorder;
     }
@@ -75,10 +84,12 @@ protected:
 
 public:
   std::shared_ptr<PublisherRaw> AdvertiseRaw(std::string_view topic, const serialization::MessageTypeInfo &message_type,
-                                             std::string_view schema_data) {
+                                             const serialization::MessageSchema& schema) {
+    schema_manager.RegisterType(message_type, schema);
+
     std::vector<std::shared_ptr<TransportPublisher>> tps = AdvertiseOnTransports(topic, message_type);
 
-    basis::RecorderInterface *recorder_for_publisher = RegisterTopicWithRecorder(topic, message_type, schema_data);
+    basis::RecorderInterface *recorder_for_publisher = RegisterTopicWithRecorder(topic, message_type, schema);
     auto publisher = std::make_shared<PublisherRaw>(topic, message_type, std::move(tps), recorder_for_publisher);
     publishers.emplace(std::string(topic), publisher);
     return publisher;
@@ -101,7 +112,7 @@ public:
     // Ensure we don't try to write raw structs to disk
     if constexpr (!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
       recorder_for_publisher = RegisterTopicWithRecorder(
-          topic, message_type, schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient);
+          topic, message_type, *schema);
     }
 
     SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;
