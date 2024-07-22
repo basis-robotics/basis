@@ -15,4 +15,6 @@ struct MessageTypeInfo {
   // size_t type_size = 0; // Required for raw types, to help ensure safety
 };
 
+constexpr char MCAP_CHANNEL_METADATA_SERIALIZER[] = "basis_serializer";
+
 } // namespace basis::core::serialization

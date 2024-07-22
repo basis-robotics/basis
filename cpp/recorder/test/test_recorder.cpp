@@ -10,7 +10,7 @@
 #include <std_msgs/String.h>
 #endif
 
-#include "mcap/reader.hpp"
+#include <mcap/reader.hpp>
 
 template <typename RecorderClass> class TestRecorderT : public testing::Test {
 public:

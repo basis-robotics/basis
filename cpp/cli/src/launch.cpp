@@ -130,7 +130,10 @@ protected:
   std::vector<const char *> args_copy;
 
   // basis
-  args_copy.push_back(args[0].data());
+  char execv_target[1024] = {};
+  readlink("/proc/self/exe", execv_target, sizeof(execv_target));
+  args_copy.push_back(execv_target);
+
   // launch
   args_copy.push_back(args[1].data());
   args_copy.push_back("--process");
@@ -155,11 +158,11 @@ protected:
     if (getppid() == 1) {
       exit(1);
     }
-    execv(args[0].data(), const_cast<char **>(args_copy.data()));
+    execv(execv_target, const_cast<char **>(args_copy.data()));
     // Manually print to stderr, don't trust anything
     int error = errno;
     fputs("Failed to execv ", stderr);
-    fputs(args[0].data(), stderr);
+    fputs(execv_target, stderr);
     fputs(" ", stderr);
     fputs(strerror(error), stderr);
     exit(1);

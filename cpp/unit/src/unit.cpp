@@ -16,6 +16,7 @@ CreateStandardTransportManager(basis::RecorderInterface *recorder) {
   return transport_manager;
 }
 
+// TODO: this is purely concerned with transport concepts, we should consider moving this to transport
 void StandardUpdate(basis::core::transport::TransportManager *transport_manager,
                     basis::core::transport::CoordinatorConnector *coordinator_connector) {
   transport_manager->Update();

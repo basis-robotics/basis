@@ -1,3 +1,4 @@
+#include "basis/core/serialization/message_type_info.h"
 #define MCAP_IMPLEMENTATION
 
 #include <basis/recorder.h>
@@ -56,6 +57,7 @@ bool Recorder::RegisterTopic(const std::string &topic, const core::serialization
   }
 
   mcap::Channel channel(topic, message_type_info.mcap_message_encoding, schema_it->second.id);
+  channel.metadata[core::serialization::MCAP_CHANNEL_METADATA_SERIALIZER] = message_type_info.serializer;
   writer.addChannel(channel);
   topic_to_channel.emplace(std::move(topic), channel);
   return true;

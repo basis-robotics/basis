@@ -10,6 +10,8 @@
 #include "subscriber.h"
 
 #include <basis/core/serialization.h>
+#include <string>
+#include <string_view>
 
 #include "transport.h"
 
@@ -50,32 +52,56 @@ class TransportManager {
 public:
   TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
 
+protected:
+  std::vector<std::shared_ptr<TransportPublisher>>
+  AdvertiseOnTransports(std::string_view topic, const serialization::MessageTypeInfo &message_type) {
+    std::vector<std::shared_ptr<TransportPublisher>> tps;
+    for (auto &[transport_name, transport] : transports) {
+      tps.push_back(transport->Advertise(topic, message_type));
+    }
+    return tps;
+  }
+
+  basis::RecorderInterface *RegisterTopicWithRecorder(std::string_view topic,
+                                                      const serialization::MessageTypeInfo &message_type,
+                                                      std::string_view schema_data) {
+    if (recorder && recorder->RegisterTopic(std::string(topic), message_type, schema_data)) {
+      // Only pass a recorder down to the publisher if the recording system will handle this topic
+      return recorder;
+    }
+
+    return nullptr;
+  }
+
+public:
+  std::shared_ptr<PublisherRaw> AdvertiseRaw(std::string_view topic, const serialization::MessageTypeInfo &message_type,
+                                             std::string_view schema_data) {
+    std::vector<std::shared_ptr<TransportPublisher>> tps = AdvertiseOnTransports(topic, message_type);
+
+    basis::RecorderInterface *recorder_for_publisher = RegisterTopicWithRecorder(topic, message_type, schema_data);
+    auto publisher = std::make_shared<PublisherRaw>(topic, message_type, std::move(tps), recorder_for_publisher);
+    publishers.emplace(std::string(topic), publisher);
+    return publisher;
+  }
+
   // todo: deducing a raw type should be an error unless requested
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-  [[nodiscard]] std::shared_ptr<Publisher<T_MSG>>
-  Advertise(std::string_view topic,
-            serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
+  [[nodiscard]] std::shared_ptr<Publisher<T_MSG>> Advertise(
+      std::string_view topic,
+      const serialization::MessageTypeInfo &message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     auto *schema = schema_manager.RegisterType<T_MSG, T_Serializer>(message_type);
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     if (inproc) {
       inproc_publisher = inproc->Advertise<T_MSG>(topic);
     }
-    std::vector<std::shared_ptr<TransportPublisher>> tps;
-    for (auto &[transport_name, transport] : transports) {
-      tps.push_back(transport->Advertise(topic, message_type));
-    }
+    std::vector<std::shared_ptr<TransportPublisher>> tps = AdvertiseOnTransports(topic, message_type);
 
     basis::RecorderInterface *recorder_for_publisher = nullptr;
     // Ensure we don't try to write raw structs to disk
     if constexpr (!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
-      if (recorder) {
-        if (recorder->RegisterTopic(std::string(topic), message_type,
-                                    schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient)) {
-          // Only pass a recorder down to the publisher if the recording system will handle this topic
-          recorder_for_publisher = recorder;
-        }
-      }
+      recorder_for_publisher = RegisterTopicWithRecorder(
+          topic, message_type, schema->schema_efficient.empty() ? schema->schema : schema->schema_efficient);
     }
 
     SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;

@@ -107,6 +107,7 @@ add_subdirectory(core)
 add_subdirectory(cli)
 add_subdirectory(examples)
 add_subdirectory(recorder)
+add_subdirectory(replayer)
 add_subdirectory(synchronizers)
 add_subdirectory(unit)
 
