@@ -7,6 +7,7 @@
 #include <basis/replayer.h>
 #include <chrono>
 #include <cstdint>
+#include <google/protobuf/wrappers.pb.h>
 #include <memory>
 #include <thread>
 
@@ -38,7 +39,6 @@ bool Replayer::LoadRecording(std::filesystem::path recording_path) {
     basis_schema.schema = channel->metadata[core::serialization::MCAP_CHANNEL_METADATA_READABLE_SCHEMA];
     basis_schema.hash_id = channel->metadata[core::serialization::MCAP_CHANNEL_METADATA_HASH_ID];
     basis_schema.schema_efficient = std::string((const char *)mcap_schema->data.data(), mcap_schema->data.size());
-// {(const char *)schema->data.data(), schema->data.size()}
 
     std::shared_ptr<core::transport::PublisherRaw> publisher =
         transport_manager.AdvertiseRaw(topic, message_type, basis_schema);
@@ -50,6 +50,8 @@ bool Replayer::LoadRecording(std::filesystem::path recording_path) {
     }
 
     publishers.emplace(topic, publisher);
+
+    time_publisher = transport_manager.Advertise<google::protobuf::Int64Value>("/time");
 
     BASIS_LOG_INFO("replaying topic {}", topic);
   }
@@ -64,31 +66,37 @@ bool Replayer::Run() {
     return false;
   }
 
-  const auto &statistics = mcap_reader.statistics();
-  basis::core::MonotonicTime now;
-  now.nsecs = (int64_t)statistics->messageStartTime;
+  do {
+    const auto &statistics = mcap_reader.statistics();
+    basis::core::MonotonicTime now;
+    now.nsecs = (int64_t)statistics->messageStartTime;
+    BASIS_LOG_INFO("Beginning replay at {}", now.ToSeconds());
+    mcap::ReadMessageOptions options;
+    options.readOrder = mcap::ReadMessageOptions::ReadOrder::LogTimeOrder;
 
-  mcap::ReadMessageOptions options;
-  options.readOrder = mcap::ReadMessageOptions::ReadOrder::LogTimeOrder;
+    auto message_view = mcap_reader.readMessages(LogMcapFailure, options);
 
-  auto message_view = mcap_reader.readMessages(LogMcapFailure, options);
+    basis::StandardUpdate(&transport_manager, &coordinator_connector);
 
-  basis::StandardUpdate(&transport_manager, &coordinator_connector);
 
-  for (const mcap::MessageView &message : message_view) {
-    while (now.nsecs < (int64_t)message.message.publishTime) {
-      constexpr int64_t NSECS_PER_TICK = 1000000; // 1ms
-      now.nsecs += NSECS_PER_TICK;
-      std::this_thread::sleep_for(std::chrono::nanoseconds(NSECS_PER_TICK));
-      basis::StandardUpdate(&transport_manager, &coordinator_connector);
+    for (const mcap::MessageView &message : message_view) {
+      while (now.nsecs < (int64_t)message.message.publishTime) {
+        constexpr int64_t NSECS_PER_TICK = 1000000; // 1ms
+        now.nsecs += NSECS_PER_TICK;
+        std::this_thread::sleep_for(std::chrono::nanoseconds(NSECS_PER_TICK));
+        basis::StandardUpdate(&transport_manager, &coordinator_connector);
+        auto time_message = std::make_shared<google::protobuf::Int64Value>();
+        time_message->set_value(now.nsecs);
+        time_publisher->Publish(time_message);
+      }
+      BASIS_LOG_DEBUG("Publishing on {}", message.channel->topic);
+
+      auto packet = std::make_shared<core::transport::MessagePacket>(core::transport::MessageHeader::DataType::MESSAGE,
+                                                                     message.message.dataSize);
+      memcpy(packet->GetMutablePayload().data(), message.message.data, message.message.dataSize);
+      publishers.at(message.channel->topic)->PublishRaw(packet, now);
     }
-    BASIS_LOG_INFO("Publishing on {}", message.channel->topic);
-
-    auto packet = std::make_shared<core::transport::MessagePacket>(core::transport::MessageHeader::DataType::MESSAGE,
-                                                                   message.message.dataSize);
-    memcpy(packet->GetMutablePayload().data(), message.message.data, message.message.dataSize);
-    publishers.at(message.channel->topic)->PublishRaw(packet, now);
-  }
+  } while(config.loop);
 
   return ok;
 }

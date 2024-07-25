@@ -22,9 +22,9 @@
  *      2. Interfacing with external systems. No recommendations here, yet.
  *
  *   Simulated time:
- *      Will not be initially implemented. It's recommended to avoid calling MonotonicTime::Now() inside callbacks, for
- * now. Simulated time will be different per callback - there will be an attempt to handle this, but it will be safer
- * not to This can eventually be worked around with
+ *      It's recommended to avoid calling MonotonicTime::Now() inside callbacks, for now.
+ * Simulated time will be different per callback - there will be an attempt to handle this, but it will be safer
+ * not to.
  */
 namespace basis::core {
 
@@ -41,11 +41,6 @@ protected:
 
   static int64_t SecondsToNanoseconds(double seconds) { return seconds * NSECS_IN_SECS; }
 
-  /* todo
-  TimeBase(double seconds) {
-
-  }
-  */
   constexpr static int64_t NSECS_IN_SECS = std::nano::den;
 
 public:
@@ -58,6 +53,7 @@ public:
   timeval ToTimeval() const { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_usec = 1000 * (nsecs % NSECS_IN_SECS)}; }
   timespec ToTimespec() const { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_nsec = (nsecs % NSECS_IN_SECS)}; }
 };
+
 #ifndef IGNORE_YEAR_2038
 // I'd like to think this software will be alive in some form in 14 years.
 static_assert(!std::is_same<time_t, int32_t>::value, "This platform is likely to hit the year 2038 problem.");
@@ -108,6 +104,8 @@ struct MonotonicTime : public TimePoint {
   }
 
   void SleepUntil() const;
+
+  static void SetSimulatedTime(int64_t nanoseconds);
 
 protected:
   using TimePoint::TimePoint;

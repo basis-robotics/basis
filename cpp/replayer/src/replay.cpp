@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   argparse::ArgumentParser parser("replay");
 
   constexpr char LOOP_ARG[] = "--loop";
-  parser.add_argument(LOOP_ARG).help("Whether or not to loop the playback.").default_value(false).implicit_value(false);
+  parser.add_argument(LOOP_ARG).help("Whether or not to loop the playback.").default_value(false).implicit_value(true);
   // TODO: allow multiple mcap files, directory support
   constexpr char RECORDING_ARG[] = "recording";
   parser.add_argument(RECORDING_ARG).help("The MCAP file to replay.");

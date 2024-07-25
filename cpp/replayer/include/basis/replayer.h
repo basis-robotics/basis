@@ -8,6 +8,8 @@
 #include <memory>
 #include <unordered_map>
 
+#include <google/protobuf/wrappers.pb.h>
+
 DEFINE_AUTO_LOGGER_NS(basis::replayer)
 
 namespace basis {
@@ -35,6 +37,7 @@ private:
   basis::core::transport::CoordinatorConnector& coordinator_connector;
   mcap::McapReader mcap_reader;
   std::unordered_map<std::string, std::shared_ptr<basis::core::transport::PublisherRaw>> publishers;
+  std::shared_ptr<basis::core::transport::Publisher<google::protobuf::Int64Value>> time_publisher;
 };
 
 } // namespace basis
