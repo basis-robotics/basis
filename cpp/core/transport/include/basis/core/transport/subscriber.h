@@ -109,12 +109,18 @@ public:
 
 protected:
   void ThreadFunction() {
+    const uint64_t run_token = MonotonicTime::GetRunToken();
     MonotonicTime next = MonotonicTime::Now();
     while (!stop) {
       next += tick_length;
-      next.SleepUntil();
+      next.SleepUntil(run_token);
+      // Really ugly kludge to not run callbacks when we've detected a time jump
+      if(run_token != MonotonicTime::GetRunToken()) {
+        break;
+      }
       // Don't use next here - it will be affected by the scheduler
       callback(MonotonicTime::Now());
+      
     }
   }
 

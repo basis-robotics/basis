@@ -102,6 +102,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             // Ensure that we stop the rate subscriber thread before we destruct the synchronizer
             rate_subsciber = nullptr;
             {% endif %}
+            synchronizer = nullptr;
         }
 
         void SetupPubSub(

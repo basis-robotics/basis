@@ -1,19 +1,20 @@
 #include <basis/core/time.h>
 
-#include <chrono>
-
-#include <thread>
+#include <cstdint>
 #include <time.h>
 
+#include <iostream>
+
+#include <atomic>
 namespace basis::core {
 namespace {
-  static std::atomic<bool> using_simulated_time = false;
-  static int64_t simulated_time_ns = 0;
-}
+static std::atomic<int64_t> simulated_time_ns = time::INVALID_NSECS;
+static std::atomic<uint64_t> current_run_token = 0;
+} // namespace
 MonotonicTime MonotonicTime::FromSeconds(double seconds) { return {TimeBase::SecondsToNanoseconds(seconds)}; }
 
-MonotonicTime MonotonicTime::Now() {
-  if(using_simulated_time) {
+MonotonicTime MonotonicTime::Now(bool ignore_simulated_time) {
+  if (!ignore_simulated_time && UsingSimulatedTime()) {
     return {simulated_time_ns};
   }
   timespec ts;
@@ -23,15 +24,35 @@ MonotonicTime MonotonicTime::Now() {
   return {TimeBase::SecondsToNanoseconds(ts.tv_sec) + ts.tv_nsec};
 }
 
-void MonotonicTime::SleepUntil() const {
-  timespec ts = ToTimespec();
+void MonotonicTime::SleepUntil(uint64_t run_token) const {
+  // TODO: these sleeps are both inaccurate and not performant if under sim time. Use a condition variable!
+  if (UsingSimulatedTime()) {
+    while(Now().nsecs < nsecs && run_token == current_run_token) {
+      // Spin until time catches up
+      timespec ts;
+      ts.tv_sec = 0;
+      ts.tv_nsec = 100000; // .1 ms
+      clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, nullptr);
+    }
+  }
+  else {
+    timespec ts = ToTimespec();
 
-  clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, nullptr);
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, nullptr);
+  }
 }
 
-void MonotonicTime::SetSimulatedTime(int64_t nanoseconds) {
+void MonotonicTime::SetSimulatedTime(int64_t nanoseconds, uint64_t run_token) {
   simulated_time_ns = nanoseconds;
-  using_simulated_time = true;
+  current_run_token = run_token;
+}
+
+bool MonotonicTime::UsingSimulatedTime() {
+  return simulated_time_ns != time::INVALID_NSECS;
+}
+
+uint64_t MonotonicTime::GetRunToken() {
+  return current_run_token;
 }
 
 } // namespace basis::core

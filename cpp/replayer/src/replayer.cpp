@@ -1,17 +1,15 @@
-#include "basis/core/logging/macros.h"
-#include "basis/core/serialization.h"
-#include "basis/core/time.h"
-#include "basis/core/transport/publisher.h"
-#include "mcap/errors.hpp"
-#include "mcap/types.hpp"
+#include <basis/core/logging/macros.h>
+#include <basis/core/time.h>
+#include <basis/core/transport/publisher.h>
 #include <basis/replayer.h>
+#include <basis/unit.h>
 #include <chrono>
 #include <cstdint>
 #include <google/protobuf/wrappers.pb.h>
+#include <mcap/errors.hpp>
+#include <mcap/types.hpp>
 #include <memory>
 #include <thread>
-
-#include <basis/unit.h>
 
 DECLARE_AUTO_LOGGER_NS(basis::replayer)
 
@@ -51,7 +49,7 @@ bool Replayer::LoadRecording(std::filesystem::path recording_path) {
 
     publishers.emplace(topic, publisher);
 
-    time_publisher = transport_manager.Advertise<google::protobuf::Int64Value>("/time");
+    time_publisher = transport_manager.Advertise<basis::core::transport::proto::Time>("/time");
 
     BASIS_LOG_INFO("replaying topic {}", topic);
   }
@@ -78,15 +76,19 @@ bool Replayer::Run() {
 
     basis::StandardUpdate(&transport_manager, &coordinator_connector);
 
+    const int64_t token = basis::core::MonotonicTime::Now().nsecs;
 
-    for (const mcap::MessageView &message : message_view) {
+    auto wall_next = std::chrono::steady_clock::now();
+    for (const mcap::MessageView &message : message_view) {  
       while (now.nsecs < (int64_t)message.message.publishTime) {
-        constexpr int64_t NSECS_PER_TICK = 1000000; // 1ms
+        constexpr int64_t NSECS_PER_TICK = 10000000; // 100hz
         now.nsecs += NSECS_PER_TICK;
-        std::this_thread::sleep_for(std::chrono::nanoseconds(NSECS_PER_TICK));
+        wall_next += std::chrono::nanoseconds(NSECS_PER_TICK);
+        std::this_thread::sleep_until(wall_next);
         basis::StandardUpdate(&transport_manager, &coordinator_connector);
-        auto time_message = std::make_shared<google::protobuf::Int64Value>();
-        time_message->set_value(now.nsecs);
+        auto time_message = std::make_shared<basis::core::transport::proto::Time>();
+        time_message->set_nsecs(now.nsecs);
+        time_message->set_run_token(*reinterpret_cast<const uint64_t*>(&token));
         time_publisher->Publish(time_message);
       }
       BASIS_LOG_DEBUG("Publishing on {}", message.channel->topic);
@@ -96,7 +98,7 @@ bool Replayer::Run() {
       memcpy(packet->GetMutablePayload().data(), message.message.data, message.message.dataSize);
       publishers.at(message.channel->topic)->PublishRaw(packet, now);
     }
-  } while(config.loop);
+  } while (config.loop);
 
   return ok;
 }
