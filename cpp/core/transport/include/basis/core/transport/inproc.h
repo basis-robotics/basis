@@ -70,9 +70,7 @@ public:
   // TODO: thread safety
 
   std::shared_ptr<InprocPublisher<T_MSG>> Advertise(std::string_view topic) {
-    auto publisher = std::make_shared<InprocPublisher<T_MSG>>(topic, this);
-    publishers.insert({std::string{topic}, publisher});
-    return publisher;
+    return std::make_shared<InprocPublisher<T_MSG>>(topic, this);
   }
 
   std::shared_ptr<InprocSubscriber<T_MSG>> Subscribe(std::string_view topic,

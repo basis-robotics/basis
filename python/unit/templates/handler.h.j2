@@ -11,11 +11,11 @@
 
 namespace unit::{{unit_name}}::{{handler_name}} {
     struct Input {
+        basis::core::MonotonicTime time;
 {% for input_name, input in inputs.items() %}
         // {{input_name}}
         {{input.cpp_type}} {{input.cpp_topic_name}};
 {% endfor %}
-        // TODO: time?
         // TODO: this will need metadata around topics to handle deterministic mode
     };
 
@@ -78,7 +78,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             }
             synchronizer = std::make_unique<Synchronizer>(
         [this, callback, publish_callback](auto ...msgs) {
-                Output output = callback({msgs...});
+                Output output = callback({basis::core::MonotonicTime::Now(), msgs...});
 {% for output_name, output in outputs.items() %}
                 assert(output.{{output.cpp_topic_name}} != nullptr);
 {% endfor %}
