@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "basis/core/time/chrono_adapter.h"
 #include <spdlog/details/null_mutex.h>
 #include <spdlog/tweakme.h>
 
@@ -138,7 +139,7 @@ using filename_t = std::string;
     #define SPDLOG_FILENAME_T(s) s
 #endif
 
-using log_clock = std::chrono::system_clock;
+using log_clock = basis::time::ChronoClock;
 using sink_ptr = std::shared_ptr<sinks::sink>;
 using sinks_init_list = std::initializer_list<sink_ptr>;
 using err_handler = std::function<void(const std::string &err_msg)>;
