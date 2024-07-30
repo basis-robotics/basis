@@ -25,13 +25,6 @@ if(${BASIS_ENABLE_TESTING})
 endif()
 
 FetchContent_Declare(
-  spdlog
-  URL  https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.zip
-)
-FetchContent_MakeAvailable(spdlog)
-target_compile_options(spdlog PUBLIC -fPIC)
-
-FetchContent_Declare(
   expected-lite
   URL https://github.com/martinmoene/expected-lite/archive/refs/tags/v0.6.3.zip
 )
@@ -125,3 +118,5 @@ if(BASIS_ENABLE_ROS)
 endif()
 
 add_subdirectory(plugins/transport/tcp)
+
+add_subdirectory(third_party)
