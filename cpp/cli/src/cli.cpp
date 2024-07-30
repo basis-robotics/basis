@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
   launch_command.add_description("launch a yaml");
   launch_command.add_argument("--process").help("The process to launch inside the yaml").default_value("");
   // todo: when kv store is implemented, query the store instead
-  launch_command.add_argument("--sim").help("Enable simulated time").default_value(false).implicit_value(true);
+  launch_command.add_argument("--sim").help("Wait for simulated time message").default_value(false).implicit_value(true);
   launch_command.add_argument("launch_yaml");
   parser.add_subparser(launch_command);
 

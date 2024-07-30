@@ -88,28 +88,20 @@ private:
     if (range.first == range.second) {
       return;
     }
-    for (auto it = range.first; it != range.second; ++it) {
-      it->second->OnMessage(msg);
+    for (auto it = range.first; it != range.second;) {
+      if(auto subscriber = it->second.lock()) {
+        subscriber->OnMessage(msg);
+        ++it;
+      }
+      else {
+        subscribers.erase(it++);
+      }
     }
   }
 
-  /*
-      template<typename T_MSG>
-      void Publish(const std::string& topic, const T_MSG& data) {
-          auto range = subscribers.equal_range(topic);
-          for (auto it = range.first; it != range.second; ++it) {
-              auto subscriber = std::static_pointer_cast<SubscriberBaseT<T_MSG>>(it->second);
-              subscriber->callback(MessageEvent<T_MSG>{});
-          }
-      }
-  */
-
-  // todo: weak ptr here...?
-
-  std::unordered_map<std::string, std::shared_ptr<InprocPublisher<T_MSG>>> publishers;
+  //std::unordered_map<std::string, std::weak_ptr<InprocPublisher<T_MSG>>> publishers;
   // mutex please
-  // todo: weak ptr here...?
-  std::unordered_multimap<std::string, std::shared_ptr<InprocSubscriber<T_MSG>>> subscribers;
+  std::unordered_multimap<std::string, std::weak_ptr<InprocSubscriber<T_MSG>>> subscribers;
 
 // WRONG - will lead to differences between compilers
 // std::unordered_map<std::string, std::type_info> topic_types;

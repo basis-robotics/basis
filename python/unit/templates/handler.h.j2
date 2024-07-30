@@ -98,6 +98,10 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         }
 
         ~PubSub() {
+            // Remove subscribers first
+            {% for input_name, input in inputs.items() %}
+            {{input.cpp_topic_name}}_subscriber = nullptr;
+            {% endfor %}
             {% if 'rate' in sync %}
             // Ensure that we stop the rate subscriber thread before we destruct the synchronizer
             rate_subsciber = nullptr;
