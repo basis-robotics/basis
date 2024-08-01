@@ -78,7 +78,7 @@ public:
     auto basis_schema = basis::plugins::serialization::RosmsgSerializer::DumpSchema<std_msgs::String>();
     auto mti = basis::plugins::serialization::RosmsgSerializer::DeduceMessageTypeInfo<std_msgs::String>();
 
-    recorder->RegisterTopic("/ros_topic", mti, basis_schema.schema);
+    recorder->RegisterTopic("/ros_topic", mti, basis_schema);
 
     auto [bytes, size] = basis::SerializeToBytes(msg);
     std::shared_ptr<const std::byte[]> owning_bytes = std::move(bytes);
