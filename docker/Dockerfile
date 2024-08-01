@@ -37,7 +37,8 @@ ARG LLVM_VERSION=18
 # Upgrade clang
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" "" 18 all
+    bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" "" ${LLVM_VERSION} && \
+    apt install clang-format-${LLVM_VERSION}
 
 RUN <<EOF
 update-alternatives \
