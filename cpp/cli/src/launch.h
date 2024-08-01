@@ -11,6 +11,6 @@ namespace basis::cli {
  * the yaml for the requested process.
  */
 void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &args,
-                    std::string process_name_filter = "");
+                    std::string process_name_filter = "", bool sim = false);
 
 } // namespace basis::cli

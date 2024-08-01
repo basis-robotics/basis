@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <memory>
 #include <string_view>
 #include <unistd.h>
 
@@ -9,11 +10,27 @@
 #include <basis/recorder/protobuf_log.h>
 #include <basis/unit.h>
 
+#include <google/protobuf/wrappers.pb.h>
+
+#include "basis/core/logging/macros.h"
+#include "basis/core/time.h"
 #include "cli_logger.h" // IWYU pragma: keep AUTO_LOGGER
 #include "launch.h"
 #include "launch_definition.h"
 #include "process_manager.h"
 #include "unit_loader.h"
+
+#include <time.pb.h>
+
+
+
+#include "backward.hpp"
+
+namespace backward {
+
+backward::SignalHandling sh;
+
+} // namespace backward
 
 namespace basis::cli {
 
@@ -43,7 +60,9 @@ public:
   ~UnitExecutor() {
     stop = true;
     for (auto &thread : threads) {
-      thread.join();
+      if(thread.joinable()) {
+        thread.join();
+      }
     }
   }
 
@@ -130,7 +149,10 @@ protected:
   std::vector<const char *> args_copy;
 
   // basis
-  args_copy.push_back(args[0].data());
+  char execv_target[1024] = {};
+  readlink("/proc/self/exe", execv_target, sizeof(execv_target));
+  args_copy.push_back(execv_target);
+
   // launch
   args_copy.push_back(args[1].data());
   args_copy.push_back("--process");
@@ -155,11 +177,11 @@ protected:
     if (getppid() == 1) {
       exit(1);
     }
-    execv(args[0].data(), const_cast<char **>(args_copy.data()));
+    execv(execv_target, const_cast<char **>(args_copy.data()));
     // Manually print to stderr, don't trust anything
     int error = errno;
     fputs("Failed to execv ", stderr);
-    fputs(args[0].data(), stderr);
+    fputs(execv_target, stderr);
     fputs(" ", stderr);
     fputs(strerror(error), stderr);
     exit(1);
@@ -221,16 +243,8 @@ void LaunchYaml(const LaunchDefinition &launch, const std::vector<std::string> &
   }
 }
 
-// todo: probably take a std::fs::path here
-void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &args, std::string process_name_filter) {
-  YAML::Node loaded_yaml = YAML::LoadFile(std::string(yaml_path));
-
-  const LaunchDefinition launch = ParseLaunchDefinitionYAML(loaded_yaml);
-
-  if (process_name_filter.empty()) {
-    // We are the parent launcher, will fork here
-    LaunchYaml(launch, args);
-  } else {
+void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter, bool sim) {
+  while(!global_stop) {
     // We are a child launcher
     std::unique_ptr<basis::RecorderInterface> recorder;
     if (launch.recording_settings && launch.recording_settings->patterns.size()) {
@@ -240,14 +254,19 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &
         recorder = std::make_unique<basis::AsyncRecorder>(launch.recording_settings->directory,
                                                           launch.recording_settings->patterns);
       } else {
-        recorder = std::make_unique<basis::Recorder>(launch.recording_settings->directory,
-                                                     launch.recording_settings->patterns);
+        recorder =
+            std::make_unique<basis::Recorder>(launch.recording_settings->directory, launch.recording_settings->patterns);
       }
-      std::string record_name =
-          fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now().ToSeconds());
+
+      std::string record_name = fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now(true).ToSeconds());
+      if(sim) {
+        // TODO: it would be great to get the actual simulation start time, but then we won't be able to start logging until coordinator connection
+        // this might be okay in practice
+        record_name += "_sim";
+      }
 
       BASIS_LOG_INFO("Recording{} to {}.mcap", recorder_type,
-                     (launch.recording_settings->directory / record_name).string());
+                    (launch.recording_settings->directory / record_name).string());
 
       recorder->Start(record_name);
     }
@@ -268,21 +287,52 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &
     auto system_transport_manager = basis::CreateStandardTransportManager(recorder.get());
     basis::CreateLogHandler(*system_transport_manager);
 
+    basis::core::threading::ThreadPool time_thread_pool(1);
+    auto time_subscriber = system_transport_manager->Subscribe("/time", std::function([](std::shared_ptr<const basis::core::transport::proto::Time> msg) {
+      basis::core::MonotonicTime::SetSimulatedTime(msg->nsecs(), msg->run_token());
+    }), &time_thread_pool);
+
     {
+      uint64_t token = basis::core::MonotonicTime::GetRunToken();
+      while(sim && !token) {
+        BASIS_LOG_INFO("In simulation mode, waiting on /time");
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
+        token = basis::core::MonotonicTime::GetRunToken();
+      }
+
       UnitExecutor runner;
       runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
 
       // Sleep until signal
       // TODO: this can be a condition variable now
-      while (!global_stop) {
+      while (!global_stop && token == basis::core::MonotonicTime::GetRunToken()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
       }
-
-      BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);
+      if(global_stop) {
+        BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);
+      }
+      else {
+        BASIS_LOG_INFO("{} detected playback restart, restarting...", process_name_filter);
+      }
     }
 
     basis::DestroyLogHandler();
+  }
+}
+
+// todo: probably take a std::fs::path here
+void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &args, std::string process_name_filter, bool sim) {
+  YAML::Node loaded_yaml = YAML::LoadFile(std::string(yaml_path));
+
+  const LaunchDefinition launch = ParseLaunchDefinitionYAML(loaded_yaml);
+
+  if (process_name_filter.empty()) {
+    // We are the parent launcher, will fork here
+    LaunchYaml(launch, args);
+  } else {
+    LaunchChild(launch, process_name_filter, sim);
   }
 }
 

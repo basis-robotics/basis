@@ -22,11 +22,14 @@
  *      2. Interfacing with external systems. No recommendations here, yet.
  *
  *   Simulated time:
- *      Will not be initially implemented. It's recommended to avoid calling MonotonicTime::Now() inside callbacks, for
- * now. Simulated time will be different per callback - there will be an attempt to handle this, but it will be safer
- * not to This can eventually be worked around with
+ *      It's recommended to avoid calling MonotonicTime::Now() inside callbacks, for now.
+ * Simulated time will be different per callback - there will be an attempt to handle this, but it will be safer
+ * not to.
  */
 namespace basis::core {
+namespace time {
+  static constexpr int64_t INVALID_NSECS = std::numeric_limits<int64_t>::min();
+}
 
 /**
  * Base of all time types. Don't construct this directly.
@@ -35,29 +38,26 @@ namespace basis::core {
  */
 struct TimeBase {
 protected:
+
   TimeBase() {}
 
   TimeBase(int64_t nsecs) : nsecs(nsecs) {}
 
   static int64_t SecondsToNanoseconds(double seconds) { return seconds * NSECS_IN_SECS; }
 
-  /* todo
-  TimeBase(double seconds) {
-
-  }
-  */
   constexpr static int64_t NSECS_IN_SECS = std::nano::den;
 
 public:
-  int64_t nsecs = std::numeric_limits<int64_t>::min();
+  int64_t nsecs = time::INVALID_NSECS;
 
-  bool IsValid() const { return nsecs != std::numeric_limits<int64_t>::min(); }
+  bool IsValid() const { return nsecs != time::INVALID_NSECS; }
 
-  double ToSeconds() const { return (nsecs / NSECS_IN_SECS) + double(nsecs % NSECS_IN_SECS) / NSECS_IN_SECS; }
+  double ToSeconds() const { return (nsecs / NSECS_IN_SECS) + double(nsecs % NSECS_IN_SECS) / NSECS_IN_SECS; } // NOLINT(bugprone-integer-division) - intentional use of double/int mix
 
   timeval ToTimeval() const { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_usec = 1000 * (nsecs % NSECS_IN_SECS)}; }
   timespec ToTimespec() const { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_nsec = (nsecs % NSECS_IN_SECS)}; }
 };
+
 #ifndef IGNORE_YEAR_2038
 // I'd like to think this software will be alive in some form in 14 years.
 static_assert(!std::is_same<time_t, int32_t>::value, "This platform is likely to hit the year 2038 problem.");
@@ -95,7 +95,7 @@ protected:
 struct MonotonicTime : public TimePoint {
   static MonotonicTime FromSeconds(double seconds);
 
-  static MonotonicTime Now();
+  static MonotonicTime Now(bool ignore_simulated_time = false);
 
   MonotonicTime &operator+=(const Duration &duration) {
     nsecs += duration.nsecs;
@@ -107,8 +107,13 @@ struct MonotonicTime : public TimePoint {
     return out;
   }
 
-  void SleepUntil() const;
+  void SleepUntil(uint64_t run_token) const;
 
+  static void SetSimulatedTime(int64_t nanoseconds, uint64_t run_token);
+
+  static bool UsingSimulatedTime();
+
+  static uint64_t GetRunToken();
 protected:
   using TimePoint::TimePoint;
 };

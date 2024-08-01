@@ -92,5 +92,9 @@
     "yaml.disableDefaultProperties": false,
     "cmake.configureOnOpen": false,
     "C_Cpp.clang_format_fallbackStyle": "Google",
-    "C_Cpp.default.compileCommands": "build/compile_commands.json"
+    "C_Cpp.default.compileCommands": "build/compile_commands.json",
+    "clangd.fallbackFlags": [
+        "--compile-commands-dir=build/compile_commands.json",
+        "--log=verbose"
+    ]
 }

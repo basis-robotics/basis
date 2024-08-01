@@ -3,6 +3,8 @@
 #include <basis/core/logging.h>
 
 #include <spdlog/spdlog.h>
+#include <string>
+#include <string_view>
 
 // Convenience macros to do "the right thing" given an appropriately scoped logger
 #define BASIS_LOG_TRACE(...) SPDLOG_LOGGER_TRACE(AUTO_LOGGER, __VA_ARGS__)
@@ -15,7 +17,18 @@
 // #define ASSERT(...)
 
 namespace basis::core::logging {
-consteval std::string_view StripLeadingNamespace(std::string_view ns) { return ns; }
+consteval std::string_view StripLeadingNamespace(std::string_view ns) {
+  size_t idx = ns.find_last_of(":");
+  if (idx == std::string::npos) {
+    idx = 0;
+  }
+  else {
+    idx++;
+  }
+
+  ns.remove_prefix(idx);
+  return ns;
+}
 } // namespace basis::core::logging
 
 // TODO: these macros never call spdlog::drop - not a huge deal though

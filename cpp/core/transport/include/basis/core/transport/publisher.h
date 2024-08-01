@@ -7,6 +7,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "basis/core/time.h"
 #include "inproc.h"
 #include "logger.h"
 #include "message_packet.h"
@@ -55,6 +56,15 @@ public:
   PublisherInfo GetPublisherInfo();
 
 protected:
+  void PublishRaw(std::shared_ptr<MessagePacket> packet, basis::core::MonotonicTime now) {
+    // Send the data
+    for (auto &pub : transport_publishers) {
+      pub->SendMessage(packet);
+    }
+    if (recorder) {
+      recorder->WriteMessage(topic, {packet, packet->GetPayload()}, now);
+    }
+  }
   const __uint128_t publisher_id = CreatePublisherId();
   const std::string topic;
   const serialization::MessageTypeInfo type_info;
@@ -62,6 +72,15 @@ protected:
   // TODO: these are shared_ptrs - it could be a single unique_ptr if we were sure we never want to pool these
   std::vector<std::shared_ptr<TransportPublisher>> transport_publishers;
   RecorderInterface *recorder;
+};
+
+class PublisherRaw : public PublisherBase {
+public:
+  PublisherRaw(std::string_view topic, serialization::MessageTypeInfo type_info,
+               std::vector<std::shared_ptr<TransportPublisher>> transport_publishers, RecorderInterface *recorder)
+      : PublisherBase(topic, type_info, false, std::move(transport_publishers), recorder) {}
+
+  using PublisherBase::PublishRaw;
 };
 
 template <typename T_MSG> class Publisher : public PublisherBase {
@@ -98,6 +117,7 @@ public:
     // Request size of payload from serializer
     const size_t payload_size = get_message_size_cb(*msg);
     // Create a packet of the proper size
+    // TODO: embed time inside packet?
     auto packet = std::make_shared<MessagePacket>(MessageHeader::DataType::MESSAGE, payload_size);
     // Serialize directly to the packet
     std::span<std::byte> payload = packet->GetMutablePayload();
@@ -106,13 +126,7 @@ public:
       return;
     }
 
-    // Send the data
-    for (auto &pub : transport_publishers) {
-      pub->SendMessage(packet);
-    }
-    if (recorder) {
-      recorder->WriteMessage(topic, {packet, packet->GetPayload()}, now);
-    }
+    PublishRaw(std::move(packet), now);
   }
 
 private:

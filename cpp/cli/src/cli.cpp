@@ -19,6 +19,7 @@
 #include "cli_logger.h"
 #include "launch.h"
 
+
 namespace basis::cli {
 
 std::shared_ptr<spdlog::logger> basis_logger = basis::core::logging::CreateLogger("basis");
@@ -151,7 +152,7 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
 
   // This looks dangerous to take as a reference but is actually safe -
   // the subscriber destructor will wait until the callback exits before the atomic goes out of scope
-  std::atomic<size_t> num_messages;
+  std::atomic<size_t> num_messages = 0;
   auto time_test_sub = transport_manager.SubscribeRaw(
       topic,
       [&]([[maybe_unused]] auto msg) {
@@ -179,6 +180,63 @@ void PrintTopic(const std::string &topic, basis::core::transport::CoordinatorCon
   }
 }
 
+void RateTopic(const std::string &topic, basis::core::transport::CoordinatorConnector *connector) {
+  basis::core::threading::ThreadPool work_thread_pool(4);
+
+  auto *info = connector->GetLastNetworkInfo();
+
+  auto it = info->publishers_by_topic().find(topic);
+  if (it == info->publishers_by_topic().end()) {
+    std::cerr << "No publishers for topic " << topic << std::endl;
+    return;
+  }
+
+  std::string schema_id = it->second.publishers()[0].schema_id();
+  std::optional<basis::core::transport::proto::MessageSchema> maybe_schema = FetchSchema(schema_id, connector, 5);
+  if (!maybe_schema) {
+    return;
+  }
+
+  auto plugin_it = serialization_plugins.find(maybe_schema->serializer());
+  if (plugin_it == serialization_plugins.end()) {
+    std::cerr << "Unknown serializer " << maybe_schema->serializer() << " please recompile basis_cli with support"
+              << std::endl;
+    return;
+  }
+  core::serialization::SerializationPlugin *plugin = plugin_it->second.get();
+
+  plugin->LoadSchema(maybe_schema->name(), maybe_schema->schema());
+  basis::core::transport::TransportManager transport_manager(
+      std::make_unique<basis::core::transport::InprocTransport>());
+  transport_manager.RegisterTransport("net_tcp", std::make_unique<basis::plugins::transport::TcpTransport>());
+
+  // This looks dangerous to take as a reference but is actually safe -
+  // the subscriber destructor will wait until the callback exits before the atomic goes out of scope
+  std::atomic<size_t> num_messages = 0;
+  auto time_test_sub = transport_manager.SubscribeRaw(
+      topic,
+      [&]([[maybe_unused]] auto msg) {
+        num_messages++;
+
+        
+      },
+      &work_thread_pool, nullptr, {});
+
+  while (true) {
+    // todo: move this out into "unit"
+    connector->SendTransportManagerInfo(transport_manager.GetTransportManagerInfo());
+    connector->Update();
+
+    if (connector->GetLastNetworkInfo()) {
+      transport_manager.HandleNetworkInfo(*connector->GetLastNetworkInfo());
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    std::cout << num_messages << " Hz" << std::endl;
+    num_messages = 0;
+  }
+}
+
 void PrintSchema(const std::string &schema_name, basis::core::transport::CoordinatorConnector *connector) {
   std::optional<basis::core::transport::proto::MessageSchema> maybe_schema = FetchSchema(schema_name, connector, 5);
   if (maybe_schema) {
@@ -190,6 +248,7 @@ void PrintSchema(const std::string &schema_name, basis::core::transport::Coordin
 } // namespace basis::cli
 
 int main(int argc, char *argv[]) {
+
   using namespace basis;
   using namespace basis::cli;
 
@@ -223,6 +282,11 @@ int main(int argc, char *argv[]) {
   topic_print_command.add_argument("-n").scan<'i', size_t>().help("number of messages to print (default: infinite)");
   topic_print_command.add_argument("--json", "-j").help("dump this message as JSON").flag();
   topic_command.add_subparser(topic_print_command);
+  // basis topic hz
+  argparse::ArgumentParser topic_hz_command("hz");
+  topic_hz_command.add_description("check the receive rate of a topic");
+  topic_hz_command.add_argument("topic");
+  topic_command.add_subparser(topic_hz_command);
 
   parser.add_subparser(topic_command);
 
@@ -248,6 +312,8 @@ int main(int argc, char *argv[]) {
   argparse::ArgumentParser launch_command("launch");
   launch_command.add_description("launch a yaml");
   launch_command.add_argument("--process").help("The process to launch inside the yaml").default_value("");
+  // todo: when kv store is implemented, query the store instead
+  launch_command.add_argument("--sim").help("Wait for simulated time message").default_value(false).implicit_value(true);
   launch_command.add_argument("launch_yaml");
   parser.add_subparser(launch_command);
 
@@ -308,6 +374,9 @@ int main(int argc, char *argv[]) {
       auto topic = topic_print_command.get("topic");
       PrintTopic(topic, connection.get(), topic_print_command.present<size_t>("-n"),
                  topic_print_command["--json"] == true);
+    } else if (topic_command.is_subcommand_used("hz")) {
+      auto topic = topic_hz_command.get("topic");
+      RateTopic(topic, connection.get());
     }
   } else if (parser.is_subcommand_used("schema")) {
     auto topic = schema_print_command.get("schema");
@@ -317,7 +386,7 @@ int main(int argc, char *argv[]) {
   } else if (parser.is_subcommand_used("launch")) {
     auto launch_yaml = launch_command.get("launch_yaml");
     std::vector<std::string> args(argv, argv + argc);
-    LaunchYamlPath(launch_yaml, args, launch_command.get("--process"));
+    LaunchYamlPath(launch_yaml, args, launch_command.get("--process"), launch_command.get<bool>("--sim"));
   }
 
   serialization_plugins.clear();

@@ -10,7 +10,7 @@
 #include <std_msgs/String.h>
 #endif
 
-#include "mcap/reader.hpp"
+#include <mcap/reader.hpp>
 
 template <typename RecorderClass> class TestRecorderT : public testing::Test {
 public:
@@ -47,7 +47,7 @@ public:
   void RegisterProtobuf(std::string topic_name = "/proto_topic") {
     auto basis_schema = basis::plugins::serialization::protobuf::ProtobufSerializer::DumpSchema<TestProtoStruct>();
     auto mti = basis::plugins::serialization::protobuf::ProtobufSerializer::DeduceMessageTypeInfo<TestProtoStruct>();
-    recorder->RegisterTopic(topic_name, mti, basis_schema.schema_efficient);
+    recorder->RegisterTopic(topic_name, mti, basis_schema);
   }
 
   void WriteProtobuf(std::string topic_name = "/proto_topic") {
@@ -78,7 +78,7 @@ public:
     auto basis_schema = basis::plugins::serialization::RosmsgSerializer::DumpSchema<std_msgs::String>();
     auto mti = basis::plugins::serialization::RosmsgSerializer::DeduceMessageTypeInfo<std_msgs::String>();
 
-    recorder->RegisterTopic("/ros_topic", mti, basis_schema.schema);
+    recorder->RegisterTopic("/ros_topic", mti, basis_schema);
 
     auto [bytes, size] = basis::SerializeToBytes(msg);
     std::shared_ptr<const std::byte[]> owning_bytes = std::move(bytes);

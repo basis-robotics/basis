@@ -1,0 +1,8 @@
+syntax= "proto3";
+
+package basis.core.transport.proto;
+
+message Time {
+    int64 nsecs = 1; // The current simulated time
+    uint64 run_token = 2; // Changes every time a replay or simulation starts
+}

@@ -12,6 +12,7 @@ target_link_libraries(
   basis::core::coordinator
   basis::unit
   argparse
+  Backward::Interface
   dl
   yaml-cpp
 )

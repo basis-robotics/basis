@@ -25,13 +25,6 @@ if(${BASIS_ENABLE_TESTING})
 endif()
 
 FetchContent_Declare(
-  spdlog
-  URL  https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.zip
-)
-FetchContent_MakeAvailable(spdlog)
-target_compile_options(spdlog PUBLIC -fPIC)
-
-FetchContent_Declare(
   expected-lite
   URL https://github.com/martinmoene/expected-lite/archive/refs/tags/v0.6.3.zip
 )
@@ -66,6 +59,14 @@ FetchContent_Declare(
   GIT_TAG v3.0
 )
 FetchContent_MakeAvailable(argparse)
+
+# Also requires one of: libbfd (gnu binutils), libdwarf, libdw (elfutils)
+FetchContent_Declare(backward
+    GIT_REPOSITORY https://github.com/bombela/backward-cpp
+    GIT_TAG master  # or a version tag, such as v1.6
+    SYSTEM          # optional, the Backward include directory will be treated as system directory
+)
+FetchContent_MakeAvailable(backward)
 
 if(BASIS_ENABLE_ROS)
   set(BUILD_TESTING OFF)
@@ -107,6 +108,7 @@ add_subdirectory(core)
 add_subdirectory(cli)
 add_subdirectory(examples)
 add_subdirectory(recorder)
+add_subdirectory(replayer)
 add_subdirectory(synchronizers)
 add_subdirectory(unit)
 
@@ -116,3 +118,5 @@ if(BASIS_ENABLE_ROS)
 endif()
 
 add_subdirectory(plugins/transport/tcp)
+
+add_subdirectory(third_party)
