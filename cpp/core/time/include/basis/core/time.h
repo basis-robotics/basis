@@ -52,7 +52,7 @@ public:
 
   bool IsValid() const { return nsecs != time::INVALID_NSECS; }
 
-  double ToSeconds() const { return (double(nsecs) / NSECS_IN_SECS) + double(nsecs % NSECS_IN_SECS) / NSECS_IN_SECS; }
+  double ToSeconds() const { return (nsecs / NSECS_IN_SECS) + double(nsecs % NSECS_IN_SECS) / NSECS_IN_SECS; } // NOLINT(bugprone-integer-division) - intentional use of double/int mix
 
   timeval ToTimeval() const { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_usec = 1000 * (nsecs % NSECS_IN_SECS)}; }
   timespec ToTimespec() const { return {.tv_sec = nsecs / NSECS_IN_SECS, .tv_nsec = (nsecs % NSECS_IN_SECS)}; }
