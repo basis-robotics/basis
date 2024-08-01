@@ -134,7 +134,7 @@ public:
   [[nodiscard]] std::shared_ptr<SubscriberBase> SubscribeRaw(std::string_view topic,
                                                              TypeErasedSubscriberCallback callback,
                                                              basis::core::threading::ThreadPool *work_thread_pool,
-                                                             core::transport::OutputQueue *output_queue,
+                                                             std::shared_ptr<core::transport::OutputQueue> output_queue,
                                                              serialization::MessageTypeInfo message_type) {
     return SubscribeInternal<SubscriberBase>(topic, callback, work_thread_pool, output_queue, message_type, {});
   }
@@ -142,7 +142,7 @@ public:
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
   Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
-            basis::core::threading::ThreadPool *work_thread_pool, core::transport::OutputQueue *output_queue = nullptr,
+            basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<core::transport::OutputQueue> output_queue = nullptr,
             serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
@@ -256,7 +256,7 @@ protected:
   template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
   [[nodiscard]] std::shared_ptr<T_SUBSCRIBER>
   SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback,
-                    basis::core::threading::ThreadPool *work_thread_pool, core::transport::OutputQueue *output_queue,
+                    basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<core::transport::OutputQueue> output_queue,
                     serialization::MessageTypeInfo message_type,
                     std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
 

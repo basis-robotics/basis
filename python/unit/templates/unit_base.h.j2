@@ -21,7 +21,7 @@ namespace unit::{{unit_name}} {
         void CreatePublishersSubscribers() {
             {% for handler_name in handlers %}
             // oops todo
-            {{handler_name}}_pubsub.SetupPubSub(transport_manager.get(), &output_queue, &thread_pool);
+            {{handler_name}}_pubsub.SetupPubSub(transport_manager.get(), output_queue, &thread_pool);
             {% endfor %}
         }
 

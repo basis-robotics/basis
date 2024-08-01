@@ -4,6 +4,7 @@
 #include <basis/core/threading/thread_pool.h>
 #include <basis/core/transport/transport_manager.h>
 
+#include <memory>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace basis {
@@ -60,7 +61,7 @@ public:
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<core::transport::Subscriber<T_MSG>>
   Subscribe(std::string_view topic, core::transport::SubscriberCallback<T_MSG> callback,
-            basis::core::threading::ThreadPool *work_thread_pool, core::transport::OutputQueue *output_queue = nullptr,
+            basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<core::transport::OutputQueue> output_queue = nullptr,
             core::serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     return transport_manager->Subscribe<T_MSG, T_Serializer>(topic, std::move(callback), work_thread_pool, output_queue,
                                                              std::move(message_type));
@@ -92,12 +93,12 @@ public:
     // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing
 
     // try to get a single event, with a wait time
-    if (auto event = output_queue.Pop(max_sleep_duration)) {
+    if (auto event = output_queue->Pop(max_sleep_duration)) {
       (*event)();
     }
 
     // Try to drain the buffer of events
-    while (auto event = output_queue.Pop()) {
+    while (auto event = output_queue->Pop()) {
       (*event)();
     }
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
@@ -110,7 +111,7 @@ public:
     return Unit::Subscribe<T_MSG, T_Serializer>(topic, callback, &thread_pool, nullptr, std::move(message_type));
   }
 
-  basis::core::transport::OutputQueue output_queue;
+  std::shared_ptr<basis::core::transport::OutputQueue> output_queue = std::make_shared<basis::core::transport::OutputQueue>();
   basis::core::threading::ThreadPool thread_pool{4};
 };
 

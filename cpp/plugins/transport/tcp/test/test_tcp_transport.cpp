@@ -2,6 +2,7 @@
 #include <span>
 #include <thread>
 
+#include "basis/core/transport/transport.h"
 #include "spdlog/cfg/env.h"
 #include <basis/core/transport/transport_manager.h>
 #include <basis/plugins/transport/epoll.h>
@@ -222,7 +223,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
   ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
 
-  OutputQueue output_queue;
+  auto output_queue = std::make_shared<OutputQueue>();
 
   transport_manager.Update();
 
@@ -230,7 +231,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   std::shared_ptr<Subscriber<TestStruct>> queue_subscriber =
       transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>(
-          "test_struct", callback, &work_thread_pool, &output_queue);
+          "test_struct", callback, &work_thread_pool, output_queue);
   std::shared_ptr<Subscriber<TestStruct>> immediate_subscriber =
       transport_manager.Subscribe<TestStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
                                                                                          &work_thread_pool);
@@ -273,7 +274,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_EQ(callback_times, 1);
 
   // Check queue subscriber
-  auto event = output_queue.Pop(basis::core::Duration::FromSecondsNanoseconds(10, 0));
+  auto event = output_queue->Pop(basis::core::Duration::FromSecondsNanoseconds(10, 0));
   ASSERT_NE(event, std::nullopt);
   (*event)();
   ASSERT_EQ(callback_times, 2);
