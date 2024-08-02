@@ -56,7 +56,8 @@ def generate_unit(unit_path, output_dir, source_dir):
 
             cpp_type = f'std::shared_ptr<const {cpp_type}>'
             io['serializer'] = type_serializer
-            serializers.add(type_serializer)
+            if type_serializer != "raw":
+                serializers.add(type_serializer)
             if io.get('accumulate'):
                 # TODO: actually set max size
                 cpp_type = f'std::vector<{cpp_type}>'

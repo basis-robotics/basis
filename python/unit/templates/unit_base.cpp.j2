@@ -11,7 +11,13 @@ namespace {{handler_name}} {
         basis::core::threading::ThreadPool* thread_pool) {
             // todo init sync
     {% for topic_name, input in handler.inputs.items() %}
-        {{input.cpp_topic_name}}_subscriber = transport_manager->Subscribe<{{input.cpp_message_type}}>("{{topic_name}}",
+        {{input.cpp_topic_name}}_subscriber = 
+        {% if input.serializer == "raw" %}
+            transport_manager->Subscribe<{{input.cpp_message_type}}, basis::core::serialization::RawSerializer>(
+        {% else %}
+            transport_manager->Subscribe<{{input.cpp_message_type}}>(
+        {% endif %}
+            "{{topic_name}}",
         [this](auto msg){
             synchronizer->OnMessage<{{loop.index0}}>(msg);
 {% if 'rate' not in handler.sync %}
@@ -21,7 +27,13 @@ namespace {{handler_name}} {
         thread_pool, output_queue);
     {% endfor %}
     {% for topic_name, output in handler.outputs.items() %}
-        {{output.cpp_topic_name}}_publisher = transport_manager->Advertise<{{output.cpp_message_type}}>("{{topic_name}}");
+    {{output.cpp_topic_name}}_publisher = 
+    {% if output.serializer == "raw" %}
+        transport_manager->Advertise<{{output.cpp_message_type}}, basis::core::serialization::RawSerializer>
+    {% else %}
+        transport_manager->Advertise<{{output.cpp_message_type}}>
+    {% endif %}
+        ("{{topic_name}}");
     {% endfor %}
     {% if 'rate' in handler.sync %}
     rate_subsciber = std::make_unique<basis::core::transport::RateSubscriber>(
