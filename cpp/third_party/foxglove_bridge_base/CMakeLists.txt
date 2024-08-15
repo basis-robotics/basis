@@ -38,12 +38,15 @@ add_library(foxglove_bridge_base SHARED
   # Generated:
   ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp
 )
+add_library(foxglove::foxglove_bridge_base ALIAS foxglove_bridge_base)
 
-target_include_directories(foxglove_bridge_base
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
+# target_include_directories(foxglove_bridge_base
+#   PUBLIC
+#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#     $<INSTALL_INTERFACE:include>
+# )
+
+target_include_directories(foxglove_bridge_base PUBLIC include)
 
 target_link_libraries(foxglove_bridge_base
   OpenSSL::Crypto
