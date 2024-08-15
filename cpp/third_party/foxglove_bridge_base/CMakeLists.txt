@@ -53,6 +53,7 @@ target_link_libraries(foxglove_bridge_base
   OpenSSL::SSL
   ZLIB::ZLIB
   ${CMAKE_THREAD_LIBS_INIT}
+  basis::core::logging
 )
 
 if(nlohmann_json_FOUND)

@@ -25,6 +25,7 @@ EOF
 RUN apt-get update && apt-get install -y --no-install-recommends \
   nlohmann-json3-dev \
   libasio-dev \
+  libboost-all-dev \
   libssl-dev \
   libwebsocketpp-dev
 
