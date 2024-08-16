@@ -1,15 +1,24 @@
 #include <foxglove_bridge/common.hpp>
 #include <foxglove_bridge/foxglove_bridge.hpp>
-// #include <foxglove_bridge/param_utils.hpp>
 #include <foxglove_bridge/server_factory.hpp>
 #include <foxglove_bridge/server_interface.hpp>
 #include <foxglove_bridge/websocket_server.hpp>
 
 #include <basis/core/logging/macros.h>
+#include <basis/core/transport/subscriber.h>
+#include <basis/core/transport/transport_manager.h>
+#include <basis/plugins/transport/tcp.h>
+#include <basis/plugins/transport/tcp_transport_name.h>
 
 #include <memory>
+#include <mutex>
+#include <unordered_map>
 
 using ConnectionHandle = websocketpp::connection_hdl;
+using SubscriptionsByClient =
+    std::map<ConnectionHandle, std::shared_ptr<basis::core::transport::SubscriberBase>, std::owner_less<>>;
+
+DEFINE_AUTO_LOGGER_PLUGIN(bridges, foxglove)
 
 DECLARE_AUTO_LOGGER_PLUGIN(bridges, foxglove)
 
@@ -29,7 +38,17 @@ std::vector<std::regex> parseRegexPatterns(const std::vector<std::string> &patte
 
 class FoxgloveBridge {
 public:
+  FoxgloveBridge() : work_thread_pool(4) {}
   void init() {
+
+    using namespace basis::core::transport;
+    using namespace basis::plugins::transport;
+
+    transport_manager = std::make_unique<TransportManager>(std::make_unique<InprocTransport>());
+
+    transport_manager->RegisterTransport(basis::plugins::transport::TCP_TRANSPORT_NAME,
+                                         std::make_unique<TcpTransport>());
+
     try {
       ::foxglove::ServerOptions serverOptions;
       serverOptions.capabilities =
@@ -111,7 +130,47 @@ private:
     }
   }
 
-  void subscribe([[maybe_unused]] ::foxglove::ChannelId channelId, [[maybe_unused]] ConnectionHandle clientHandle) {}
+  void subscribe([[maybe_unused]] ::foxglove::ChannelId channelId, [[maybe_unused]] ConnectionHandle clientHandle) {
+    std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+
+    auto it = _advertisedTopics.find(channelId);
+    if (it == _advertisedTopics.end()) {
+      const std::string errMsg = "Received subscribe request for unknown channel " + std::to_string(channelId);
+      BASIS_LOG_WARN(errMsg);
+      return;
+    }
+    const auto &channel = it->second;
+
+    auto [subscriptionsIt, firstSubscription] = _subscriptions.emplace(channelId, SubscriptionsByClient());
+    auto &subscriptionsByClient = subscriptionsIt->second;
+
+    if (!firstSubscription && subscriptionsByClient.find(clientHandle) != subscriptionsByClient.end()) {
+      const std::string errMsg = "Client is already subscribed to channel " + std::to_string(channelId);
+      BASIS_LOG_WARN(errMsg);
+      return;
+    }
+
+    try {
+      std::shared_ptr<basis::core::transport::SubscriberBase> sub =
+          transport_manager->SubscribeRaw(channel.topic,
+                                          [&]([[maybe_unused]] auto msg) {
+                                            // TODO
+                                          },
+                                          &work_thread_pool, nullptr, {});
+      subscriptionsByClient.emplace(clientHandle, sub);
+      if (firstSubscription) {
+        BASIS_LOG_INFO("Subscribed to topic \"%s\" (%s) on channel %d", channel.topic.c_str(),
+                       channel.schemaName.c_str(), channelId);
+      } else {
+        BASIS_LOG_INFO("Added subscriber #%zu to topic \"%s\" (%s) on channel %d", subscriptionsByClient.size(),
+                       channel.topic.c_str(), channel.schemaName.c_str(), channelId);
+      }
+    } catch (const std::exception &ex) {
+      const std::string errMsg =
+          "Failed to subscribe to topic '" + channel.topic + "' (" + channel.schemaName + "): " + ex.what();
+      BASIS_LOG_ERROR(errMsg);
+    }
+  }
 
   void unsubscribe([[maybe_unused]] ::foxglove::ChannelId channelId, [[maybe_unused]] ConnectionHandle clientHandle) {}
 
@@ -141,6 +200,14 @@ private:
 
   std::unique_ptr<::foxglove::ServerInterface<ConnectionHandle>> server;
   bool useSimTime = false;
+
+  std::mutex _subscriptionsMutex;
+  std::unordered_map<::foxglove::ChannelId, ::foxglove::ChannelWithoutId> _advertisedTopics;
+  std::unordered_map<::foxglove::ChannelId, SubscriptionsByClient> _subscriptions;
+
+  std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
+
+  basis::core::threading::ThreadPool work_thread_pool;
 };
 
 } // namespace basis::plugins::bridges::foxglove

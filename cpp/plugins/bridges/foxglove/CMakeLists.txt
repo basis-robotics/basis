@@ -1,15 +1,15 @@
 project(foxglove_bridge)
 # include(DeclarePlugin)
 
-# find_package(foxglove_bridge_base REQUIRED)
-
-
 add_library(foxglove_bridge SHARED
   src/foxglove_bridge.cpp
 )
 
 target_link_libraries(foxglove_bridge
   foxglove_bridge_base
+  basis::core::logging
+  basis::core::threading
+  basis::plugins::transport::tcp
 )
 
 
