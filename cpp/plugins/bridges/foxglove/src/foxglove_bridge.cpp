@@ -296,8 +296,33 @@ private:
     }
   }
 
-  void clientMessage([[maybe_unused]] const ::foxglove::ClientMessage &clientMsg,
-                     [[maybe_unused]] ConnectionHandle clientHandle) {}
+  void clientMessage(const ::foxglove::ClientMessage &clientMsg, ConnectionHandle clientHandle) {
+    const auto channelId = clientMsg.advertisement.channelId;
+    std::shared_lock<std::shared_mutex> lock(_publicationsMutex);
+
+    auto clientPublicationsIt = _clientAdvertisedTopics.find(clientHandle);
+    if (clientPublicationsIt == _clientAdvertisedTopics.end()) {
+      BASIS_LOG_ERROR("Dropping client message from " + server->remoteEndpointString(clientHandle) +
+                      " for unknown channel " + std::to_string(channelId) + ", client has no advertised topics");
+      return;
+    }
+
+    auto &clientPublications = clientPublicationsIt->second;
+
+    auto channelPublicationIt = clientPublications.find(clientMsg.advertisement.channelId);
+    if (channelPublicationIt == clientPublications.end()) {
+      BASIS_LOG_ERROR("Dropping client message from " + server->remoteEndpointString(clientHandle) +
+                      " for unknown channel " + std::to_string(channelId) + ", client has " +
+                      std::to_string(clientPublications.size()) + " advertised topic(s)");
+      return;
+    }
+
+    auto packet = std::make_shared<core::transport::MessagePacket>(core::transport::MessageHeader::DataType::MESSAGE,
+                                                                   clientMsg.getLength());
+    memcpy(packet->GetMutablePayload().data(), clientMsg.getData(), clientMsg.getLength());
+    basis::core::MonotonicTime now = basis::core::MonotonicTime::Now();
+    channelPublicationIt->second->PublishRaw(packet, now);
+  }
 
   void getParameters([[maybe_unused]] const std::vector<std::string> &parameters,
                      [[maybe_unused]] const std::optional<std::string> &requestId,
