@@ -245,12 +245,19 @@ private:
       return;
     }
 
-    // transport_manager->GetSchemaManager();
-    // TODO get schema
-    core::serialization::MessageSchema basis_schema;
     core::serialization::MessageTypeInfo message_type;
+    message_type.serializer = channel.encoding;
+    message_type.name = channel.schemaName;
+
+    basis::core::transport::SchemaManager &schema_manager = transport_manager->GetSchemaManager();
+    auto const &schemas = schema_manager.GetRegisteredSchemas();
+    auto schemaIt = schemas.find(message_type.SchemaId());
+    if (schemaIt == schemas.end()) {
+      BASIS_LOG_ERROR("Unknown schema " + message_type.SchemaId());
+    }
+
     std::shared_ptr<basis::core::transport::PublisherRaw> publisher =
-        transport_manager->AdvertiseRaw(channel.topic, message_type, basis_schema);
+        transport_manager->AdvertiseRaw(channel.topic, message_type, schemaIt->second);
 
     if (publisher) {
       clientPublications.insert({channel.channelId, std::move(publisher)});
@@ -324,18 +331,22 @@ private:
     channelPublicationIt->second->PublishRaw(packet, now);
   }
 
+  // TODO
   void getParameters([[maybe_unused]] const std::vector<std::string> &parameters,
                      [[maybe_unused]] const std::optional<std::string> &requestId,
                      [[maybe_unused]] ConnectionHandle hdl) {}
 
+  // TODO
   void setParameters([[maybe_unused]] const std::vector<::foxglove::Parameter> &parameters,
                      [[maybe_unused]] const std::optional<std::string> &requestId,
                      [[maybe_unused]] ConnectionHandle hdl) {}
 
+  // TODO
   void subscribeParameters([[maybe_unused]] const std::vector<std::string> &parameters,
                            [[maybe_unused]] ::foxglove::ParameterSubscriptionOperation op,
                            [[maybe_unused]] ConnectionHandle) {}
 
+  // TODO
   void serviceRequest([[maybe_unused]] const ::foxglove::ServiceRequest &request,
                       [[maybe_unused]] ConnectionHandle clientHandle) {}
 

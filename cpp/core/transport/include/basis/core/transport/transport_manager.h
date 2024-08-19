@@ -48,6 +48,8 @@ public:
 
   std::vector<serialization::MessageSchema> &&ConsumeSchemasToSend() { return std::move(schemas_to_send); }
 
+  const std::unordered_map<std::string, serialization::MessageSchema>& GetRegisteredSchemas() const { return known_schemas; }
+
 protected:
   std::unordered_map<std::string, serialization::MessageSchema> known_schemas;
 
