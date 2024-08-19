@@ -10,6 +10,7 @@ target_link_libraries(foxglove_bridge
   basis::core::logging
   basis::core::threading
   basis::plugins::transport::tcp
+  basis::unit
 )
 
 
