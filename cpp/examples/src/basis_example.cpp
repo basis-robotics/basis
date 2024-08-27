@@ -36,7 +36,7 @@ class ExampleUnit : public basis::SingleThreadedUnit {
 public:
   ExampleUnit() : basis::SingleThreadedUnit("ExampleUnit") {}
 
-  void Initialize() {
+  virtual void Initialize([[maybe_unused]] const basis::UnitInitializeOptions& options = {}) override {
     using namespace std::placeholders;
 
     // Subscribe to the /time_test topic, with a protobuf message TimeTest.

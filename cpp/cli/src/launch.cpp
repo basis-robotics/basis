@@ -14,17 +14,18 @@
 
 #include "basis/core/logging/macros.h"
 #include "basis/core/time.h"
-#include "cli_logger.h" // IWYU pragma: keep AUTO_LOGGER
-#include "launch.h"
-#include "launch_definition.h"
+#include "basis/cli_logger.h"
+#include <basis/launch.h>
 #include "process_manager.h"
-#include "unit_loader.h"
+#include <basis/launch/unit_loader.h>
+#include <basis/launch/launch_definition.h>
 
 #include <time.pb.h>
 
-
-
 #include "backward.hpp"
+
+
+DECLARE_AUTO_LOGGER_NS(basis::launch)
 
 namespace backward {
 
@@ -32,7 +33,7 @@ backward::SignalHandling sh;
 
 } // namespace backward
 
-namespace basis::cli {
+namespace basis::launch {
 
 /**
  * Search for a unit in well known directories given a unit name
@@ -50,7 +51,6 @@ std::optional<std::filesystem::path> FindUnit(std::string_view unit_name) {
   }
   return {};
 }
-
 /**
  * Responsible for loading and running units
  */
@@ -60,7 +60,7 @@ public:
   ~UnitExecutor() {
     stop = true;
     for (auto &thread : threads) {
-      if(thread.joinable()) {
+      if (thread.joinable()) {
         thread.join();
       }
     }
@@ -142,7 +142,7 @@ protected:
  * @param args The args passed into this launch.
  * @return Process A handle to the process we ran. When destructed, will kill the process.
  */
-[[nodiscard]] Process CreateSublauncherProcess(const std::string &process_name, const std::vector<std::string> &args) {
+[[nodiscard]] cli::Process CreateSublauncherProcess(const std::string &process_name, const std::vector<std::string> &args) {
   assert(args.size() >= 3);
 
   // Construct new arguments to pass in
@@ -189,7 +189,7 @@ protected:
     BASIS_LOG_DEBUG("forked with pid {}", pid);
   }
 
-  return Process(pid);
+  return cli::Process(pid);
 }
 
 std::atomic<bool> global_stop = false;
@@ -214,7 +214,7 @@ void InstallSignalHandler(int sig) {
  * @param args
  */
 void LaunchYaml(const LaunchDefinition &launch, const std::vector<std::string> &args) {
-  std::vector<Process> managed_processes;
+  std::vector<cli::Process> managed_processes;
   for (const auto &[process_name, _] : launch.processes) {
     managed_processes.push_back(CreateSublauncherProcess(process_name, args));
   }
@@ -230,12 +230,12 @@ void LaunchYaml(const LaunchDefinition &launch, const std::vector<std::string> &
   BASIS_LOG_INFO("Top level launcher got kill signal, killing children.");
 
   // Send signal to all processes
-  for (Process &process : managed_processes) {
+  for (cli::Process &process : managed_processes) {
     process.Kill(SIGINT);
   }
 
   // TODO: we could just managed_processes.clear() with the same effect
-  for (Process &process : managed_processes) {
+  for (cli::Process &process : managed_processes) {
     bool killed = process.Wait(5);
     if (!killed) {
       BASIS_LOG_ERROR("Failed to kill pid {}", process.GetPid());
@@ -244,7 +244,7 @@ void LaunchYaml(const LaunchDefinition &launch, const std::vector<std::string> &
 }
 
 void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter, bool sim) {
-  while(!global_stop) {
+  while (!global_stop) {
     // We are a child launcher
     std::unique_ptr<basis::RecorderInterface> recorder;
     if (launch.recording_settings && launch.recording_settings->patterns.size()) {
@@ -254,19 +254,20 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
         recorder = std::make_unique<basis::AsyncRecorder>(launch.recording_settings->directory,
                                                           launch.recording_settings->patterns);
       } else {
-        recorder =
-            std::make_unique<basis::Recorder>(launch.recording_settings->directory, launch.recording_settings->patterns);
+        recorder = std::make_unique<basis::Recorder>(launch.recording_settings->directory,
+                                                     launch.recording_settings->patterns);
       }
 
-      std::string record_name = fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now(true).ToSeconds());
-      if(sim) {
-        // TODO: it would be great to get the actual simulation start time, but then we won't be able to start logging until coordinator connection
-        // this might be okay in practice
+      std::string record_name =
+          fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now(true).ToSeconds());
+      if (sim) {
+        // TODO: it would be great to get the actual simulation start time, but then we won't be able to start logging
+        // until coordinator connection this might be okay in practice
         record_name += "_sim";
       }
 
       BASIS_LOG_INFO("Recording{} to {}.mcap", recorder_type,
-                    (launch.recording_settings->directory / record_name).string());
+                     (launch.recording_settings->directory / record_name).string());
 
       recorder->Start(record_name);
     }
@@ -288,13 +289,15 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
     basis::CreateLogHandler(*system_transport_manager);
 
     basis::core::threading::ThreadPool time_thread_pool(1);
-    auto time_subscriber = system_transport_manager->Subscribe("/time", std::function([](std::shared_ptr<const basis::core::transport::proto::Time> msg) {
-      basis::core::MonotonicTime::SetSimulatedTime(msg->nsecs(), msg->run_token());
-    }), &time_thread_pool);
+    auto time_subscriber = system_transport_manager->Subscribe(
+        "/time", std::function([](std::shared_ptr<const basis::core::transport::proto::Time> msg) {
+          basis::core::MonotonicTime::SetSimulatedTime(msg->nsecs(), msg->run_token());
+        }),
+        &time_thread_pool);
 
     {
       uint64_t token = basis::core::MonotonicTime::GetRunToken();
-      while(sim && !token) {
+      while (sim && !token) {
         BASIS_LOG_INFO("In simulation mode, waiting on /time");
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
@@ -310,10 +313,9 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
       }
-      if(global_stop) {
+      if (global_stop) {
         BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);
-      }
-      else {
+      } else {
         BASIS_LOG_INFO("{} detected playback restart, restarting...", process_name_filter);
       }
     }
@@ -323,7 +325,8 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
 }
 
 // todo: probably take a std::fs::path here
-void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &args, std::string process_name_filter, bool sim) {
+void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &args, std::string process_name_filter,
+                    bool sim) {
   YAML::Node loaded_yaml = YAML::LoadFile(std::string(yaml_path));
 
   const LaunchDefinition launch = ParseLaunchDefinitionYAML(loaded_yaml);
@@ -336,4 +339,4 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &
   }
 }
 
-} // namespace basis::cli
+} // namespace basis

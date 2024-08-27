@@ -6,11 +6,13 @@ namespace unit::{{unit_name}} {
 {% for handler_name, handler in handlers.items() %}
 namespace {{handler_name}} {
     void PubSub::SetupPubSub(
+        const basis::UnitInitializeOptions& options,
         basis::core::transport::TransportManager* transport_manager,
         std::shared_ptr<basis::core::transport::OutputQueue> output_queue,
         basis::core::threading::ThreadPool* thread_pool) {
             // todo init sync
     {% for topic_name, input in handler.inputs.items() %}
+    if(options.create_subscribers) {
         {{input.cpp_topic_name}}_subscriber = 
         {% if input.serializer == "raw" %}
             transport_manager->Subscribe<{{input.cpp_message_type}}, basis::core::serialization::RawSerializer>(
@@ -25,6 +27,7 @@ namespace {{handler_name}} {
 {% endif %}
         },
         thread_pool, output_queue);
+    }
     {% endfor %}
     {% for topic_name, output in handler.outputs.items() %}
     {{output.cpp_topic_name}}_publisher = 

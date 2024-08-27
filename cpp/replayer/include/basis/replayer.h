@@ -26,10 +26,12 @@ public:
       : config(std::move(config)), transport_manager(transport_manager), coordinator_connector(coordinator_connector) {
       }
 
-  bool Run();
+  virtual bool Run();
 
-private:
+protected:
   bool LoadRecording(std::filesystem::path recording_path);
+
+  virtual bool OnRecordLoaded();
 
   const Config config;
 

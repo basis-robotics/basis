@@ -15,6 +15,11 @@ CreateStandardTransportManager(basis::RecorderInterface *recorder = nullptr);
 void StandardUpdate(basis::core::transport::TransportManager *transport_manager,
                     basis::core::transport::CoordinatorConnector *coordinator_connector);
 
+
+struct UnitInitializeOptions {
+  bool create_subscribers = true;
+};
+
 class Unit {
 public:
   Unit(std::string_view unit_name)
@@ -44,7 +49,7 @@ public:
   spdlog::logger &Logger() { return *logger; }
 
   // override this, should be called once by main()
-  virtual void Initialize() = 0;
+  virtual void Initialize(const UnitInitializeOptions& options = {}) = 0;
 
   virtual void Update([[maybe_unused]] const basis::core::Duration &max_sleep_duration =
                           basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
