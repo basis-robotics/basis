@@ -66,7 +66,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
     >;
 {% endif %}
 
-    struct PubSub {
+    struct PubSub : basis::HandlerPubSub {
         using Callback = std::function<Output(const Input&)>;
         PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr)
         {
@@ -110,7 +110,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         }
 
         void SetupPubSub(
-            basis::UnitInitializeOptions options,
+            const basis::UnitInitializeOptions& options,
             basis::core::transport::TransportManager* transport_manager,
             std::shared_ptr<basis::core::transport::OutputQueue> output_queue,
             basis::core::threading::ThreadPool* thread_pool);
@@ -125,7 +125,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
 {% if 'rate' in sync %}
 private:
-    void OnRateSubscriber(const basis::core::MonotonicTime&) {
+    virtual void OnRateSubscriber(const basis::core::MonotonicTime&) override {
         // TODO: consume the monotonic time
         synchronizer->ConsumeIfReady();
     }
