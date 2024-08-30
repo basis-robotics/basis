@@ -26,6 +26,7 @@ struct HandlerPubSub {
     // Handlers that have rate subscribers will override
   }
   std::map<std::string, std::function<void(std::shared_ptr<const void>)>> type_erased_callbacks;
+  std::vector<std::string> outputs;
   std::optional<basis::core::Duration> rate;
 };
 

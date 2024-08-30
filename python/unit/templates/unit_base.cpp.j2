@@ -39,6 +39,11 @@ namespace {{handler_name}} {
         type_erased_callbacks["{{topic_name}}"] = type_erased_callback;
     }
     {% endfor %}
+    outputs = {
+        {% for output_name in handler.outputs.keys() %}
+            "{{output_name}}",
+        {% endfor %}
+    };
     {% for topic_name, output in handler.outputs.items() %}
     {{output.cpp_topic_name}}_publisher = 
     {% if output.serializer == "raw" %}

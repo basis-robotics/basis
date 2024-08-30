@@ -30,7 +30,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         std::map<std::string, std::shared_ptr<const void>> ByTopic() {
             return {
             {% for output_name, output in outputs.items() %}
-                {"{{output_name}}", {{output.cpp_topic_name}} },
+                {"{{output_name}}", {{output.cpp_topic_name}}},
             {% endfor %}
             };
         }
