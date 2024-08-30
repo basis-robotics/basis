@@ -17,9 +17,8 @@ namespace {{handler_name}} {
         {
         auto callback = [this](std::shared_ptr<const {{input.cpp_message_type}}> msg) -> auto {
             synchronizer->OnMessage<{{loop.index0}}>(msg);
-            // todo: pass time in?
 {% if 'rate' not in handler.sync %}
-            return synchronizer->ConsumeIfReady();
+            return synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
 {% endif %}
         };
         if(options.create_subscribers) {

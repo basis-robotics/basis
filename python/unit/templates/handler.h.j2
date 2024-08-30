@@ -77,8 +77,8 @@ namespace unit::{{unit_name}}::{{handler_name}} {
                     };
             }
             synchronizer = std::make_unique<Synchronizer>(
-        [this, callback, publish_callback](auto ...msgs) {
-                Output output = callback({basis::core::MonotonicTime::Now(), msgs...});
+        [this, callback, publish_callback](const basis::core::MonotonicTime& now, auto ...msgs) {
+                Output output = callback({now, msgs...});
 {% for output_name, output in outputs.items() %}
                 assert(output.{{output.cpp_topic_name}} != nullptr);
 {% endfor %}
@@ -125,9 +125,9 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
 {% if 'rate' in sync %}
 private:
-    virtual void OnRateSubscriber(const basis::core::MonotonicTime&) override {
+    virtual void OnRateSubscriber(const basis::core::MonotonicTime& now) override {
         // TODO: consume the monotonic time
-        synchronizer->ConsumeIfReady();
+        synchronizer->ConsumeIfReady(now);
     }
 
     std::unique_ptr<basis::core::transport::RateSubscriber> rate_subsciber;

@@ -5,6 +5,8 @@
 #include <mutex>
 #include <tuple>
 
+#include <basis/core/time.h>
+
 namespace basis::synchronizers {
 
 // todo: how are we going to add timing require to this
@@ -90,7 +92,7 @@ public:
 
 template <typename... T_MSG_CONTAINERs> class SynchronizerBase : Synchronizer {
 public:
-  using Callback = std::function<void(T_MSG_CONTAINERs...)>;
+  using Callback = std::function<void(const basis::core::MonotonicTime&, T_MSG_CONTAINERs...)>;
   using MessageSumType = std::tuple<T_MSG_CONTAINERs...>;
 
   SynchronizerBase(Callback callback, MessageMetadata<T_MSG_CONTAINERs> &&...metadatas)
@@ -106,18 +108,22 @@ public:
     std::get<INDEX>(storage).ApplyMessage(msg);
   }
 
-  std::optional<MessageSumType> ConsumeIfReady() {
+  std::optional<MessageSumType> ConsumeIfReady(const basis::core::MonotonicTime& now) {
     std::lock_guard lock(mutex);
-    return ConsumeIfReadyNoLock();
+    return ConsumeIfReadyNoLock(now);
   }
 
 protected:
-  std::optional<MessageSumType> ConsumeIfReadyNoLock() {
+  std::optional<MessageSumType> ConsumeIfReadyNoLock(const basis::core::MonotonicTime& now) {
     if (IsReadyNoLock()) {
       MessageSumType out(ConsumeMessagesNoLock());
 
       if (callback) {
-        std::apply(callback, out);
+        // std::apply doesn't allow prepending arguments, so sneak `now` in through a lambda  
+        auto f = [&]<typename... Ts>(Ts&&... ts){
+          return callback(now, std::forward<Ts>(ts)...);
+        };
+        std::apply(f, out);
       }
       return out;
     }
