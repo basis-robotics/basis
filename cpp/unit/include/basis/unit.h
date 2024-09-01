@@ -1,4 +1,5 @@
 #pragma once
+#include "basis/core/time.h"
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/logging.h>
 #include <basis/core/threading/thread_pool.h>
@@ -26,7 +27,8 @@ struct HandlerPubSub {
   virtual void OnRateSubscriber(const basis::core::MonotonicTime&) {
     // Handlers that have rate subscribers will override
   }
-  using TypeErasedCallbackReturn = std::function<void()>;
+  using TopicMap = std::map<std::string, std::shared_ptr<const void>>;
+  using TypeErasedCallbackReturn = std::function<TopicMap(basis::core::MonotonicTime)>;
   using TypeErasedCallback = std::function<TypeErasedCallbackReturn(std::shared_ptr<const void>)>;
   std::map<std::string, TypeErasedCallback>  type_erased_callbacks;
   std::vector<std::string> outputs;

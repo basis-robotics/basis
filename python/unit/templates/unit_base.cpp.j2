@@ -19,18 +19,19 @@ namespace {{handler_name}} {
             {# Ensure this is in sync with type erased version #}
             synchronizer->OnMessage<{{loop.index0}}>(msg);
 {% if 'rate' not in handler.sync %}
-            return synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+            auto msgs = synchronizer->ConsumeIfReady();
+            if(msgs) {
+                Execute(basis::core::MonotonicTime::Now(), *msgs);
+            }
 {% endif %}
         };
         TypeErasedCallback type_erased_callback = [this](std::shared_ptr<const void> msg) -> TypeErasedCallbackReturn {
             synchronizer->OnMessage<{{loop.index0}}>(std::static_pointer_cast<const {{input.cpp_message_type}}>(msg));
 
             if(synchronizer->IsReady()) {
-                return [synchronizer=synchronizer.get()]() {
-                    assert(IsReady());
-                    auto topics_to_consume = synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
-                    
-
+                return [this](basis::core::MonotonicTime now) {
+                    //assert(IsReady());
+                    return Execute(now, *synchronizer->ConsumeIfReady()).ByTopic();
                 };
             }
             else {

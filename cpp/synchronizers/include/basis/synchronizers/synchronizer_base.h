@@ -95,11 +95,11 @@ public:
   using Callback = std::function<void(const basis::core::MonotonicTime&, T_MSG_CONTAINERs...)>;
   using MessageSumType = std::tuple<T_MSG_CONTAINERs...>;
 
-  SynchronizerBase(Callback callback, MessageMetadata<T_MSG_CONTAINERs> &&...metadatas)
-      : SynchronizerBase(callback, std::forward_as_tuple(metadatas...)) {}
+  SynchronizerBase(MessageMetadata<T_MSG_CONTAINERs> &&...metadatas)
+      : SynchronizerBase(std::forward_as_tuple(metadatas...)) {}
 
-  SynchronizerBase(Callback callback = {}, std::tuple<MessageMetadata<T_MSG_CONTAINERs>...> &&metadatas = {})
-      : callback(callback), storage(metadatas) {}
+  SynchronizerBase(std::tuple<MessageMetadata<T_MSG_CONTAINERs>...> &&metadatas = {})
+      : storage(metadatas) {}
 
   virtual ~SynchronizerBase() = default;
 
@@ -108,26 +108,19 @@ public:
     std::get<INDEX>(storage).ApplyMessage(msg);
   }
 
-  std::optional<MessageSumType> ConsumeIfReady(const basis::core::MonotonicTime& now) {
+  std::optional<MessageSumType> ConsumeIfReady() {
     std::lock_guard lock(mutex);
-    return ConsumeIfReadyNoLock(now);
+    return ConsumeIfReadyNoLock();
   }
   bool IsReady() {
     std::lock_guard lock(mutex);
     return IsReadyNoLock();
   }
 protected:
-  std::optional<MessageSumType> ConsumeIfReadyNoLock(const basis::core::MonotonicTime& now) {
+  std::optional<MessageSumType> ConsumeIfReadyNoLock() {
     if (IsReadyNoLock()) {
       MessageSumType out(ConsumeMessagesNoLock());
 
-      if (callback) {
-        // std::apply doesn't allow prepending arguments, so sneak `now` in through a lambda  
-        auto f = [&]<typename... Ts>(Ts&&... ts){
-          return callback(now, std::forward<Ts>(ts)...);
-        };
-        std::apply(f, out);
-      }
       return out;
     }
     return {};
@@ -143,8 +136,6 @@ protected:
     // Maybe C++25 will have constexpr for loops on tuples
     return std::apply([](auto... x) { return (bool(x) && ...); }, storage);
   }
-
-  Callback callback;
 
   std::tuple<Storage<T_MSG_CONTAINERs>...> storage;
 

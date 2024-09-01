@@ -75,24 +75,17 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 {% endif %}
 
     struct PubSub : basis::HandlerPubSub {
-        using Callback = std::function<Output(const Input&)>;
-        PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr)
-        {
-            if(!publish_callback) {
-                publish_callback = 
-                    [this](Output& output){
-                        OnOutput(output);
-                    };
-            }
-            synchronizer = std::make_unique<Synchronizer>(
-        [this, callback, publish_callback](const basis::core::MonotonicTime& now, auto ...msgs) {
-                Output output = callback({now, msgs...});
-{% for output_name, output in outputs.items() %}
-                assert(output.{{output.cpp_topic_name}} != nullptr);
-{% endfor %}
+        
 
-                publish_callback(output);
-            }, std::tuple{ 
+        std::function<void(Output&)> publish_callback;
+        using Callback = std::function<Output(const Input&)>;
+        Callback callback;
+
+        PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr) 
+            : callback(callback), publish_callback(publish_callback)
+        {
+
+            synchronizer = std::make_unique<Synchronizer>(std::tuple{ 
 {%- set comma = joiner(", ") %}
 {%- for input_name, input in inputs.items() %}
             {{- comma() }}
@@ -103,6 +96,31 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 {%- endfor %}
             }
             );
+        }
+
+        Output Execute(const basis::core::MonotonicTime& now, const std::tuple<
+{%- set comma = joiner(", ") %}
+{%- for input_name, input in inputs.items() %}
+            {{- comma() }}
+            {{input.cpp_type}}
+{%- endfor %}
+        >& messages) {
+
+            auto f = [&]<typename... Ts>(Ts&&... ts){
+                return callback({now, std::forward<Ts>(ts)...});
+            };
+            Output output = std::apply(f, messages);
+            
+{% for output_name, output in outputs.items() %}
+            assert(output.{{output.cpp_topic_name}} != nullptr);
+{% endfor %}
+            if(publish_callback) {
+                publish_callback(output);
+            }
+            else {
+                PublishOutput(output);
+            }
+            return output;
         }
 
         ~PubSub() {
@@ -123,7 +141,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             std::shared_ptr<basis::core::transport::OutputQueue> output_queue,
             basis::core::threading::ThreadPool* thread_pool);
 
-        void OnOutput(const Output& output) {
+        void PublishOutput(const Output& output) {
 {% for output_name, output in outputs.items() %}
         {{output.cpp_topic_name}}_publisher->Publish(output.{{output.cpp_topic_name}});
 {%- endfor %}
@@ -133,9 +151,12 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
 {% if 'rate' in sync %}
 private:
-    virtual void OnRateSubscriber(const basis::core::MonotonicTime& now) override {
-        // TODO: consume the monotonic time
-        synchronizer->ConsumeIfReady(now);
+    virtual void OnRateSubscriber([[maybe_unused]] const basis::core::MonotonicTime& now) override {
+        // todo run callback here!
+        auto msgs = synchronizer->ConsumeIfReady();
+        if(msgs) {
+            Execute(now, *msgs);
+        }
     }
 
     std::unique_ptr<basis::core::transport::RateSubscriber> rate_subsciber;
