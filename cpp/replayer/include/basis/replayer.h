@@ -28,6 +28,12 @@ public:
 
   virtual bool Run();
 
+  basis::core::MonotonicTime StartTime() {
+    return basis::core::MonotonicTime::FromNanoseconds(mcap_reader.statistics()->messageStartTime);
+  }
+  basis::core::MonotonicTime EndTime() {
+    return basis::core::MonotonicTime::FromNanoseconds(mcap_reader.statistics()->messageEndTime);
+  }
 protected:
   bool LoadRecording(std::filesystem::path recording_path);
 

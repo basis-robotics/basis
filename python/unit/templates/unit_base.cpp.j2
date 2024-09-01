@@ -11,18 +11,34 @@ namespace {{handler_name}} {
         std::shared_ptr<basis::core::transport::OutputQueue> output_queue,
         basis::core::threading::ThreadPool* thread_pool) {
     {% if 'rate' in handler.sync %}
-        rate = basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{handler.sync.rate}}));
+        rate_duration = basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{handler.sync.rate}}));
     {% endif %}
     {% for topic_name, input in handler.inputs.items() %}
         {
         auto callback = [this](std::shared_ptr<const {{input.cpp_message_type}}> msg) -> auto {
+            {# Ensure this is in sync with type erased version #}
             synchronizer->OnMessage<{{loop.index0}}>(msg);
 {% if 'rate' not in handler.sync %}
             return synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
 {% endif %}
         };
-        if(options.create_subscribers) {
+        TypeErasedCallback type_erased_callback = [this](std::shared_ptr<const void> msg) -> TypeErasedCallbackReturn {
+            synchronizer->OnMessage<{{loop.index0}}>(std::static_pointer_cast<const {{input.cpp_message_type}}>(msg));
 
+            if(synchronizer->IsReady()) {
+                return [synchronizer=synchronizer.get()]() {
+                    assert(IsReady());
+                    auto topics_to_consume = synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+                    
+
+                };
+            }
+            else {
+                return {};
+            }
+        };
+
+        if(options.create_subscribers) {
             {{input.cpp_topic_name}}_subscriber = 
             {% if input.serializer == "raw" %}
                 transport_manager->Subscribe<{{input.cpp_message_type}}, basis::core::serialization::RawSerializer>(
@@ -33,9 +49,7 @@ namespace {{handler_name}} {
             callback,
             thread_pool, output_queue);
         }
-        std::function<void(std::shared_ptr<const void>)> type_erased_callback = [callback](std::shared_ptr<const void> msg) {
-            return callback(std::static_pointer_cast<const {{input.cpp_message_type}}>(msg));
-        };
+
         type_erased_callbacks["{{topic_name}}"] = type_erased_callback;
     }
     {% endfor %}
@@ -56,7 +70,7 @@ namespace {{handler_name}} {
     {% if 'rate' in handler.sync %}
     if(options.create_subscribers) {
         rate_subsciber = std::make_unique<basis::core::transport::RateSubscriber>(
-            *rate,
+            *rate_duration,
             [this, output_queue](basis::core::MonotonicTime time) {
             output_queue->Emplace([this, time]() {
                 OnRateSubscriber(time);

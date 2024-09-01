@@ -112,7 +112,10 @@ public:
     std::lock_guard lock(mutex);
     return ConsumeIfReadyNoLock(now);
   }
-
+  bool IsReady() {
+    std::lock_guard lock(mutex);
+    return IsReadyNoLock();
+  }
 protected:
   std::optional<MessageSumType> ConsumeIfReadyNoLock(const basis::core::MonotonicTime& now) {
     if (IsReadyNoLock()) {
