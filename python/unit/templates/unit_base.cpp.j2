@@ -5,6 +5,7 @@ namespace unit::{{unit_name}} {
 {# PubSub impls, to avoid weird linker errors and to speed up compilation time #}
 {% for handler_name, handler in handlers.items() %}
 namespace {{handler_name}} {
+    
     void PubSub::SetupPubSub(
         const basis::UnitInitializeOptions& options,
         basis::core::transport::TransportManager* transport_manager,
@@ -13,47 +14,9 @@ namespace {{handler_name}} {
     {% if 'rate' in handler.sync %}
         rate_duration = basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{handler.sync.rate}}));
     {% endif %}
-    {% for topic_name, input in handler.inputs.items() %}
-        {
-        auto callback = [this](std::shared_ptr<const {{input.cpp_message_type}}> msg) -> auto {
-            {# Ensure this is in sync with type erased version #}
-            synchronizer->OnMessage<{{loop.index0}}>(msg);
-{% if 'rate' not in handler.sync %}
-            auto msgs = synchronizer->ConsumeIfReady();
-            if(msgs) {
-                Execute(basis::core::MonotonicTime::Now(), *msgs);
-            }
-{% endif %}
-        };
-        TypeErasedCallback type_erased_callback = [this](std::shared_ptr<const void> msg) -> TypeErasedCallbackReturn {
-            synchronizer->OnMessage<{{loop.index0}}>(std::static_pointer_cast<const {{input.cpp_message_type}}>(msg));
 
-            if(synchronizer->IsReady()) {
-                return [this](basis::core::MonotonicTime now) {
-                    //assert(IsReady());
-                    return Execute(now, *synchronizer->ConsumeIfReady()).ByTopic();
-                };
-            }
-            else {
-                return {};
-            }
-        };
+    SetupInputs(options, transport_manager, output_queue, thread_pool);
 
-        if(options.create_subscribers) {
-            {{input.cpp_topic_name}}_subscriber = 
-            {% if input.serializer == "raw" %}
-                transport_manager->Subscribe<{{input.cpp_message_type}}, basis::core::serialization::RawSerializer>(
-            {% else %}
-                transport_manager->Subscribe<{{input.cpp_message_type}}>(
-            {% endif %}
-                "{{topic_name}}",
-            callback,
-            thread_pool, output_queue);
-        }
-
-        type_erased_callbacks["{{topic_name}}"] = type_erased_callback;
-    }
-    {% endfor %}
     outputs = {
         {% for output_name in handler.outputs.keys() %}
             "{{output_name}}",

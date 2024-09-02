@@ -27,7 +27,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         // TODO: diagnostics, error state, etc
         // TODO: should we take as unique_ptr instead?
 
-        std::map<std::string, std::shared_ptr<const void>> ByTopic() {
+        basis::HandlerPubSub::TopicMap ToTopicMap() {
             return {
             {% for output_name, output in outputs.items() %}
                 {"{{output_name}}", {{output.cpp_topic_name}}},
@@ -74,15 +74,14 @@ namespace unit::{{unit_name}}::{{handler_name}} {
     >;
 {% endif %}
 
-    struct PubSub : basis::HandlerPubSub {
-        
+    constexpr size_t INPUT_SIZE = {{ inputs | length }};
 
-        std::function<void(Output&)> publish_callback;
-        using Callback = std::function<Output(const Input&)>;
-        Callback callback;
+    struct PubSub : basis::HandlerPubSubWithOptions<PubSub, {{ ('rate' in sync) | string | lower}}, INPUT_SIZE> {
+        using Synchronizer = Synchronizer;
+        using HandlerCallback = std::function<Output(const Input&)>;
 
-        PubSub(std::function<Output(const Input&)> callback, std::function<void(Output&)> publish_callback = nullptr) 
-            : callback(callback), publish_callback(publish_callback)
+        PubSub(std::function<Output(const Input&)> handler_callback, std::function<void(Output&)> publish_callback = nullptr) 
+            : handler_callback(handler_callback), publish_callback(publish_callback)
         {
 
             synchronizer = std::make_unique<Synchronizer>(std::tuple{ 
@@ -98,7 +97,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             );
         }
 
-        Output Execute(const basis::core::MonotonicTime& now, const std::tuple<
+        Output RunHandlerAndPublish(const basis::core::MonotonicTime& now, const std::tuple<
 {%- set comma = joiner(", ") %}
 {%- for input_name, input in inputs.items() %}
             {{- comma() }}
@@ -107,7 +106,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         >& messages) {
 
             auto f = [&]<typename... Ts>(Ts&&... ts){
-                return callback({now, std::forward<Ts>(ts)...});
+                return handler_callback({now, std::forward<Ts>(ts)...});
             };
             Output output = std::apply(f, messages);
             
@@ -121,6 +120,10 @@ namespace unit::{{unit_name}}::{{handler_name}} {
                 PublishOutput(output);
             }
             return output;
+        }
+        
+        bool SynchronizerIsReady() {
+            return synchronizer->IsReady();
         }
 
         ~PubSub() {
@@ -151,14 +154,6 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
 {% if 'rate' in sync %}
 private:
-    virtual void OnRateSubscriber([[maybe_unused]] const basis::core::MonotonicTime& now) override {
-        // todo run callback here!
-        auto msgs = synchronizer->ConsumeIfReady();
-        if(msgs) {
-            Execute(now, *msgs);
-        }
-    }
-
     std::unique_ptr<basis::core::transport::RateSubscriber> rate_subsciber;
 
 public:
@@ -173,6 +168,31 @@ public:
 {%- endfor %}
 
         std::unique_ptr<Synchronizer> synchronizer;
+        std::function<void(Output&)> publish_callback;
+        HandlerCallback handler_callback;
+
+        static constexpr std::array<const char*, INPUT_SIZE> subscription_topics = {
+{%- for input_name in inputs.keys() %}
+            "{{input_name}}",
+{%- endfor %}
+        };
+        static constexpr std::array<const char*, INPUT_SIZE> subscription_serializers = {
+{%- for input in inputs.values() %}
+            "{{ input.serializer }}",
+{%- endfor %}
+        };
+
+        static constexpr std::tuple<
+        {%- set comma = joiner(", ") %}
+        {% for input_name, input in inputs.items() %}
+            {{ comma() }}
+            decltype(&PubSub::{{input.cpp_topic_name}}_subscriber)
+        {% endfor %}
+        > subscribers = {
+        {% for input_name, input in inputs.items() %}
+            &PubSub::{{input.cpp_topic_name}}_subscriber,
+        {% endfor %} 
+        };
     };
 
 }

@@ -103,9 +103,23 @@ public:
 
   virtual ~SynchronizerBase() = default;
 
-  template <size_t INDEX> void OnMessage(auto msg) {
+  /**
+   * 
+   * @tparam INDEX 
+   * @param msg 
+   * @param out Optional - to consume while still holding the lock, rather than as a separate call
+   * @return bool 
+   */
+  template <size_t INDEX> bool OnMessage(auto msg, MessageSumType* out = nullptr) {
     std::lock_guard lock(mutex);
     std::get<INDEX>(storage).ApplyMessage(msg);
+    if(IsReadyNoLock()) {
+      if(out) {
+        *out = ConsumeMessagesNoLock();
+      }
+      return true;
+    }
+    return false;
   }
 
   std::optional<MessageSumType> ConsumeIfReady() {
