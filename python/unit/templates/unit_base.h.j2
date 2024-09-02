@@ -18,6 +18,8 @@ namespace unit::{{unit_name}} {
     // TODO: this won't work with multi threaded units, obviously
     class Base : public basis::SingleThreadedUnit {
     
+        void SetupSerializationHelpers();
+
         void CreatePublishersSubscribers(const basis::UnitInitializeOptions& options) {
             {% for handler_name in handlers %}
             {{handler_name}}_pubsub.SetupPubSub(options, transport_manager.get(), output_queue, &thread_pool);
@@ -37,6 +39,7 @@ namespace unit::{{unit_name}} {
 
         virtual void Initialize(const basis::UnitInitializeOptions& options) final override {
             CreatePublishersSubscribers(options);
+            SetupSerializationHelpers();
         }
     
     private:

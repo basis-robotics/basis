@@ -37,7 +37,8 @@ def generate_unit(unit_path, output_dir, source_dir):
     jsonschema.validate(instance=unit, schema=schema)
 
     jinja_env = jinja2.Environment(loader=jinja2.PackageLoader("generate_unit"),
-                                undefined=jinja2.StrictUndefined)
+                                   extensions=['jinja2.ext.do'],
+                                   undefined=jinja2.StrictUndefined)
 
     serializers = set()
     

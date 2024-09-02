@@ -2,7 +2,7 @@
 #include "basis/core/coordinator_connector.h"
 #include "basis/core/transport/publisher.h"
 #include "basis/core/transport/transport_manager.h"
-#include <basis/core/logging/macros.h>
+
 #include <basis/replayer/config.h>
 #include <mcap/reader.hpp>
 #include <memory>
@@ -10,7 +10,7 @@
 
 #include <time.pb.h>
 
-DEFINE_AUTO_LOGGER_NS(basis::replayer)
+#include "replayer/logger.h"
 
 namespace basis {
 namespace core::transport {

@@ -2,6 +2,21 @@
 
 namespace unit::{{unit_name}} {
 
+void Base::SetupSerializationHelpers() {
+{% set all_deserialize_types = {} -%}
+{% for handler in handlers.values() %}
+{% for input in handler.inputs.values() %}
+{% if input.type not in all_deserialize_types and input.serializer != "raw" %}
+{% do all_deserialize_types.update({input.type: True}) %}
+    deserialization_helpers["{{input.type}}"] = basis::SerializationHandler<{{input.cpp_message_type}}>::type::template DeserializeFromSpan<{{input.cpp_message_type}}>;
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+
+}
+
+
 {# PubSub impls, to avoid weird linker errors and to speed up compilation time #}
 {% for handler_name, handler in handlers.items() %}
 namespace {{handler_name}} {

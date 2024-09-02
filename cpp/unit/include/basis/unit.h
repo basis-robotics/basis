@@ -8,6 +8,7 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
 
 namespace basis {
 class DeterministicReplayer;
@@ -27,6 +28,8 @@ struct HandlerPubSub {
   using TopicMap = std::map<std::string, std::shared_ptr<const void>>;
   using HandlerExecutingCallback = std::function<TopicMap()>;
   using TypeErasedCallback = std::function<void(const std::shared_ptr<const void>, HandlerExecutingCallback *)>;
+
+  virtual void OnRateSubscriberTypeErased(basis::core::MonotonicTime now, HandlerExecutingCallback *callback) = 0;
 
   std::map<std::string, TypeErasedCallback> type_erased_callbacks;
   std::vector<std::string> outputs;
@@ -93,6 +96,15 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
       }
     } else {
       static_assert(false, "OnRateSubscriber called on Handler with no rate specified");
+    }
+  }
+
+  virtual void OnRateSubscriberTypeErased(basis::core::MonotonicTime now, HandlerExecutingCallback *callback) override {
+    T_DERIVED *derived = ((T_DERIVED *)this);
+
+    auto msgs = derived->synchronizer->ConsumeIfReady();
+    if (msgs) {
+      *callback = [derived, now, msgs]() { return derived->RunHandlerAndPublish(now, *msgs).ToTopicMap(); };
     }
   }
 
@@ -182,6 +194,10 @@ public:
                                                              std::move(message_type));
   }
 
+  using DeserializationHelper = std::function<std::shared_ptr<const void>(std::span<const std::byte>)>;
+  const DeserializationHelper& GetDeserializationHelper(const std::string& type) {
+    return deserialization_helpers.at(type);
+  }
 protected:
   std::string unit_name;
   std::shared_ptr<spdlog::logger> logger;
@@ -193,6 +209,9 @@ protected:
   friend class basis::DeterministicReplayer;
   friend class basis::UnitManager;
   std::map<std::string, HandlerPubSub *> handlers;
+
+  // Helpers to convert a byte buffer to a type erased message pointer
+  std::unordered_map<std::string, DeserializationHelper> deserialization_helpers;
 };
 
 /**

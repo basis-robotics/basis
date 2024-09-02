@@ -1,6 +1,8 @@
 #include <basis/core/logging.h>
 
+#include "basis/core/time.h"
 #include "spdlog/fmt/ostr.h" // support for user defined types
+#include <chrono>
 #include <spdlog/cfg/env.h>  // support for loading levels from the environment variable
 
 namespace basis::core::logging {
@@ -22,9 +24,8 @@ void RecorderSink::sink_it_(const spdlog::details::log_msg &msg) {
 
   std::unique_lock lock(global_logging_handler_mutex);
   if (global_logging_handler) {
-    // TODO the time here is slightly inaccurate, given the logging system is async
-    // need to do math to convert the system clock embedded inside the message into a monotonic time
-    global_logging_handler->HandleLog(basis::core::MonotonicTime::Now(), msg, fmt::to_string(formatted));
+    auto now = basis::core::MonotonicTime::FromNanoseconds(std::chrono::time_point_cast<std::chrono::nanoseconds>(msg.time).time_since_epoch().count());
+    global_logging_handler->HandleLog(now, msg, fmt::to_string(formatted));
   }
 }
 } // namespace internal
