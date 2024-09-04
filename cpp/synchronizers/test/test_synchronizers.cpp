@@ -9,38 +9,42 @@
 #pragma clang diagnostic pop
 
 TEST(TestSyncAll, BasicTest) {
-  std::atomic<bool> was_called{false};
-  std::function test_cb = [&](std::shared_ptr<char> a, std::shared_ptr<char> b) {
-    was_called = true;
-    ASSERT_EQ(*a, 'a');
-    ASSERT_EQ(*b, 'b');
-  };
 
-  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all(test_cb);
+  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all;
+
+  std::atomic<bool> was_called{false};
+  std::function test_cb = [&](const std::optional<decltype(test_all)::MessageSumType> &maybe_tuple) {
+    if (maybe_tuple) {
+      was_called = true;
+      auto &[a, b] = *maybe_tuple;
+      ASSERT_EQ(*a, 'a');
+      ASSERT_EQ(*b, 'b');
+    }
+  };
 
   auto a = std::make_shared<char>('a');
   auto b = std::make_shared<char>('b');
 
   // Shouldn't be called
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_FALSE(was_called);
   // Shouldn't be called
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_FALSE(was_called);
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_TRUE(was_called);
   was_called = false;
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_FALSE(was_called);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_TRUE(was_called);
 }
 
@@ -49,13 +53,16 @@ TEST(TestSyncAll, TestOptional) {
   std::shared_ptr<char> recvd_a;
   std::shared_ptr<char> recvd_b;
 
-  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all(
-      [&](auto a, auto b) {
-        was_called = true;
-        recvd_a = a;
-        recvd_b = b;
-      },
-      {}, {.is_optional = true});
+  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all({}, {.is_optional = true});
+
+  std::function test_cb = [&](const std::optional<decltype(test_all)::MessageSumType> &maybe_tuple) {
+    if (maybe_tuple) {
+      was_called = true;
+      auto [a, b] = *maybe_tuple;
+      recvd_a = a;
+      recvd_b = b;
+    }
+  };
 
   auto a = std::make_shared<char>('a');
   auto b = std::make_shared<char>('b');
@@ -64,56 +71,58 @@ TEST(TestSyncAll, TestOptional) {
   ASSERT_EQ(recvd_b, nullptr);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(*recvd_a, 'a');
   ASSERT_EQ(recvd_b, nullptr);
   recvd_a = nullptr;
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b, nullptr);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(*recvd_a, 'a');
   ASSERT_EQ(*recvd_b, 'b');
 }
 
 TEST(TestSyncAll, TestCached) {
   std::atomic<bool> was_called{false};
-  std::function test_cb = [&](std::shared_ptr<char> a, std::shared_ptr<char> b) {
-    was_called = true;
-    ASSERT_EQ(*a, 'a');
-    ASSERT_EQ(*b, 'b');
+
+  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all({}, {.is_cached = true});
+  std::function test_cb = [&](const std::optional<decltype(test_all)::MessageSumType> &maybe_tuple) {
+    if (maybe_tuple) {
+      was_called = true;
+      auto &[a, b] = *maybe_tuple;
+      ASSERT_EQ(*a, 'a');
+      ASSERT_EQ(*b, 'b');
+    }
   };
-
-  basis::synchronizers::All<std::shared_ptr<char>, std::shared_ptr<char>> test_all(test_cb, {}, {.is_cached = true});
-
   auto a = std::make_shared<char>('a');
   auto b = std::make_shared<char>('b');
 
   ASSERT_EQ(was_called, false);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(was_called, false);
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(was_called, true);
   was_called = false;
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(was_called, true);
   was_called = false;
 
   test_all.OnMessage<1>(b);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(was_called, false);
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(was_called, true);
 }
 
@@ -123,11 +132,15 @@ TEST(TestSyncAll, TestContainer) {
   std::shared_ptr<char> recvd_a;
   std::vector<std::shared_ptr<char>> recvd_b;
 
-  basis::synchronizers::All<std::shared_ptr<char>, std::vector<std::shared_ptr<char>>> test_all([&](auto a, auto b) {
-    was_called = true;
-    recvd_a = a;
-    recvd_b = b;
-  });
+  basis::synchronizers::All<std::shared_ptr<char>, std::vector<std::shared_ptr<char>>> test_all;
+  std::function test_cb = [&](const std::optional<decltype(test_all)::MessageSumType> &maybe_tuple) {
+    if (maybe_tuple) {
+      auto &[a, b] = *maybe_tuple;
+      was_called = true;
+      recvd_a = a;
+      recvd_b = b;
+    }
+  };
 
   auto a = std::make_shared<char>('a');
   auto b1 = std::make_shared<char>('1');
@@ -138,12 +151,12 @@ TEST(TestSyncAll, TestContainer) {
   ASSERT_EQ(recvd_b.size(), 0);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b.size(), 0);
 
   test_all.OnMessage<1>(b1);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(recvd_a, a);
   ASSERT_EQ(recvd_b.size(), 1);
   ASSERT_EQ(recvd_b, decltype(recvd_b)({b1}));
@@ -152,20 +165,20 @@ TEST(TestSyncAll, TestContainer) {
   recvd_b.clear();
 
   test_all.OnMessage<1>(b1);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b.size(), 0);
   test_all.OnMessage<1>(b2);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b.size(), 0);
   test_all.OnMessage<1>(b3);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(recvd_a, nullptr);
   ASSERT_EQ(recvd_b.size(), 0);
 
   test_all.OnMessage<0>(a);
-  test_all.ConsumeIfReady();
+  test_cb(test_all.ConsumeIfReady());
   ASSERT_EQ(recvd_a, a);
 
   ASSERT_EQ(recvd_b, decltype(recvd_b)({b1, b2, b3}));
@@ -193,10 +206,7 @@ TEST(TestSyncField, BasicTest) {
       basis::synchronizers::Field<std::shared_ptr<const OuterSyncTestStruct>,
                                   [](const OuterSyncTestStruct *outer) { return outer->header().stamp(); }>,
       basis::synchronizers::Field<std::vector<std::shared_ptr<const Unsynced>>, nullptr>>
-      test([](std::shared_ptr<const Foo>, std::shared_ptr<const OuterSyncTestStruct>,
-              std::vector<std::shared_ptr<const Unsynced>>) {
-
-      });
+      test;
 
   auto unsynced = std::make_shared<Unsynced>(0xFF);
 
@@ -259,7 +269,7 @@ TEST(TestSyncField, TestApproximate) {
       0.01, basis::synchronizers::Field<std::shared_ptr<const ApproxTest>, &ApproxTest::f>,
       basis::synchronizers::Field<std::shared_ptr<const ApproxTest>, &ApproxTest::f>,
       basis::synchronizers::Field<std::vector<std::shared_ptr<const Unsynced>>, nullptr>>
-      test({}, {}, {}, {.is_cached = true});
+      test({}, {}, {.is_cached = true});
 
   // Test the same number, but no third memeber
   test.OnMessage<0>(std::make_shared<ApproxTest>(0.0));

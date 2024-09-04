@@ -16,14 +16,10 @@
 #include <dlfcn.h>
 #include <unistd.h>
 
-#include "cli_logger.h"
-#include "launch.h"
-
+#include <basis/cli_logger.h>
+#include <basis/launch.h>
 
 namespace basis::cli {
-
-std::shared_ptr<spdlog::logger> basis_logger = basis::core::logging::CreateLogger("basis");
-// TODO: set up a special CLI logger that prints to stderr
 
 template <typename T> std::unique_ptr<T> LoadPlugin(const char *path) {
   // Use RTLD_DEEPBIND to avoid the plugin sharing protobuf globals with us and crashing
@@ -386,7 +382,7 @@ int main(int argc, char *argv[]) {
   } else if (parser.is_subcommand_used("launch")) {
     auto launch_yaml = launch_command.get("launch_yaml");
     std::vector<std::string> args(argv, argv + argc);
-    LaunchYamlPath(launch_yaml, args, launch_command.get("--process"), launch_command.get<bool>("--sim"));
+    basis::launch::LaunchYamlPath(launch_yaml, args, launch_command.get("--process"), launch_command.get<bool>("--sim"));
   }
 
   serialization_plugins.clear();

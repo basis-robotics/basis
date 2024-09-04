@@ -21,6 +21,14 @@ bool Replayer::LoadRecording(std::filesystem::path recording_path) {
   auto status = mcap_reader.open(std::string(recording_path));
   status = mcap_reader.readSummary(mcap::ReadSummaryMethod::AllowFallbackScan);
 
+  if(!status.ok()) {
+    return false;
+  }
+
+  return OnRecordLoaded();
+}
+
+bool Replayer::OnRecordLoaded() {
   for (const auto &[channel_id, channel] : mcap_reader.channels()) {
     [[maybe_unused]] const std::string &topic = channel->topic;
     core::serialization::MessageTypeInfo message_type;
@@ -79,7 +87,7 @@ bool Replayer::Run() {
     const int64_t token = basis::core::MonotonicTime::Now().nsecs;
 
     auto wall_next = std::chrono::steady_clock::now();
-    for (const mcap::MessageView &message : message_view) {  
+    for (const mcap::MessageView &message : message_view) {
       while (now.nsecs < (int64_t)message.message.publishTime) {
         constexpr int64_t NSECS_PER_TICK = 10000000; // 100hz
         now.nsecs += NSECS_PER_TICK;

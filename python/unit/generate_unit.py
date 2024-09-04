@@ -37,7 +37,8 @@ def generate_unit(unit_path, output_dir, source_dir):
     jsonschema.validate(instance=unit, schema=schema)
 
     jinja_env = jinja2.Environment(loader=jinja2.PackageLoader("generate_unit"),
-                                undefined=jinja2.StrictUndefined)
+                                   extensions=['jinja2.ext.do'],
+                                   undefined=jinja2.StrictUndefined)
 
     serializers = set()
     
@@ -51,12 +52,15 @@ def generate_unit(unit_path, output_dir, source_dir):
             cpp_topic_name = topic_name.lstrip('/').replace('/', '_')
             io['cpp_topic_name'] = cpp_topic_name
             type_serializer, cpp_type = io['type'].split(':', 1)
+            # Kludge, fixup protobuf type names
+            cpp_type = cpp_type.replace(".", "::")
 
             io['cpp_message_type'] = cpp_type
 
             cpp_type = f'std::shared_ptr<const {cpp_type}>'
             io['serializer'] = type_serializer
-            serializers.add(type_serializer)
+            if type_serializer != "raw":
+                serializers.add(type_serializer)
             if io.get('accumulate'):
                 # TODO: actually set max size
                 cpp_type = f'std::vector<{cpp_type}>'

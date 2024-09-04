@@ -55,12 +55,12 @@ public:
   using MessageSumType = Base::MessageSumType;
 
   /**
-   * Handles a message at INDEX. Will call the owned callback if all messages are ready.
+   * Handles a message at INDEX.
    * @tparam INDEX
    * @param msg
-   * @return the set of messages that would be called using the callback
+   * @return true if the synchronizer is ready
    */
-  template <size_t INDEX> void OnMessage(auto msg) {
+  template <size_t INDEX> bool OnMessage(auto msg, MessageSumType* out = nullptr) {
     std::lock_guard lock(this->mutex);
 
     constexpr auto pointer_to_member = std::get<INDEX>(fields);
@@ -68,17 +68,18 @@ public:
     if constexpr (pointer_to_member != nullptr) {
       std::get<INDEX>(sync_buffers).push_back(msg);
 
-      MessageSumType matching;
-
       auto field_to_check = GetFieldData<pointer_to_member>(msg.get());
 
       [&]<std::size_t... I>(std::index_sequence<I...>) {
+        // Find messages that match with the current message
         const auto syncs =
             std::tuple(FindMatchingFieldNoLock<std::get<I>(fields)>(field_to_check, std::get<I>(sync_buffers))...);
+        // Find if all required messages in a sync are present
         const bool is_synced = ((std::get<I>(this->storage).metadata.is_optional || std::get<I>(fields) == nullptr ||
                                  std::get<I>(syncs) != -1) &&
                                 ...);
         if (is_synced) {
+          // If so, apply them
           [[maybe_unused]] auto t = ((ApplySync<I>(std::get<I>(syncs)), true) && ...);
         }
       }(std::index_sequence_for<T_FIELD_SYNCs...>());
@@ -86,6 +87,8 @@ public:
     } else {
       std::get<INDEX>(this->storage).ApplyMessage(msg);
     }
+    
+    return Base::PostApplyMessage(out);
   }
 
 protected:

@@ -76,6 +76,7 @@ protected:
 
 template <typename T_MSG> class Subscriber : public SubscriberBase {
 public:
+  using MessageType = T_MSG;
   Subscriber(std::string_view topic, serialization::MessageTypeInfo type_info,
              std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers,
              std::shared_ptr<InprocSubscriber<T_MSG>> inproc)
