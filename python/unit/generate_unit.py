@@ -52,6 +52,8 @@ def generate_unit(unit_path, output_dir, source_dir):
             cpp_topic_name = topic_name.lstrip('/').replace('/', '_')
             io['cpp_topic_name'] = cpp_topic_name
             type_serializer, cpp_type = io['type'].split(':', 1)
+            # Kludge, fixup protobuf type names
+            cpp_type = cpp_type.replace(".", "::")
 
             io['cpp_message_type'] = cpp_type
 

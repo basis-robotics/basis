@@ -5,6 +5,12 @@
 
 #include <vector>
 
+template <typename T_PUBSUB> auto CreateCallbacks(T_PUBSUB &pubsub) {
+  return [&]<std::size_t... I>(std::index_sequence<I...>) {
+    return std::make_tuple(pubsub.template CreateOnMessageCallback<I>()...);
+  }(std::make_index_sequence<T_PUBSUB::input_count>());
+}
+
 TEST(TestUnitGeneration, TestInitialization) { test_unit unit; }
 
 template <class T, template <class...> class U>
@@ -42,18 +48,15 @@ TEST(TestUnitGeneration, TestAllHandler) {
         return unit::test_unit::AllTest::Output();
       },
       [&](auto output) { pub_callback_called = true; });
-
-  pubsub.synchronizer->OnMessage<0>(std::make_shared<const ::TimeTest>());
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  auto cbs = CreateCallbacks(pubsub);
+  std::get<0>(cbs)(std::make_shared<const ::TimeTest>());
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
-  pubsub.synchronizer->OnMessage<1>(
+  std::get<1>(cbs)(
       std::make_shared<const sensor_msgs::Image>());
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
   ASSERT_TRUE(callback_called);
   ASSERT_TRUE(pub_callback_called);
 }
-
 // Check that we set up field sync correcty
 static_assert(is_instance_of_v<unit::test_unit::StereoMatch::Synchronizer,
                                basis::synchronizers::FieldSync>);
@@ -79,21 +82,20 @@ TEST(TestUnitGeneration, TestFieldHandler) {
       },
       [&](auto output) { pub_callback_called = true; });
 
+  auto cbs = CreateCallbacks(pubsub);
+
   auto a = std::make_shared<sensor_msgs::Image>();
   a->header.stamp.sec = 1;
   auto b = std::make_shared<sensor_msgs::Image>();
   b->header.stamp.sec = 2;
 
-  pubsub.synchronizer->OnMessage<0>(b);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<0>(cbs)(b);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
-  pubsub.synchronizer->OnMessage<1>(a);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<1>(cbs)(a);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
-  pubsub.synchronizer->OnMessage<1>(b);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<1>(cbs)(b);
   ASSERT_TRUE(callback_called);
   ASSERT_TRUE(pub_callback_called);
 }
@@ -126,6 +128,8 @@ TEST(TestUnitGeneration, TestApproxHandler) {
       },
       [&](auto output) { pub_callback_called = true; });
 
+  auto cbs = CreateCallbacks(pubsub);
+
   auto v_a = std::make_shared<::ExampleStampedVector>();
   v_a->set_time(0.95);
   auto v_b = std::make_shared<::ExampleStampedVector>();
@@ -133,16 +137,13 @@ TEST(TestUnitGeneration, TestApproxHandler) {
   auto p_a = std::make_shared<sensor_msgs::PointCloud2>();
   p_a->header.stamp.sec = 1;
 
-  pubsub.synchronizer->OnMessage<0>(v_a);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<0>(cbs)(v_a);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
-  pubsub.synchronizer->OnMessage<1>(p_a);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<1>(cbs)(p_a);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
-  pubsub.synchronizer->OnMessage<0>(v_b);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<0>(cbs)(v_b);
   ASSERT_TRUE(callback_called);
   ASSERT_TRUE(pub_callback_called);
 }
@@ -222,26 +223,23 @@ TEST(TestUnitGeneration, TestEqualOptions) {
       },
       [&](auto output) { pub_callback_called = true; });
 
+  auto cbs = CreateCallbacks(pubsub);
   auto a = std::make_shared<sensor_msgs::Image>();
   a->header.stamp.sec = 1;
   auto b = std::make_shared<sensor_msgs::Image>();
   b->header.stamp.sec = 2;
 
-  pubsub.synchronizer->OnMessage<0>(b);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<0>(cbs)(b);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
-  pubsub.synchronizer->OnMessage<1>(a);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<1>(cbs)(a);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
-  pubsub.synchronizer->OnMessage<1>(b);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<1>(cbs)(b);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
 
-  pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<3>(cbs)(std::make_shared<TestEmptyEvent>());
   ASSERT_TRUE(callback_called);
   ASSERT_TRUE(pub_callback_called);
   ASSERT_EQ(gotten_input.buffered_non_optional.size(), 1);
@@ -253,37 +251,28 @@ TEST(TestUnitGeneration, TestEqualOptions) {
   pub_callback_called = false;
   gotten_input = {};
 
-  pubsub.synchronizer->OnMessage<2>(std::make_shared<TestEmptyEvent>());
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
-  pubsub.synchronizer->OnMessage<2>(std::make_shared<TestEmptyEvent>());
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<2>(cbs)(std::make_shared<TestEmptyEvent>());
+  std::get<2>(cbs)(std::make_shared<TestEmptyEvent>());
 
-  pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
-  pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
-  pubsub.synchronizer->OnMessage<3>(std::make_shared<TestEmptyEvent>());
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<3>(cbs)(std::make_shared<TestEmptyEvent>());
+  std::get<3>(cbs)(std::make_shared<TestEmptyEvent>());
+  std::get<3>(cbs)(std::make_shared<TestEmptyEvent>());
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
 
-  pubsub.synchronizer->OnMessage<4>(b);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<4>(cbs)(b);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
 
-  pubsub.synchronizer->OnMessage<5>(a);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<5>(cbs)(a);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
 
-  pubsub.synchronizer->OnMessage<0>(b);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<0>(cbs)(b);
   ASSERT_FALSE(callback_called);
   ASSERT_FALSE(pub_callback_called);
 
-  pubsub.synchronizer->OnMessage<1>(b);
-  pubsub.synchronizer->ConsumeIfReady(basis::core::MonotonicTime::Now());
+  std::get<1>(cbs)(b);
   ASSERT_TRUE(callback_called);
   ASSERT_TRUE(pub_callback_called);
   ASSERT_EQ(gotten_input.buffered_optional.size(), 2);

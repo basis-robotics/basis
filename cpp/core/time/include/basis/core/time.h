@@ -71,6 +71,8 @@ struct Duration : public TimeBase {
   static Duration FromSecondsNanoseconds(int64_t seconds, int64_t nanoseconds) {
     return {TimeBase::SecondsToNanoseconds(seconds) + nanoseconds};
   }
+  static Duration FromSeconds(double seconds) { return {TimeBase::SecondsToNanoseconds(seconds)}; }
+
 
   std::pair<int32_t, int32_t> ToRosDuration() { return {nsecs / NSECS_IN_SECS, nsecs % NSECS_IN_SECS}; }
 
@@ -112,6 +114,12 @@ struct MonotonicTime : public TimePoint {
 
   MonotonicTime operator+(const Duration &duration) const {
     MonotonicTime out(nsecs + duration.nsecs);
+    return out;
+  }
+
+  Duration operator-(const MonotonicTime &other) const {
+    Duration out;
+    out.nsecs = nsecs - other.nsecs;
     return out;
   }
 

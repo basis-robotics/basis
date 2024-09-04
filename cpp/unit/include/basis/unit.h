@@ -1,5 +1,6 @@
 #pragma once
 #include "basis/core/time.h"
+#include "basis/synchronizers/synchronizer_base.h"
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/logging.h>
 #include <basis/core/threading/thread_pool.h>
@@ -46,6 +47,8 @@ template <typename MessageType> struct RawSerializationHelper<MessageType, false
 
 template <typename T_DERIVED, bool HAS_RATE, size_t INPUT_COUNT>
 struct HandlerPubSubWithOptions : public HandlerPubSub {
+  constexpr static size_t input_count = INPUT_COUNT;
+
   template <int INDEX, typename ON_CONSUME>
   auto OnMessageHelper(auto *synchronizer, const auto msg, ON_CONSUME on_consume = nullptr) {
     typename T_DERIVED::Synchronizer::MessageSumType consume_msgs;
@@ -72,11 +75,13 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
     };
   }
 
+  // Note: it'd be interesting to see if this works properly with vector types or not
   template <int INDEX> auto CreateTypeErasedOnMessageCallback() {
     return [this](const std::shared_ptr<const void> msg, HandlerExecutingCallback *callback) {
       T_DERIVED *derived = ((T_DERIVED *)this);
       using TupleElementType = std::tuple_element_t<INDEX, typename T_DERIVED::Synchronizer::MessageSumType>;
-      auto type_correct_msg = std::static_pointer_cast<typename TupleElementType::element_type>(msg);
+      using MessageType = typename basis::synchronizers::ExtractMessageType<TupleElementType>::Type; 
+      auto type_correct_msg = std::static_pointer_cast<MessageType>(msg);
 
       return OnMessageHelper<INDEX>(
           derived->synchronizer.get(), type_correct_msg,
@@ -116,8 +121,8 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
     T_DERIVED *derived = ((T_DERIVED *)this);
 
     if (options.create_subscribers) {
-      using MessageType = std::remove_const_t<
-          typename std::tuple_element_t<INDEX, typename T_DERIVED::Synchronizer::MessageSumType>::element_type>;
+      using MessageType = std::remove_const_t<typename basis::synchronizers::ExtractMessageType<
+          typename std::tuple_element_t<INDEX, typename T_DERIVED::Synchronizer::MessageSumType>>::Type>;
       auto subscriber_member_ptr = std::get<INDEX>(T_DERIVED::subscribers);
 
       constexpr bool is_raw = std::string_view(T_DERIVED::subscription_serializers[INDEX]) == "raw";
@@ -195,9 +200,10 @@ public:
   }
 
   using DeserializationHelper = std::function<std::shared_ptr<const void>(std::span<const std::byte>)>;
-  const DeserializationHelper& GetDeserializationHelper(const std::string& type) {
+  const DeserializationHelper &GetDeserializationHelper(const std::string &type) {
     return deserialization_helpers.at(type);
   }
+
 protected:
   std::string unit_name;
   std::shared_ptr<spdlog::logger> logger;

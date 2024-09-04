@@ -113,13 +113,7 @@ public:
   template <size_t INDEX> bool OnMessage(auto msg, MessageSumType* out = nullptr) {
     std::lock_guard lock(mutex);
     std::get<INDEX>(storage).ApplyMessage(msg);
-    if(IsReadyNoLock()) {
-      if(out) {
-        *out = ConsumeMessagesNoLock();
-      }
-      return true;
-    }
-    return false;
+    return PostApplyMessage(out);
   }
 
   std::optional<MessageSumType> ConsumeIfReady() {
@@ -131,6 +125,15 @@ public:
     return IsReadyNoLock();
   }
 protected:
+  bool PostApplyMessage(MessageSumType* out) {
+    if(IsReadyNoLock()) {
+      if(out) {
+        *out = ConsumeMessagesNoLock();
+      }
+      return true;
+    }
+    return false;
+  }
   std::optional<MessageSumType> ConsumeIfReadyNoLock() {
     if (IsReadyNoLock()) {
       MessageSumType out(ConsumeMessagesNoLock());

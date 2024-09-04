@@ -36,7 +36,7 @@ class ExampleUnit : public basis::SingleThreadedUnit {
 public:
   ExampleUnit() : basis::SingleThreadedUnit("ExampleUnit") {}
 
-  virtual void Initialize([[maybe_unused]] const basis::UnitInitializeOptions& options = {}) override {
+  virtual void Initialize([[maybe_unused]] const basis::UnitInitializeOptions &options = {}) override {
     using namespace std::placeholders;
 
     // Subscribe to the /time_test topic, with a protobuf message TimeTest.
@@ -63,14 +63,25 @@ public:
         std::bind(&ExampleUnit::EveryTenHertz, this, _1));
 
 #ifdef BASIS_ENABLE_ROS
-    vector_lidar_sync = std::make_unique<decltype(vector_lidar_sync)::element_type>(
-        std::bind(&ExampleUnit::OnSyncedVectorLidar, this, _1, _2));
+    vector_lidar_sync = std::make_unique<decltype(vector_lidar_sync)::element_type>();
 
-    vector_sub =
-        Subscribe<ExampleStampedVector>("/stamped_vector", [this](auto m) { vector_lidar_sync->OnMessage<0>(m); });
+    // TODO: this API has changed for the worse, need to go back and add helpers
+    auto CheckLidarSync = [this]() {
+      auto maybe_msgs = vector_lidar_sync->ConsumeIfReady();
+      if (maybe_msgs) {
+        OnSyncedVectorLidar(std::get<0>(*maybe_msgs), std::get<1>(*maybe_msgs));
+      }
+    };
 
-    pc2_sub =
-        Subscribe<sensor_msgs::PointCloud2>("/point_cloud", [this](auto m) { vector_lidar_sync->OnMessage<1>(m); });
+    vector_sub = Subscribe<ExampleStampedVector>("/stamped_vector", [this, &CheckLidarSync](auto m) {
+      vector_lidar_sync->OnMessage<0>(m);
+      CheckLidarSync();
+    });
+
+    pc2_sub = Subscribe<sensor_msgs::PointCloud2>("/point_cloud", [this, &CheckLidarSync](auto m) {
+      vector_lidar_sync->OnMessage<1>(m);
+      CheckLidarSync();
+    });
 
     sync_event_pub = Advertise<SyncedVectorLidarEvent>("/synced_vector_lidar");
 #endif
