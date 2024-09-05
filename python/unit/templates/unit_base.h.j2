@@ -1,3 +1,4 @@
+#pragma once
 #include <memory>
 #include <vector>
 
@@ -45,6 +46,7 @@ namespace unit::{{unit_name}} {
     private:
         {% for handler_name in handlers %}
         {{handler_name}}::PubSub {{handler_name}}_pubsub = {
+            AUTO_LOGGER.get(),
             [this](auto input){
                 return {{handler_name}}(input); 
             }

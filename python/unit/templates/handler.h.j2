@@ -81,8 +81,8 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         using Synchronizer = Synchronizer;
         using HandlerCallback = std::function<Output(const Input&)>;
 
-        PubSub(std::function<Output(const Input&)> handler_callback, std::function<void(Output&)> publish_callback = nullptr) 
-            : handler_callback(handler_callback), publish_callback(publish_callback)
+        PubSub(spdlog::logger * const logger, std::function<Output(const Input&)> handler_callback, std::function<void(Output&)> publish_callback = nullptr)
+            : AUTO_LOGGER(logger), handler_callback(handler_callback), publish_callback(publish_callback)
         {
 
             synchronizer = std::make_unique<Synchronizer>(std::tuple{ 
@@ -112,7 +112,11 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             Output output = std::apply(f, messages);
             
 {% for output_name, output in outputs.items() %}
-            assert(output.{{output.cpp_topic_name}} != nullptr);
+        {% if not output.optional %}
+            if (output.{{output.cpp_topic_name}} == nullptr) {
+                BASIS_LOG_ERROR("{{unit_name}}::{{handler_name}} didn't output {{output_name}}");
+            }
+        {% endif %}
 {% endfor %}
             if(publish_callback) {
                 publish_callback(output);
@@ -147,7 +151,9 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
         void PublishOutput(const Output& output) {
 {% for output_name, output in outputs.items() %}
-        {{output.cpp_topic_name}}_publisher->Publish(output.{{output.cpp_topic_name}});
+        if(output.{{output.cpp_topic_name}}) {
+            {{output.cpp_topic_name}}_publisher->Publish(output.{{output.cpp_topic_name}});
+        }
 {%- endfor %}
         }
 
@@ -194,6 +200,8 @@ public:
             &PubSub::{{input.cpp_topic_name}}_subscriber,
         {% endfor %} 
         };
+    private:
+        spdlog::logger * const AUTO_LOGGER;
     };
 
 }

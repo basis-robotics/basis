@@ -48,6 +48,9 @@ def generate_unit(unit_path, output_dir, source_dir):
     for handler_name, handler in unit['handlers'].items():
         handler.setdefault('inputs', {})
         handler.setdefault('outputs', {})
+        for output in handler['outputs'].values():
+            output.setdefault('optional', False)
+
         for topic_name, io in itertools.chain(handler['inputs'].items(), handler['outputs'].items()):
             cpp_topic_name = topic_name.lstrip('/').replace('/', '_')
             io['cpp_topic_name'] = cpp_topic_name

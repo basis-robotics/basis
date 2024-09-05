@@ -1,7 +1,7 @@
 # Note: all versions will need pinned here
 
 # focal as this is the last version that ROS1 supports
-FROM ubuntu:focal as basis-env
+FROM ubuntu:focal AS basis-env
 
 LABEL org.opencontainers.image.source https://github.com/basis-robotics/basis
 
@@ -109,6 +109,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 RUN useradd -ms /bin/bash basis
 RUN adduser basis sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+# Grant webcam permissions
+RUN usermod -a -G video basis
 
 # Install python dependencies
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
@@ -117,12 +119,13 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 RUN curl -s https://bootstrap.pypa.io/get-pip.py |  python3
 RUN pip -q install jsonschema pyyaml jinja2
 
+
 USER basis
 
 WORKDIR /basis
 
 # Basis image with ROS dependencies added in
-FROM basis-env as basis-env-ros
+FROM basis-env AS basis-env-ros
 
 USER root
 
