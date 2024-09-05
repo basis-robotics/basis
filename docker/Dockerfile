@@ -1,7 +1,8 @@
 # Note: all versions will need pinned here
 
 # focal as this is the last version that ROS1 supports
-FROM ubuntu:focal AS basis-env
+ARG BASE_IMAGE=ubuntu:focal
+FROM $BASE_IMAGE AS basis-env
 
 LABEL org.opencontainers.image.source https://github.com/basis-robotics/basis
 
