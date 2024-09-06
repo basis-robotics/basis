@@ -1,9 +1,8 @@
-#include <foxglove_bridge/common.hpp>
-#include <foxglove_bridge/foxglove_bridge.hpp>
-#include <foxglove_bridge/regex_utils.hpp>
-#include <foxglove_bridge/server_factory.hpp>
-#include <foxglove_bridge/server_interface.hpp>
-#include <foxglove_bridge/websocket_server.hpp>
+#include <foxglove/websocket/common.hpp>
+#include <foxglove/websocket/regex_utils.hpp>
+#include <foxglove/websocket/server_factory.hpp>
+#include <foxglove/websocket/server_interface.hpp>
+#include <foxglove/websocket/websocket_server.hpp>
 
 #include <basis/core/logging/macros.h>
 #include <basis/core/transport/subscriber.h>
@@ -63,7 +62,7 @@ public:
       if (useSimTime) {
         serverOptions.capabilities.push_back(::foxglove::CAPABILITY_TIME);
       }
-      serverOptions.supportedEncodings = {"ros1"};
+      serverOptions.supportedEncodings = {"ros1", "protobuf"};
       serverOptions.metadata = {{"DISTRO", "basis"}};
       serverOptions.sendBufferLimitBytes = ::foxglove::DEFAULT_SEND_BUFFER_LIMIT_BYTES;
       serverOptions.sessionId = std::to_string(std::time(nullptr));
@@ -227,7 +226,7 @@ private:
 
   void clientAdvertise(const ::foxglove::ClientAdvertisement &channel, ConnectionHandle clientHandle) {
     // TODO: other encodings
-    if (channel.encoding != "ros1") {
+    if (channel.encoding != "ros1" && channel.encoding != "protobuf") {
       BASIS_LOG_ERROR("Unsupported encoding. Only '" + std::string("ros1") + "' encoding is supported at the moment.");
       return;
     }
