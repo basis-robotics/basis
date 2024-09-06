@@ -6,6 +6,7 @@
  */
 #include <filesystem>
 #include <string>
+#include <optional>
 #include <unordered_map>
 
 #include <yaml-cpp/yaml.h>

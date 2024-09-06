@@ -4,7 +4,7 @@
 ARG BASE_IMAGE=ubuntu:focal
 FROM $BASE_IMAGE AS basis-env
 
-LABEL org.opencontainers.image.source https://github.com/basis-robotics/basis
+LABEL org.opencontainers.image.source=https://github.com/basis-robotics/basis
 
 RUN rm -f /etc/apt/apt.conf.d/docker-clean
 # Basic dependencies
@@ -32,6 +32,9 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     rm /etc/apt/trusted.gpg.d/kitware.gpg
     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1A127079A92F09ED
 EOF
+
+# nvidia's image preinstalls cmake, nuke it
+RUN rm /usr/local/bin/cmake || true
 
 ARG LLVM_VERSION=18
 
@@ -86,8 +89,8 @@ update-alternatives \
     --slave   /usr/bin/lldb                  lldb                  /usr/bin/lldb-${LLVM_VERSION} \
     --slave   /usr/bin/lldb-server           lldb-server           /usr/bin/lldb-server-${LLVM_VERSION}
 EOF
-ENV CC clang
-ENV CXX clang++
+ENV CC=clang
+ENV CXX=clang++
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
@@ -122,6 +125,8 @@ RUN pip -q install jsonschema pyyaml jinja2
 
 
 USER basis
+
+RUN echo "source /basis/bash/source_env.sh" >> /home/basis/.bashrc
 
 WORKDIR /basis
 

@@ -8,6 +8,7 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 
 #include "serialization/message_type_info.h"
