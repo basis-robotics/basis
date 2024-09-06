@@ -57,8 +57,12 @@ public:
 
     try {
       ::foxglove::ServerOptions serverOptions;
-      serverOptions.capabilities =
-          std::vector<std::string>(::foxglove::DEFAULT_CAPABILITIES.begin(), ::foxglove::DEFAULT_CAPABILITIES.end());
+
+      const std::vector<std::string> capabilities = {
+          ::foxglove::CAPABILITY_CLIENT_PUBLISH,
+      };
+
+      serverOptions.capabilities = capabilities;
       if (useSimTime) {
         serverOptions.capabilities.push_back(::foxglove::CAPABILITY_TIME);
       }
@@ -87,15 +91,6 @@ public:
           std::bind(&FoxgloveBridge::clientUnadvertise, this, std::placeholders::_1, std::placeholders::_2);
       hdlrs.clientMessageHandler =
           std::bind(&FoxgloveBridge::clientMessage, this, std::placeholders::_1, std::placeholders::_2);
-      hdlrs.parameterRequestHandler = std::bind(&FoxgloveBridge::getParameters, this, std::placeholders::_1,
-                                                std::placeholders::_2, std::placeholders::_3);
-      hdlrs.parameterChangeHandler = std::bind(&FoxgloveBridge::setParameters, this, std::placeholders::_1,
-                                               std::placeholders::_2, std::placeholders::_3);
-      hdlrs.parameterSubscriptionHandler = std::bind(&FoxgloveBridge::subscribeParameters, this, std::placeholders::_1,
-                                                     std::placeholders::_2, std::placeholders::_3);
-      hdlrs.serviceRequestHandler =
-          std::bind(&FoxgloveBridge::serviceRequest, this, std::placeholders::_1, std::placeholders::_2);
-      hdlrs.subscribeConnectionGraphHandler = [](bool /*subscribe*/) { /*_subscribeGraphUpdates = subscribe;*/ };
 
       server->setHandlers(std::move(hdlrs));
 
@@ -225,9 +220,9 @@ private:
   }
 
   void clientAdvertise(const ::foxglove::ClientAdvertisement &channel, ConnectionHandle clientHandle) {
-    // TODO: other encodings
+    // TODO: other encodings?
     if (channel.encoding != "ros1" && channel.encoding != "protobuf") {
-      BASIS_LOG_ERROR("Unsupported encoding. Only '" + std::string("ros1") + "' encoding is supported at the moment.");
+      BASIS_LOG_ERROR("Unsupported encoding. Only 'ros1' and 'protobuf' encodings are supported at the moment.");
       return;
     }
 
@@ -302,6 +297,16 @@ private:
     }
   }
 
+  static std::string getSerializerFromSchemaId(const std::string &schemaId) {
+    if (schemaId.starts_with("rosmsg:")) 
+      return "ros1";
+    
+    if (schemaId.starts_with("protobuf:")) 
+      return "protobuf";
+    
+    return "";
+  }
+
   void clientMessage(const ::foxglove::ClientMessage &clientMsg, ConnectionHandle clientHandle) {
     const auto channelId = clientMsg.advertisement.channelId;
     std::shared_lock<std::shared_mutex> lock(_publicationsMutex);
@@ -329,25 +334,6 @@ private:
     basis::core::MonotonicTime now = basis::core::MonotonicTime::Now();
     channelPublicationIt->second->PublishRaw(packet, now);
   }
-
-  // TODO
-  void getParameters([[maybe_unused]] const std::vector<std::string> &parameters,
-                     [[maybe_unused]] const std::optional<std::string> &requestId,
-                     [[maybe_unused]] ConnectionHandle hdl) {}
-
-  // TODO
-  void setParameters([[maybe_unused]] const std::vector<::foxglove::Parameter> &parameters,
-                     [[maybe_unused]] const std::optional<std::string> &requestId,
-                     [[maybe_unused]] ConnectionHandle hdl) {}
-
-  // TODO
-  void subscribeParameters([[maybe_unused]] const std::vector<std::string> &parameters,
-                           [[maybe_unused]] ::foxglove::ParameterSubscriptionOperation op,
-                           [[maybe_unused]] ConnectionHandle) {}
-
-  // TODO
-  void serviceRequest([[maybe_unused]] const ::foxglove::ServiceRequest &request,
-                      [[maybe_unused]] ConnectionHandle clientHandle) {}
 
   void updateAdvertisedTopics() {
 
@@ -406,7 +392,11 @@ private:
       ::foxglove::ChannelWithoutId newChannel{};
       newChannel.topic = topicAndDatatype.first;
       newChannel.schemaName = topicAndDatatype.second;
-      newChannel.encoding = "ros1"; // TODO
+      newChannel.encoding = getSerializerFromSchemaId(topicAndDatatype.second);
+      if (newChannel.encoding.empty()) {
+        BASIS_LOG_ERROR("Could not find serializer for schema %s", topicAndDatatype.second.c_str());
+        continue;
+      }
 
       try {
         const auto msgDescription = coordinator_connector->TryGetSchema(topicAndDatatype.second);
