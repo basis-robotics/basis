@@ -20,14 +20,6 @@
 #include <shared_mutex>
 #include <unordered_map>
 
-// using ConnectionHandle = websocketpp::connection_hdl;
-// using TopicAndDatatype = std::pair<std::string, std::string>;
-// using ClientPublications =
-//     std::unordered_map<::foxglove::ClientChannelId, std::shared_ptr<basis::core::transport::PublisherRaw>>;
-// using PublicationsByClient = std::map<ConnectionHandle, ClientPublications, std::owner_less<>>;
-// using SubscriptionsByClient =
-//     std::map<ConnectionHandle, std::shared_ptr<basis::core::transport::SubscriberBase>, std::owner_less<>>;
-
 DEFINE_AUTO_LOGGER_PLUGIN(bridges, foxglove)
 
 DECLARE_AUTO_LOGGER_PLUGIN(bridges, foxglove)
@@ -44,6 +36,14 @@ std::vector<std::regex> parseRegexPatterns(const std::vector<std::string> &patte
     }
   }
   return result;
+}
+
+FoxgloveBridge::FoxgloveBridge() : SingleThreadedUnit("foxglove_bridge") { init(); }
+
+FoxgloveBridge::~FoxgloveBridge() {
+  if (server) {
+    server->stop();
+  }
 }
 
 void FoxgloveBridge::init(const std::string &address, int port) {
@@ -95,12 +95,6 @@ void FoxgloveBridge::init(const std::string &address, int port) {
     server->start(address, static_cast<uint16_t>(port));
   } catch (const std::exception &err) {
     BASIS_LOG_ERROR("Failed to start websocket server: %s", err.what());
-  }
-}
-
-FoxgloveBridge::~FoxgloveBridge() {
-  if (server) {
-    server->stop();
   }
 }
 

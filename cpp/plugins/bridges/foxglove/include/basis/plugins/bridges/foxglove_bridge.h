@@ -19,7 +19,8 @@ class FoxgloveBridge : public basis::SingleThreadedUnit {
       std::map<ConnectionHandle, std::shared_ptr<basis::core::transport::SubscriberBase>, std::owner_less<>>;
 
 public:
-  void init(const std::string &address = "0.0.0.0", int port = 8765);
+  FoxgloveBridge();
+
   ~FoxgloveBridge();
 
 private:
@@ -28,6 +29,8 @@ private:
       return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
     }
   };
+
+  void init(const std::string &address = "0.0.0.0", int port = 8765);
 
   void logHandler(::foxglove::WebSocketLogLevel level, [[maybe_unused]] char const *msg);
 
