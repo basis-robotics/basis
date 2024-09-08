@@ -146,15 +146,18 @@ public:
             serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
-    TypeErasedSubscriberCallback outer_callback = [topic, callback](std::shared_ptr<MessagePacket> packet) {
-      std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
-      if (!message) {
-        // todo: change the callback to take the topic as well?
-        BASIS_LOG_ERROR("Unable to deserialize message on topic {}", topic);
-        return;
-      }
-      callback(std::move(message));
-    };
+    TypeErasedSubscriberCallback outer_callback;
+    if constexpr (!std::is_same_v<T_Serializer, serialization::RawSerializer>) {
+      outer_callback = [topic, callback](std::shared_ptr<MessagePacket> packet) {
+        std::shared_ptr<const T_MSG> message = T_Serializer::template DeserializeFromSpan<T_MSG>(packet->GetPayload());
+        if (!message) {
+          // todo: change the callback to take the topic as well?
+          BASIS_LOG_ERROR("Unable to deserialize message on topic {}", topic);
+          return;
+        }
+        callback(std::move(message));
+      };
+    }
 
     if (inproc) {
       inproc_subscriber = inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg) {
