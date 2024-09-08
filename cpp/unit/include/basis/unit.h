@@ -80,7 +80,7 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
     return [this](const std::shared_ptr<const void> msg, HandlerExecutingCallback *callback) {
       T_DERIVED *derived = ((T_DERIVED *)this);
       using TupleElementType = std::tuple_element_t<INDEX, typename T_DERIVED::Synchronizer::MessageSumType>;
-      using MessageType = typename basis::synchronizers::ExtractMessageType<TupleElementType>::Type; 
+      using MessageType = typename basis::synchronizers::ExtractMessageType<TupleElementType>::Type;
       auto type_correct_msg = std::static_pointer_cast<MessageType>(msg);
 
       return OnMessageHelper<INDEX>(
@@ -177,7 +177,8 @@ public:
   // override this, should be called once by main()
   virtual void Initialize(const UnitInitializeOptions &options = {}) = 0;
 
-  virtual void Update([[maybe_unused]] const basis::core::Duration &max_sleep_duration =
+  virtual void Update([[maybe_unused]] std::atomic<bool> *stop_token = nullptr,
+                      [[maybe_unused]] const basis::core::Duration &max_sleep_duration =
                           basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     StandardUpdate(transport_manager.get(), coordinator_connector.get());
   }
@@ -233,9 +234,9 @@ public:
   using Unit::Initialize;
   using Unit::Unit;
 
-  virtual void Update(const basis::core::Duration &max_sleep_duration) override {
-    Unit::Update(max_sleep_duration);
-    // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing
+  virtual void Update(std::atomic<bool> *stop_token, const basis::core::Duration &max_sleep_duration) override {
+    Unit::Update(stop_token, max_sleep_duration);
+    // TODO: this won't necessarily sleep the max amount - this might be okay but could be confusing
 
     // try to get a single event, with a wait time
     if (auto event = output_queue->Pop(max_sleep_duration)) {
@@ -244,6 +245,9 @@ public:
 
     // Try to drain the buffer of events
     while (auto event = output_queue->Pop()) {
+      if ((stop_token != nullptr && *stop_token)) {
+        break;
+      }
       (*event)();
     }
     // todo: it's possible that we may want to periodically schedule Update() for the output queue

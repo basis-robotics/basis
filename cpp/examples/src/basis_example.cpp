@@ -194,7 +194,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   example_unit.Initialize();
 
   while (true) {
-    example_unit.Update(basis::core::Duration::FromSecondsNanoseconds(1, 0));
+    example_unit.Update(nullptr, basis::core::Duration::FromSecondsNanoseconds(1, 0));
   }
 
   return 0;

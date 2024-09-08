@@ -161,7 +161,8 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
 {% if 'rate' in sync %}
 private:
-    std::unique_ptr<basis::core::transport::RateSubscriber> rate_subsciber;
+    std::unique_ptr<basis::core::transport::RateSubscriber> rate_subsciber;    
+    std::atomic<bool> is_rate_subscriber_queued = false;
 
 public:
 {% endif %}

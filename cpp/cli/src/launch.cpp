@@ -122,7 +122,7 @@ protected:
     unit->Initialize();
 
     while (!stop) {
-      unit->Update(basis::core::Duration::FromSecondsNanoseconds(1, 0));
+      unit->Update(&stop, basis::core::Duration::FromSecondsNanoseconds(1, 0));
     }
   }
 

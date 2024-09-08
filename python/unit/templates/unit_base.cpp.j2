@@ -51,10 +51,16 @@ namespace {{handler_name}} {
         rate_subsciber = std::make_unique<basis::core::transport::RateSubscriber>(
             *rate_duration,
             [this, output_queue](basis::core::MonotonicTime time) {
-            output_queue->Emplace([this, time]() {
-                OnRateSubscriber(time);
-            });
-            }
+                // Don't allow more than 1 rate subscriber callback in the queue, to avoid overload
+                // We may eventually want this configurable
+                if(!is_rate_subscriber_queued) {
+                    is_rate_subscriber_queued = true;
+                    output_queue->Emplace([this, time]() {
+                        is_rate_subscriber_queued = false;
+                        OnRateSubscriber(time);
+                    });
+                    }
+                }
             );
     }
     {% endif %}
