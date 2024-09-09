@@ -388,8 +388,9 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     const auto msgDescription = coordinator_connector->TryGetSchema(topicAndDatatype.second);
 
     if (msgDescription) {
-      newChannel.schema = ::foxglove::base64Encode(msgDescription->schema());
+      newChannel.schema = msgDescription->schema();
       channelsToAdd.push_back(newChannel);
+      BASIS_LOG_INFO("topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic, newChannel.schemaName, newChannel.encoding, newChannel.schema);
     } else {
       const std::string schemaId = topicAndDatatype.second;
       coordinator_connector->RequestSchemas({&schemaId, 1});
