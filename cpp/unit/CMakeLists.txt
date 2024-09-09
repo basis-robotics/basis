@@ -6,6 +6,7 @@ target_link_libraries(basis_unit
     basis::core::coordinator
     basis::core::logging
     basis::core::threading
+    basis::synchronizers
     basis::plugins::transport::tcp
     )
 

@@ -11,6 +11,10 @@ namespace {
 static std::atomic<int64_t> simulated_time_ns = time::INVALID_NSECS;
 static std::atomic<uint64_t> current_run_token = 0;
 } // namespace
+MonotonicTime MonotonicTime::FromNanoseconds(int64_t ns) {
+  return {ns};
+}
+
 MonotonicTime MonotonicTime::FromSeconds(double seconds) { return {TimeBase::SecondsToNanoseconds(seconds)}; }
 
 MonotonicTime MonotonicTime::Now(bool ignore_simulated_time) {

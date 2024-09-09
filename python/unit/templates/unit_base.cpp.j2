@@ -2,37 +2,61 @@
 
 namespace unit::{{unit_name}} {
 
+void Base::SetupSerializationHelpers() {
+{% set all_deserialize_types = {} -%}
+{% for handler in handlers.values() %}
+{% for input in handler.inputs.values() %}
+{% if input.type not in all_deserialize_types and input.serializer != "raw" %}
+{% do all_deserialize_types.update({input.type: True}) %}
+    deserialization_helpers["{{input.type}}"] = basis::SerializationHandler<{{input.cpp_message_type}}>::type::template DeserializeFromSpan<{{input.cpp_message_type}}>;
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+
+}
+
+
 {# PubSub impls, to avoid weird linker errors and to speed up compilation time #}
 {% for handler_name, handler in handlers.items() %}
 namespace {{handler_name}} {
+    
     void PubSub::SetupPubSub(
+        const basis::UnitInitializeOptions& options,
         basis::core::transport::TransportManager* transport_manager,
         std::shared_ptr<basis::core::transport::OutputQueue> output_queue,
         basis::core::threading::ThreadPool* thread_pool) {
-            // todo init sync
-    {% for topic_name, input in handler.inputs.items() %}
-        {{input.cpp_topic_name}}_subscriber = transport_manager->Subscribe<{{input.cpp_message_type}}>("{{topic_name}}",
-        [this](auto msg){
-            synchronizer->OnMessage<{{loop.index0}}>(msg);
-{% if 'rate' not in handler.sync %}
-            synchronizer->ConsumeIfReady();
-{% endif %}
-        },
-        thread_pool, output_queue);
-    {% endfor %}
+    {% if 'rate' in handler.sync %}
+        rate_duration = basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{handler.sync.rate}}));
+    {% endif %}
+
+    SetupInputs(options, transport_manager, output_queue, thread_pool);
+
+    outputs = {
+        {% for output_name in handler.outputs.keys() %}
+            "{{output_name}}",
+        {% endfor %}
+    };
     {% for topic_name, output in handler.outputs.items() %}
-        {{output.cpp_topic_name}}_publisher = transport_manager->Advertise<{{output.cpp_message_type}}>("{{topic_name}}");
+    {{output.cpp_topic_name}}_publisher = 
+    {% if output.serializer == "raw" %}
+        transport_manager->Advertise<{{output.cpp_message_type}}, basis::core::serialization::RawSerializer>
+    {% else %}
+        transport_manager->Advertise<{{output.cpp_message_type}}>
+    {% endif %}
+        ("{{topic_name}}");
     {% endfor %}
     {% if 'rate' in handler.sync %}
-    rate_subsciber = std::make_unique<basis::core::transport::RateSubscriber>(
-        basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{handler.sync.rate}})),
-        [this, output_queue](basis::core::MonotonicTime time) {
-        output_queue->Emplace([this, time]() {
-            OnRateSubscriber(time);
-        });
-        }
-
-        );
+    if(options.create_subscribers) {
+        rate_subsciber = std::make_unique<basis::core::transport::RateSubscriber>(
+            *rate_duration,
+            [this, output_queue](basis::core::MonotonicTime time) {
+            output_queue->Emplace([this, time]() {
+                OnRateSubscriber(time);
+            });
+            }
+            );
+    }
     {% endif %}
     }
 }

@@ -147,4 +147,17 @@ protected:
 
   IncompleteMessagePacket in_progress_packet;
 };
+
+inline std::unique_ptr<basis::core::transport::CoordinatorConnector> WaitForCoordinator() {
+  std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
+  while (!coordinator_connector) {
+    coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
+    if (!coordinator_connector) {
+      BASIS_LOG_WARN("No connection to the coordinator, waiting 1 second and trying again");
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+  }
+  return coordinator_connector;
+}
+
 } // namespace basis::core::transport

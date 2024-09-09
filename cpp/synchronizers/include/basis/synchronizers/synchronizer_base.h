@@ -5,6 +5,8 @@
 #include <mutex>
 #include <tuple>
 
+#include <basis/core/time.h>
+
 namespace basis::synchronizers {
 
 // todo: how are we going to add timing require to this
@@ -90,35 +92,52 @@ public:
 
 template <typename... T_MSG_CONTAINERs> class SynchronizerBase : Synchronizer {
 public:
-  using Callback = std::function<void(T_MSG_CONTAINERs...)>;
+  using Callback = std::function<void(const basis::core::MonotonicTime&, T_MSG_CONTAINERs...)>;
   using MessageSumType = std::tuple<T_MSG_CONTAINERs...>;
 
-  SynchronizerBase(Callback callback, MessageMetadata<T_MSG_CONTAINERs> &&...metadatas)
-      : SynchronizerBase(callback, std::forward_as_tuple(metadatas...)) {}
+  SynchronizerBase(MessageMetadata<T_MSG_CONTAINERs> &&...metadatas)
+      : SynchronizerBase(std::forward_as_tuple(metadatas...)) {}
 
-  SynchronizerBase(Callback callback = {}, std::tuple<MessageMetadata<T_MSG_CONTAINERs>...> &&metadatas = {})
-      : callback(callback), storage(metadatas) {}
+  SynchronizerBase(std::tuple<MessageMetadata<T_MSG_CONTAINERs>...> &&metadatas = {})
+      : storage(metadatas) {}
 
   virtual ~SynchronizerBase() = default;
 
-  template <size_t INDEX> void OnMessage(auto msg) {
+  /**
+   * 
+   * @tparam INDEX 
+   * @param msg 
+   * @param out Optional - to consume while still holding the lock, rather than as a separate call
+   * @return bool 
+   */
+  template <size_t INDEX> bool OnMessage(auto msg, MessageSumType* out = nullptr) {
     std::lock_guard lock(mutex);
     std::get<INDEX>(storage).ApplyMessage(msg);
+    return PostApplyMessage(out);
   }
 
   std::optional<MessageSumType> ConsumeIfReady() {
     std::lock_guard lock(mutex);
     return ConsumeIfReadyNoLock();
   }
-
+  bool IsReady() {
+    std::lock_guard lock(mutex);
+    return IsReadyNoLock();
+  }
 protected:
+  bool PostApplyMessage(MessageSumType* out) {
+    if(IsReadyNoLock()) {
+      if(out) {
+        *out = ConsumeMessagesNoLock();
+      }
+      return true;
+    }
+    return false;
+  }
   std::optional<MessageSumType> ConsumeIfReadyNoLock() {
     if (IsReadyNoLock()) {
       MessageSumType out(ConsumeMessagesNoLock());
 
-      if (callback) {
-        std::apply(callback, out);
-      }
       return out;
     }
     return {};
@@ -134,8 +153,6 @@ protected:
     // Maybe C++25 will have constexpr for loops on tuples
     return std::apply([](auto... x) { return (bool(x) && ...); }, storage);
   }
-
-  Callback callback;
 
   std::tuple<Storage<T_MSG_CONTAINERs>...> storage;
 

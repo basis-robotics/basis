@@ -46,8 +46,10 @@ protected:
   static int64_t SecondsToNanoseconds(double seconds) { return seconds * NSECS_IN_SECS; }
 
   constexpr static int64_t NSECS_IN_SECS = std::nano::den;
-
 public:
+  // TODO: ensure this doesn't allow comparison between duration and timepoint
+  auto operator<=>(const TimeBase&) const = default;
+
   int64_t nsecs = time::INVALID_NSECS;
 
   bool IsValid() const { return nsecs != time::INVALID_NSECS; }
@@ -64,9 +66,13 @@ static_assert(!std::is_same<time_t, int32_t>::value, "This platform is likely to
 #endif
 
 struct Duration : public TimeBase {
+  auto operator<=>(const Duration&) const = default;
+
   static Duration FromSecondsNanoseconds(int64_t seconds, int64_t nanoseconds) {
     return {TimeBase::SecondsToNanoseconds(seconds) + nanoseconds};
   }
+  static Duration FromSeconds(double seconds) { return {TimeBase::SecondsToNanoseconds(seconds)}; }
+
 
   std::pair<int32_t, int32_t> ToRosDuration() { return {nsecs / NSECS_IN_SECS, nsecs % NSECS_IN_SECS}; }
 
@@ -75,6 +81,8 @@ protected:
 };
 
 struct TimePoint : public TimeBase {
+  auto operator<=>(const TimePoint&) const = default;
+
   std::pair<uint32_t, uint32_t> ToRosTime() { return {nsecs / NSECS_IN_SECS, nsecs % NSECS_IN_SECS}; }
 
 protected:
@@ -93,6 +101,8 @@ protected:
  * Monotonic time - used as the basis for all robot time operations.
  */
 struct MonotonicTime : public TimePoint {
+  static MonotonicTime FromNanoseconds(int64_t ns);
+
   static MonotonicTime FromSeconds(double seconds);
 
   static MonotonicTime Now(bool ignore_simulated_time = false);
@@ -104,6 +114,12 @@ struct MonotonicTime : public TimePoint {
 
   MonotonicTime operator+(const Duration &duration) const {
     MonotonicTime out(nsecs + duration.nsecs);
+    return out;
+  }
+
+  Duration operator-(const MonotonicTime &other) const {
+    Duration out;
+    out.nsecs = nsecs - other.nsecs;
     return out;
   }
 

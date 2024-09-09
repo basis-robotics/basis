@@ -5,7 +5,8 @@
 #include <sys/wait.h>
 #include <thread>
 
-#include "cli_logger.h"
+#include <basis/cli_logger.h>
+
 namespace basis::cli {
 
 bool Process::Wait(int timeout_s) {
