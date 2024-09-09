@@ -19,7 +19,7 @@ public:
 
   ~FoxgloveBridge();
 
-  void Initialize() override;
+  void Initialize(const UnitInitializeOptions &options) override;
 
   void Update(const basis::core::Duration &max_sleep_duration) override;
 

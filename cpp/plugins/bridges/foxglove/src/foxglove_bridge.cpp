@@ -45,7 +45,7 @@ FoxgloveBridge::~FoxgloveBridge() {
   }
 }
 
-void FoxgloveBridge::Initialize() { init(); }
+void FoxgloveBridge::Initialize([[maybe_unused]] const UnitInitializeOptions &options) { init(); }
 
 void FoxgloveBridge::Update(const basis::core::Duration &max_sleep_duration) {
   SingleThreadedUnit::Update(max_sleep_duration);
