@@ -1,6 +1,5 @@
 project(foxglove_bridge)
 include(FetchContent)
-include(DeclarePlugin)
 
 add_plugin(basis_plugins_bridges_foxglove src/foxglove_bridge.cpp)
 
@@ -15,6 +14,8 @@ add_subdirectory(
   ${CMAKE_BINARY_DIR}/foxglove-websocket
 )
 
+find_package(OpenSSL)
+
 target_compile_definitions(basis_plugins_bridges_foxglove PRIVATE ASIO_STANDALONE)
 target_compile_definitions(foxglove_websocket PUBLIC ASIO_STANDALONE)
 
@@ -28,7 +29,13 @@ target_link_libraries(basis_plugins_bridges_foxglove
   basis::core::threading
   basis::plugins::transport::tcp
   basis::unit
+  OpenSSL::SSL
 )
 target_include_directories(basis_plugins_bridges_foxglove PUBLIC include)
+
+set_target_properties(basis_plugins_bridges_foxglove PROPERTIES OUTPUT_NAME "foxglove.unit")
+set_target_properties(basis_plugins_bridges_foxglove PROPERTIES PREFIX "")
+
+install(TARGETS basis_plugins_bridges_foxglove DESTINATION unit/)
 
 add_library(basis::plugins::bridges::foxglove ALIAS basis_plugins_bridges_foxglove)
