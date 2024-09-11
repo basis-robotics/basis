@@ -60,6 +60,7 @@ public:
       schema_msg->set_name(schema.name);
       schema_msg->set_schema(schema.schema);
       schema_msg->set_hash_id(schema.hash_id);
+      schema_msg->set_schema_efficient(schema.schema_efficient);
     }
 
     SendToCoordinator(message);

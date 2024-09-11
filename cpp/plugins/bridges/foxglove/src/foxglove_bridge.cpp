@@ -6,6 +6,8 @@
 #include <foxglove/websocket/regex_utils.hpp>
 #include <foxglove/websocket/server_factory.hpp>
 
+#include <google/protobuf/descriptor.pb.h>
+
 #include <basis/core/logging/macros.h>
 #include <basis/core/transport/subscriber.h>
 #include <basis/core/transport/transport_manager.h>
@@ -100,7 +102,7 @@ void FoxgloveBridge::init(const std::string &address, int port) {
 
     server->start(address, static_cast<uint16_t>(port));
   } catch (const std::exception &err) {
-    BASIS_LOG_ERROR("Failed to start websocket server: %s", err.what());
+    BASIS_LOG_ERROR("Failed to start websocket server: {}", err.what());
   }
 }
 
@@ -145,21 +147,23 @@ void FoxgloveBridge::subscribe(::foxglove::ChannelId channelId, ConnectionHandle
   }
 
   try {
-    std::shared_ptr<basis::core::transport::SubscriberBase> sub = transport_manager->SubscribeRaw(
-        channel.topic,
-        [&](auto msg) {
-          const auto payload = msg->GetPayload();
-          const uint64_t receiptTimeNs = msg->GetMessageHeader()->send_time;
-          server->sendMessage(clientHandle, channelId, receiptTimeNs, reinterpret_cast<const uint8_t *>(payload.data()),
-                              payload.size());
-        },
-        &thread_pool, nullptr, {});
+    std::shared_ptr<basis::core::transport::SubscriberBase> sub =
+        transport_manager->SubscribeRaw(channel.topic,
+                                        [this, clientHandle, channelId](auto msg) {
+                                          const uint64_t receiptTimeNs = msg->GetMessageHeader()->send_time;
+                                          const auto &payload = msg->GetPayload();
+                                          const void *data = payload.data();
+                                          server->sendMessage(clientHandle, channelId, receiptTimeNs,
+                                                              static_cast<const uint8_t *>(data), payload.size());
+                                        },
+                                        &thread_pool, nullptr, {});
+
     subscriptionsByClient.emplace(clientHandle, sub);
     if (firstSubscription) {
-      BASIS_LOG_INFO("Subscribed to topic \"%s\" (%s) on channel %d", channel.topic.c_str(), channel.schemaName.c_str(),
+      BASIS_LOG_INFO("Subscribed to topic \"{}\" ({}) on channel {}", channel.topic.c_str(), channel.schemaName.c_str(),
                      channelId);
     } else {
-      BASIS_LOG_INFO("Added subscriber #%zu to topic \"%s\" (%s) on channel %d", subscriptionsByClient.size(),
+      BASIS_LOG_INFO("Added subscriber #{} to topic \"{}\" ({}) on channel {}", subscriptionsByClient.size(),
                      channel.topic.c_str(), channel.schemaName.c_str(), channelId);
     }
   } catch (const std::exception &ex) {
@@ -197,11 +201,11 @@ void FoxgloveBridge::unsubscribe(::foxglove::ChannelId channelId, ConnectionHand
 
   subscriptionsByClient.erase(clientSubscription);
   if (subscriptionsByClient.empty()) {
-    BASIS_LOG_INFO("Unsubscribing from topic \"%s\" (%s) on channel %d", channel.topic.c_str(),
+    BASIS_LOG_INFO("Unsubscribing from topic \"{}\" ({}) on channel {}", channel.topic.c_str(),
                    channel.schemaName.c_str(), channelId);
     subscriptions.erase(subscriptionsIt);
   } else {
-    BASIS_LOG_INFO("Removed one subscription from channel %d (%zu subscription(s) left)", channelId,
+    BASIS_LOG_INFO("Removed one subscription from channel {} ({} subscription(s) left)", channelId,
                    subscriptionsByClient.size());
   }
 }
@@ -242,7 +246,7 @@ void FoxgloveBridge::clientAdvertise(const ::foxglove::ClientAdvertisement &chan
 
   if (publisher) {
     clientPublications.insert({channel.channelId, std::move(publisher)});
-    BASIS_LOG_INFO("Client %s is advertising \"%s\" (%s) on channel %d",
+    BASIS_LOG_INFO("Client {} is advertising \"{}\" ({}) on channel {}",
                    server->remoteEndpointString(clientHandle).c_str(), channel.topic.c_str(),
                    channel.schemaName.c_str(), channel.channelId);
 
@@ -274,7 +278,7 @@ void FoxgloveBridge::clientUnadvertise(::foxglove::ClientChannelId channelId, Co
   }
 
   const auto &publisher = channelPublicationIt->second;
-  BASIS_LOG_INFO("Client %s is no longer advertising %s on channel %d",
+  BASIS_LOG_INFO("Client {} is no longer advertising {} on channel {}",
                  server->remoteEndpointString(clientHandle).c_str(), publisher->GetPublisherInfo().topic.c_str(),
                  channelId);
   clientPublications.erase(channelPublicationIt);
@@ -282,16 +286,6 @@ void FoxgloveBridge::clientUnadvertise(::foxglove::ClientChannelId channelId, Co
   if (clientPublications.empty()) {
     clientAdvertisedTopics.erase(clientPublicationsIt);
   }
-}
-
-static std::string getSerializerFromSchemaId(const std::string &schemaId) {
-  if (schemaId.starts_with("rosmsg:"))
-    return "ros1";
-
-  if (schemaId.starts_with("protobuf:"))
-    return "protobuf";
-
-  return "";
 }
 
 void FoxgloveBridge::clientMessage(const ::foxglove::ClientMessage &clientMsg, ConnectionHandle clientHandle) {
@@ -322,6 +316,22 @@ void FoxgloveBridge::clientMessage(const ::foxglove::ClientMessage &clientMsg, C
   channelPublicationIt->second->PublishRaw(packet, now);
 }
 
+static std::string serialize_pb_schema(const std::string &schema) {
+  google::protobuf::io::ArrayInputStream stream(schema.data(), schema.size());
+  google::protobuf::FileDescriptorSet fdSet;
+  if (!google::protobuf::TextFormat::Parse(&stream, &fdSet)) {
+    BASIS_LOG_ERROR("serialize_pb_schema Failed to parse schema {}", schema);
+    return "";
+  }
+
+  return fdSet.SerializeAsString();
+}
+
+std::pair<std::string, std::string> split_serializer_and_schema(std::string name) {
+  auto pos = name.find(':');
+  return {name.substr(0, pos), name.substr(pos + 1)};
+}
+
 void FoxgloveBridge::updateAdvertisedTopics() {
 
   auto info = coordinator_connector->GetLastNetworkInfo();
@@ -330,19 +340,22 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     return;
   }
 
-  std::unordered_set<TopicAndDatatype, PairHash> latestTopics;
+  std::vector<TopicAndDatatype> latestTopics;
   latestTopics.reserve(info->publishers_by_topic_size());
   for (const auto &[topic_name, publishers] : info->publishers_by_topic()) {
     if (publishers.publishers_size()) {
       auto topic_name = publishers.publishers(0).topic();
       if (::foxglove::isWhitelisted(topic_name, topicWhitelistPatterns)) {
-        latestTopics.emplace(topic_name, publishers.publishers(0).schema_id());
+        std::string schema = publishers.publishers(0).schema_id();
+        auto [serializer, schema_name] = split_serializer_and_schema(schema);
+        const TopicAndDatatype topicAndDatatype = {topic_name, serializer, schema_name};
+        latestTopics.push_back(topicAndDatatype);
       }
     }
   }
 
   if (const auto numIgnoredTopics = info->publishers_by_topic_size() - latestTopics.size()) {
-    BASIS_LOG_DEBUG("%zu topics have been ignored as they do not match any pattern on the topic whitelist",
+    BASIS_LOG_DEBUG("{} topics have been ignored as they do not match any pattern on the topic whitelist",
                     numIgnoredTopics);
   }
 
@@ -351,16 +364,17 @@ void FoxgloveBridge::updateAdvertisedTopics() {
   // Remove channels for which the topic does not exist anymore
   std::vector<::foxglove::ChannelId> channelIdsToRemove;
   for (auto channelIt = advertisedTopics.begin(); channelIt != advertisedTopics.end();) {
-    const TopicAndDatatype topicAndDatatype = {channelIt->second.topic, channelIt->second.schemaName};
-    if (latestTopics.find(topicAndDatatype) == latestTopics.end()) {
+    if (std::find_if(latestTopics.begin(), latestTopics.end(), [channelIt](const auto &topicAndDatatype) {
+          const auto &channel = channelIt->second;
+          return channel.topic == topicAndDatatype.topic && channel.schemaName == topicAndDatatype.schema;
+        }) != latestTopics.end()) {
+      channelIt++;
+    } else {
       const auto channelId = channelIt->first;
       channelIdsToRemove.push_back(channelId);
       subscriptions.erase(channelId);
-      BASIS_LOG_DEBUG("Removed channel %d for topic \"%s\" (%s)", channelId, topicAndDatatype.first.c_str(),
-                      topicAndDatatype.second.c_str());
+      BASIS_LOG_INFO("Removed channel {} for topic \"{}\"", channelId, channelIt->second.schema);
       channelIt = advertisedTopics.erase(channelIt);
-    } else {
-      channelIt++;
     }
   }
   server->removeChannels(channelIdsToRemove);
@@ -371,31 +385,40 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     if (std::find_if(advertisedTopics.begin(), advertisedTopics.end(),
                      [topicAndDatatype](const auto &channelIdAndChannel) {
                        const auto &channel = channelIdAndChannel.second;
-                       return channel.topic == topicAndDatatype.first && channel.schemaName == topicAndDatatype.second;
+                       return channel.topic == topicAndDatatype.topic && channel.schemaName == topicAndDatatype.schema;
                      }) != advertisedTopics.end()) {
       continue; // Topic already advertised
     }
 
     ::foxglove::ChannelWithoutId newChannel{};
-    newChannel.topic = topicAndDatatype.first;
-    newChannel.schemaName = topicAndDatatype.second;
-    newChannel.encoding = getSerializerFromSchemaId(topicAndDatatype.second);
+    newChannel.topic = topicAndDatatype.topic;
+    newChannel.schemaName = topicAndDatatype.schema;
+    newChannel.encoding = topicAndDatatype.schema_serializer;
+    newChannel.schemaEncoding = newChannel.encoding;
+    BASIS_LOG_INFO("New channel  --  topic: {} schemaName: {} encoding: {}", newChannel.topic, newChannel.schemaName,
+                   newChannel.encoding);
+
     if (newChannel.encoding.empty()) {
-      BASIS_LOG_ERROR("Could not find serializer for schema %s", topicAndDatatype.second.c_str());
+      BASIS_LOG_ERROR("Could not find serializer for schema {}", topicAndDatatype.schema);
       continue;
     }
 
-    const auto msgDescription = coordinator_connector->TryGetSchema(topicAndDatatype.second);
+    const auto msgDescription =
+        coordinator_connector->TryGetSchema(topicAndDatatype.schema_serializer + ":" + topicAndDatatype.schema);
 
     if (msgDescription) {
-      newChannel.schema = msgDescription->schema();
+      std::string schema =
+          msgDescription->schema_efficient().empty() ? msgDescription->schema() : msgDescription->schema_efficient();
+      std::string schema_gen = topicAndDatatype.schema_serializer == "protobuf" ? serialize_pb_schema(schema) : schema;
+      newChannel.schema = ::foxglove::base64Encode(schema_gen);
       channelsToAdd.push_back(newChannel);
-      BASIS_LOG_INFO("topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic, newChannel.schemaName, newChannel.encoding, newChannel.schema);
+      BASIS_LOG_INFO("newChannel -- topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic,
+                     newChannel.schemaName, newChannel.encoding, newChannel.schema);
     } else {
-      const std::string schemaId = topicAndDatatype.second;
+      const std::string schemaId = topicAndDatatype.schema_serializer + ":" + topicAndDatatype.schema;
       coordinator_connector->RequestSchemas({&schemaId, 1});
 
-      BASIS_LOG_WARN("Could not find definition for type {}", topicAndDatatype.second.c_str());
+      BASIS_LOG_WARN("Could not find definition for type {}", topicAndDatatype.schema);
     }
   }
 
@@ -404,8 +427,8 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     const auto channelId = channelIds[i];
     const auto &channel = channelsToAdd[i];
     advertisedTopics.emplace(channelId, channel);
-    BASIS_LOG_DEBUG("Advertising channel %d for topic \"%s\" (%s)", channelId, channel.topic.c_str(),
-                    channel.schemaName.c_str());
+    BASIS_LOG_INFO("Advertising channel {} for topic \"{}\" ({})", channelId, channel.topic.c_str(),
+                   channel.schemaName.c_str());
   }
 }
 

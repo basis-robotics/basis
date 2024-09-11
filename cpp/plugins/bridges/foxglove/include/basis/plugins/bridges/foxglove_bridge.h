@@ -7,7 +7,6 @@
 namespace basis::plugins::bridges::foxglove {
 class FoxgloveBridge : public basis::SingleThreadedUnit {
   using ConnectionHandle = websocketpp::connection_hdl;
-  using TopicAndDatatype = std::pair<std::string, std::string>;
   using ClientPublications =
       std::unordered_map<::foxglove::ClientChannelId, std::shared_ptr<basis::core::transport::PublisherRaw>>;
   using PublicationsByClient = std::map<ConnectionHandle, ClientPublications, std::owner_less<>>;
@@ -24,10 +23,10 @@ public:
   void Update(const basis::core::Duration &max_sleep_duration) override;
 
 private:
-  struct PairHash {
-    template <class T1, class T2> std::size_t operator()(const std::pair<T1, T2> &pair) const {
-      return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
-    }
+  struct TopicAndDatatype {
+    std::string topic;
+    std::string schema_serializer;
+    std::string schema;
   };
 
   void init(const std::string &address = "0.0.0.0", int port = 8765);
