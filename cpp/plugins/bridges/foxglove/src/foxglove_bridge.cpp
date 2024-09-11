@@ -209,11 +209,6 @@ void FoxgloveBridge::unsubscribe(::foxglove::ChannelId channelId, ConnectionHand
 }
 
 void FoxgloveBridge::clientAdvertise(const ::foxglove::ClientAdvertisement &channel, ConnectionHandle clientHandle) {
-  // TODO: other encodings?
-  if (channel.encoding != "ros1" && channel.encoding != "protobuf") {
-    BASIS_LOG_ERROR("Unsupported encoding. Only 'ros1' and 'protobuf' encodings are supported at the moment.");
-    return;
-  }
 
   std::unique_lock<std::shared_mutex> lock(publicationsMutex);
 
