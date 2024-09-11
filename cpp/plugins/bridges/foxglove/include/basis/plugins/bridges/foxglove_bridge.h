@@ -4,6 +4,8 @@
 
 #include <foxglove/websocket/websocket_server.hpp>
 
+DEFINE_AUTO_LOGGER_PLUGIN(bridges, foxglove)
+
 namespace basis::plugins::bridges::foxglove {
 class FoxgloveBridge : public basis::SingleThreadedUnit {
   using ConnectionHandle = websocketpp::connection_hdl;

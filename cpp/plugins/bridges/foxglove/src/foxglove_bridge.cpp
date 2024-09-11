@@ -21,8 +21,6 @@
 #include <shared_mutex>
 #include <unordered_map>
 
-DEFINE_AUTO_LOGGER_PLUGIN(bridges, foxglove)
-
 DECLARE_AUTO_LOGGER_PLUGIN(bridges, foxglove)
 
 namespace basis::plugins::bridges::foxglove {
@@ -102,7 +100,7 @@ void FoxgloveBridge::init(const std::string &address, int port) {
 
     server->start(address, static_cast<uint16_t>(port));
   } catch (const std::exception &err) {
-    BASIS_LOG_ERROR("Failed to start websocket server: {}", err.what());
+    BASIS_LOG_FATAL("Failed to start websocket server: {}", err.what());
   }
 }
 
@@ -315,17 +313,6 @@ void FoxgloveBridge::clientMessage(const ::foxglove::ClientMessage &clientMsg, C
   channelPublicationIt->second->PublishRaw(packet, now);
 }
 
-static std::string serialize_pb_schema(const std::string &schema) {
-  google::protobuf::io::ArrayInputStream stream(schema.data(), schema.size());
-  google::protobuf::FileDescriptorSet fdSet;
-  if (!google::protobuf::TextFormat::Parse(&stream, &fdSet)) {
-    BASIS_LOG_ERROR("serialize_pb_schema Failed to parse schema {}", schema);
-    return "";
-  }
-
-  return fdSet.SerializeAsString();
-}
-
 std::pair<std::string, std::string> split_serializer_and_schema(std::string name) {
   auto pos = name.find(':');
   return {name.substr(0, pos), name.substr(pos + 1)};
@@ -403,14 +390,12 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     }
 
     const std::string schemaId = topicAndDatatype.schema_serializer + ":" + topicAndDatatype.schema;
-    const auto msgDescription =
-        coordinator_connector->TryGetSchema(schemaId);
+    const auto msgDescription = coordinator_connector->TryGetSchema(schemaId);
 
     if (msgDescription) {
       std::string schema =
           msgDescription->schema_efficient().empty() ? msgDescription->schema() : msgDescription->schema_efficient();
-      std::string schema_gen = topicAndDatatype.schema_serializer == "protobuf" ? serialize_pb_schema(schema) : schema;
-      newChannel.schema = ::foxglove::base64Encode(schema_gen);
+      newChannel.schema = ::foxglove::base64Encode(schema);
       channelsToAdd.push_back(newChannel);
       BASIS_LOG_INFO("newChannel -- topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic,
                      newChannel.schemaName, newChannel.encoding, newChannel.schema);
