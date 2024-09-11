@@ -21,12 +21,11 @@ class SchemaManager {
 public:
   SchemaManager() {}
 
-
-  void RegisterType(const serialization::MessageTypeInfo &type_info, const serialization::MessageSchema& schema) {
+  void RegisterType(const serialization::MessageTypeInfo &type_info, const serialization::MessageSchema &schema) {
     const std::string schema_id = type_info.SchemaId();
     auto it = known_schemas.find(schema_id);
     if (it == known_schemas.end()) {
-        known_schemas.emplace(schema_id, schema); 
+      known_schemas.emplace(schema_id, schema);
     }
   }
 
@@ -47,6 +46,14 @@ public:
   }
 
   std::vector<serialization::MessageSchema> &&ConsumeSchemasToSend() { return std::move(schemas_to_send); }
+
+  const serialization::MessageSchema *TryGetSchema(std::string schema) const {
+    auto it = known_schemas.find(schema);
+    if (it == known_schemas.end()) {
+      return nullptr;
+    }
+    return &it->second;
+  }
 
 protected:
   std::unordered_map<std::string, serialization::MessageSchema> known_schemas;
@@ -73,7 +80,7 @@ protected:
 
   basis::RecorderInterface *RegisterTopicWithRecorder(std::string_view topic,
                                                       const serialization::MessageTypeInfo &message_type,
-                                                      const serialization::MessageSchema& basis_schema) {
+                                                      const serialization::MessageSchema &basis_schema) {
     if (recorder && recorder->RegisterTopic(std::string(topic), message_type, basis_schema)) {
       // Only pass a recorder down to the publisher if the recording system will handle this topic
       return recorder;
@@ -84,7 +91,7 @@ protected:
 
 public:
   std::shared_ptr<PublisherRaw> AdvertiseRaw(std::string_view topic, const serialization::MessageTypeInfo &message_type,
-                                             const serialization::MessageSchema& schema) {
+                                             const serialization::MessageSchema &schema) {
     schema_manager.RegisterType(message_type, schema);
 
     std::vector<std::shared_ptr<TransportPublisher>> tps = AdvertiseOnTransports(topic, message_type);
@@ -111,8 +118,7 @@ public:
     basis::RecorderInterface *recorder_for_publisher = nullptr;
     // Ensure we don't try to write raw structs to disk
     if constexpr (!std::is_same<T_Serializer, basis::core::serialization::RawSerializer>()) {
-      recorder_for_publisher = RegisterTopicWithRecorder(
-          topic, message_type, *schema);
+      recorder_for_publisher = RegisterTopicWithRecorder(topic, message_type, *schema);
     }
 
     SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;
@@ -142,7 +148,8 @@ public:
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
   [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
   Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
-            basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<core::transport::OutputQueue> output_queue = nullptr,
+            basis::core::threading::ThreadPool *work_thread_pool,
+            std::shared_ptr<core::transport::OutputQueue> output_queue = nullptr,
             serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
@@ -254,11 +261,10 @@ protected:
    * @return std::shared_ptr<T_SUBSCRIBER>
    */
   template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
-  [[nodiscard]] std::shared_ptr<T_SUBSCRIBER>
-  SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback,
-                    basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<core::transport::OutputQueue> output_queue,
-                    serialization::MessageTypeInfo message_type,
-                    std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
+  [[nodiscard]] std::shared_ptr<T_SUBSCRIBER> SubscribeInternal(
+      std::string_view topic, TypeErasedSubscriberCallback callback,
+      basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<core::transport::OutputQueue> output_queue,
+      serialization::MessageTypeInfo message_type, std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
 
