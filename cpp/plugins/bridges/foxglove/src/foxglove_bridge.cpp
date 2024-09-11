@@ -234,15 +234,14 @@ void FoxgloveBridge::clientAdvertise(const ::foxglove::ClientAdvertisement &chan
   message_type.name = channel.schemaName;
 
   basis::core::transport::SchemaManager &schema_manager = transport_manager->GetSchemaManager();
-  auto const &schemas = schema_manager.GetRegisteredSchemas();
-  auto schemaIt = schemas.find(message_type.SchemaId());
-  if (schemaIt == schemas.end()) {
-    BASIS_LOG_ERROR("Unknown schema " + message_type.SchemaId());
+  auto schema_message = schema_manager.TryGetSchema(message_type.SchemaId());
+  if (!schema_message) {
+    BASIS_LOG_ERROR("Failed to retrieve schema for {}", message_type.SchemaId());
     return;
   }
 
   std::shared_ptr<basis::core::transport::PublisherRaw> publisher =
-      transport_manager->AdvertiseRaw(channel.topic, message_type, schemaIt->second);
+      transport_manager->AdvertiseRaw(channel.topic, message_type, *schema_message);
 
   if (publisher) {
     clientPublications.insert({channel.channelId, std::move(publisher)});
