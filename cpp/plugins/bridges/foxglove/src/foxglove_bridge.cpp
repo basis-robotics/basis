@@ -402,8 +402,9 @@ void FoxgloveBridge::updateAdvertisedTopics() {
       continue;
     }
 
+    const std::string schemaId = topicAndDatatype.schema_serializer + ":" + topicAndDatatype.schema;
     const auto msgDescription =
-        coordinator_connector->TryGetSchema(topicAndDatatype.schema_serializer + ":" + topicAndDatatype.schema);
+        coordinator_connector->TryGetSchema(schemaId);
 
     if (msgDescription) {
       std::string schema =
@@ -414,7 +415,6 @@ void FoxgloveBridge::updateAdvertisedTopics() {
       BASIS_LOG_INFO("newChannel -- topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic,
                      newChannel.schemaName, newChannel.encoding, newChannel.schema);
     } else {
-      const std::string schemaId = topicAndDatatype.schema_serializer + ":" + topicAndDatatype.schema;
       coordinator_connector->RequestSchemas({&schemaId, 1});
 
       BASIS_LOG_WARN("Could not find definition for type {}", topicAndDatatype.schema);
