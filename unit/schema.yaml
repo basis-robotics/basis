@@ -94,6 +94,7 @@ properties:
               optional: True
               allow_transports: True
               deny_transports: True
+              QoS: True
         outputs:
           type: object
           additionalProperties:
@@ -145,5 +146,11 @@ $defs:
     properties:
       type:
         $ref: "#/$defs/message_type"
+      QoS:
+        type: object
+        properties:
+          MaxQueueSize:
+            type: integer
+            oprional: True
       optional:
         type: boolean

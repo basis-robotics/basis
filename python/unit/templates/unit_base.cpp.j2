@@ -32,6 +32,12 @@ namespace {{handler_name}} {
 
     SetupInputs(options, transport_manager, subscriber_queues, thread_pool);
 
+    {% for input_it in handler.inputs.values() %}
+        {% if 'QoS' in input_it %}
+    subscriber_queues[{{loop.index0}}]->SetMaxSize({{input_it['QoS']['MaxQueueSize']}});
+        {% endif %}
+    {% endfor %}
+
     outputs = {
         {% for output_name in handler.outputs.keys() %}
             "{{output_name}}",
