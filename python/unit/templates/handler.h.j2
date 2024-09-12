@@ -134,7 +134,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             {% endfor %}
             {% if 'rate' in sync %}
             // Ensure that we stop the rate subscriber thread before we destruct the synchronizer
-            rate_subsciber = nullptr;
+            rate_subscriber = nullptr;
             {% endif %}
             synchronizer = nullptr;
         }
@@ -142,7 +142,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         void SetupPubSub(
             const basis::UnitInitializeOptions& options,
             basis::core::transport::TransportManager* transport_manager,
-            std::shared_ptr<basis::core::transport::OutputQueue> output_queue,
+            basis::CallbackQueues& subscriber_queues,
             basis::core::threading::ThreadPool* thread_pool);
 
         void PublishOutput(const Output& output) {
@@ -155,8 +155,8 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 
 {% if 'rate' in sync %}
 private:
-    std::unique_ptr<basis::core::transport::RateSubscriber> rate_subsciber;
-
+    std::unique_ptr<basis::core::transport::RateSubscriber> rate_subscriber;
+    
 public:
 {% endif %}
 {% for input_name, input in inputs.items() %}

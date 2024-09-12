@@ -23,6 +23,10 @@ public:
     {
       std::lock_guard lock(queue_mutex);
       if (max_size > 0) {
+        if (queue.size() >= max_size) {
+          // TODO: only for debugging
+          std::cerr << "Queue full " << queue.size() << "/" << max_size << ", dropping item" << std::endl;
+        }
         while (queue.size() >= max_size) {
           queue.pop();
         }
