@@ -51,6 +51,9 @@ namespace {{handler_name}} {
         transport_manager->Advertise<{{output.cpp_message_type}}>
     {% endif %}
         ("{{topic_name}}");
+    {% if 'QoS' in output %}
+        {{output.cpp_topic_name}}_publisher->SetMaxQueueSize({{output['QoS']['MaxQueueSize']}});
+    {% endif %}
     {% endfor %}
     {% if 'rate' in handler.sync %}
     

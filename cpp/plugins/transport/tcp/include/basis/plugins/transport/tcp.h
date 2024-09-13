@@ -48,6 +48,8 @@ public:
     return socket.IsValid();
   }
 
+  void SetMaxQueueSize(size_t max_queue_size);
+
   // TODO: do we want to be able to send high priority packets?
   void SendMessage(std::shared_ptr<core::transport::MessagePacket> message);
 
@@ -74,6 +76,7 @@ private:
   std::condition_variable send_cv;
   std::mutex send_mutex;
   std::vector<std::shared_ptr<const core::transport::MessagePacket>> send_buffer;
+  size_t max_queue_size = 0;
   std::atomic<bool> stop_thread = false;
 };
 
@@ -91,6 +94,8 @@ public:
 
   virtual std::string GetConnectionInformation() override { return std::to_string(GetPort()); }
 
+  virtual void SetMaxQueueSize(size_t max_queue_size) override;
+
   virtual void SendMessage(std::shared_ptr<core::transport::MessagePacket> message) override;
 
   virtual size_t GetSubscriberCount() override {
@@ -104,6 +109,7 @@ protected:
   core::networking::TcpListenSocket listen_socket;
   std::mutex senders_mutex;
   std::vector<std::unique_ptr<TcpSender>> senders;
+  size_t max_queue_size = 0;
 };
 
 // todo: need to catch out of order subscribe/publishes

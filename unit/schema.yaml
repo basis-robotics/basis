@@ -109,6 +109,7 @@ properties:
               optional: True
               allow_transports: True
               deny_transports: True
+              QoS: True
 
 $defs:
   duration:
