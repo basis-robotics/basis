@@ -122,5 +122,6 @@ if(BASIS_ENABLE_ROS)
 endif()
 
 add_subdirectory(plugins/transport/tcp)
+add_subdirectory(plugins/bridges/foxglove)
 
 add_subdirectory(third_party)

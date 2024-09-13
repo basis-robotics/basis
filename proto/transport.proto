@@ -9,6 +9,7 @@ message MessageSchema {
   string name = 2;
   string schema = 3;
   string hash_id = 4;
+  bytes schema_efficient = 5;
 }
 
 message PublisherInfo {
