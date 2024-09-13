@@ -22,7 +22,7 @@ public:
 
   void Initialize(const UnitInitializeOptions &options) override;
 
-  void Update(const basis::core::Duration &max_sleep_duration) override;
+  void Update(std::atomic<bool> *stop_token, const basis::core::Duration &max_sleep_duration) override;
 
 private:
   struct TopicAndDatatype {

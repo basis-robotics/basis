@@ -178,7 +178,7 @@ public:
   virtual void Initialize(const UnitInitializeOptions &options = {}) = 0;
 
   virtual void Update([[maybe_unused]] std::atomic<bool> *stop_token = nullptr,
-                      [[maybe_unused]] const basis::core::Duration &max_sleep_duration =
+                      [[maybe_unused]] const basis::core::Duration &max_execution_duration =
                           basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     StandardUpdate(transport_manager.get(), coordinator_connector.get());
   }
@@ -234,12 +234,15 @@ public:
   using Unit::Initialize;
   using Unit::Unit;
 
-  virtual void Update(std::atomic<bool> *stop_token, const basis::core::Duration &max_sleep_duration) override {
-    Unit::Update(stop_token, max_sleep_duration);
+  virtual void Update(std::atomic<bool> *stop_token, const basis::core::Duration &max_execution_duration) override {
+    Unit::Update(stop_token, max_execution_duration);
+
+    basis::core::MonotonicTime update_until = basis::core::MonotonicTime::Now() + max_execution_duration;
+
     // TODO: this won't necessarily sleep the max amount - this might be okay but could be confusing
 
     // try to get a single event, with a wait time
-    if (auto event = output_queue->Pop(max_sleep_duration)) {
+    if (auto event = output_queue->Pop(max_execution_duration)) {
       (*event)();
     }
 
@@ -249,6 +252,10 @@ public:
         break;
       }
       (*event)();
+      // TODO: this is somewhat of a kludge to rest of the Unit to Update() - we need to move towards a system where those updates can happen
+      if(update_until < basis::core::MonotonicTime::Now()) {
+        break;
+      }
     }
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
   }

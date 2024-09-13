@@ -5,6 +5,7 @@ add_plugin(basis_plugins_bridges_foxglove src/foxglove_bridge.cpp)
 
 FetchContent_Declare(
   foxglove_websocket
+  PATCH_COMMAND sed -i -e "s/CMAKE_SOURCE_DIR/PROJECT_SOURCE_DIR/g" cpp/foxglove-websocket/CMakeLists.txt
   URL https://github.com/foxglove/ws-protocol/archive/refs/tags/releases/cpp/v1.3.0.zip
 )
 FetchContent_MakeAvailable(foxglove_websocket)
