@@ -6,7 +6,9 @@ handlers:
   PublishAt1Hz:
     sync:
       type: all
-      rate: 1
+      rate: 0.05
     outputs:
       /chatter:
         type: protobuf:StringMessage
+        QoS:
+          MaxQueueSize: 1

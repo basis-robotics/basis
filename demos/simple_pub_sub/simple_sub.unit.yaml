@@ -9,3 +9,5 @@ handlers:
     inputs:
       /chatter:
         type: protobuf:StringMessage
+        QoS:
+          MaxQueueSize: 3
