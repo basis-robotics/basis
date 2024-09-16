@@ -1,5 +1,6 @@
 #pragma once
 
+#include <basis/core/containers/subscriber_callback_queue.h>
 #include <basis/core/transport/subscriber.h>
 #include <basis/core/transport/publisher.h>
 #include <basis/synchronizers/all.h>
@@ -142,7 +143,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
         void SetupPubSub(
             const basis::UnitInitializeOptions& options,
             basis::core::transport::TransportManager* transport_manager,
-            basis::CallbackQueues& subscriber_queues,
+            std::shared_ptr<basis::core::containers::SubscriberOverallQueue> subscriber_queues,
             basis::core::threading::ThreadPool* thread_pool);
 
         void PublishOutput(const Output& output) {
@@ -156,12 +157,14 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 {% if 'rate' in sync %}
 private:
     std::unique_ptr<basis::core::transport::RateSubscriber> rate_subscriber;
+    basis::core::containers::SubscriberQueueSharedPtr rate_subscriber_queue;
     
 public:
 {% endif %}
 {% for input_name, input in inputs.items() %}
         // {{input_name}}
         std::shared_ptr<basis::core::transport::Subscriber<{{input.cpp_message_type}}>> {{input.cpp_topic_name}}_subscriber;
+        basis::core::containers::SubscriberQueueSharedPtr {{input.cpp_topic_name}}_queue;
 {% endfor %}
 {% for output_name, output in outputs.items() %}
         // {{output_name}}

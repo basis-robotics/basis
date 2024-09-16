@@ -223,7 +223,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
   ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
 
-  auto output_queue = std::make_shared<OutputQueue>();
+  auto output_queue = std::make_shared<basis::core::containers::SubscriberQueue>();
 
   transport_manager.Update();
 
@@ -547,7 +547,7 @@ TEST_F(TestTcpTransport, Torture) {
   auto poller = std::make_unique<Epoll>();
   ThreadPool thread_pool(4);
 
-  OutputQueue output_queue;
+  containers::SubscriberQueue output_queue;
 
   /**
    * Create callback, storing in the bind

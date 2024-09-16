@@ -1,6 +1,7 @@
 #pragma once
 #include "basis/core/time.h"
 #include "basis/synchronizers/synchronizer_base.h"
+#include <basis/core/containers/subscriber_callback_queue.h>
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/logging.h>
 #include <basis/core/threading/thread_pool.h>
@@ -44,8 +45,6 @@ template <typename MessageType, bool IS_RAW> struct RawSerializationHelper {
 template <typename MessageType> struct RawSerializationHelper<MessageType, false> {
   using type = SerializationHandler<MessageType>::type;
 };
-
-using CallbackQueues = std::unordered_map<int, std::shared_ptr<basis::core::transport::OutputQueue>>;
 
 template <typename T_DERIVED, bool HAS_RATE, size_t INPUT_COUNT>
 struct HandlerPubSubWithOptions : public HandlerPubSub {
@@ -117,7 +116,7 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
 
   template <int INDEX>
   void SetupInput(const basis::UnitInitializeOptions &options,
-                  basis::core::transport::TransportManager *transport_manager, CallbackQueues &subscriber_queues,
+                  basis::core::transport::TransportManager *transport_manager, basis::core::containers::SubscriberQueueSharedPtr& subscriber_queue,
                   basis::core::threading::ThreadPool *thread_pool) {
     T_DERIVED *derived = ((T_DERIVED *)this);
 
@@ -127,22 +126,21 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
       auto subscriber_member_ptr = std::get<INDEX>(T_DERIVED::subscribers);
 
       constexpr bool is_raw = std::string_view(T_DERIVED::subscription_serializers[INDEX]) == "raw";
-      subscriber_queues[INDEX] = std::make_shared<basis::core::transport::OutputQueue>();
       derived->*subscriber_member_ptr =
           transport_manager->Subscribe<MessageType, typename RawSerializationHelper<MessageType, is_raw>::type>(
               derived->subscription_topics[INDEX], CreateOnMessageCallback<INDEX>(), thread_pool,
-              subscriber_queues[INDEX]);
+              subscriber_queue);
     }
 
     type_erased_callbacks[derived->subscription_topics[INDEX]] = CreateTypeErasedOnMessageCallback<INDEX>();
   }
 
   void SetupInputs(const basis::UnitInitializeOptions &options,
-                   basis::core::transport::TransportManager *transport_manager, CallbackQueues &subscriber_queues,
+                   basis::core::transport::TransportManager *transport_manager, basis::core::containers::SubscriberQueueSharedPtr *subscriber_queues,
                    basis::core::threading::ThreadPool *thread_pool) {
     // Magic to iterate from 0...INPUT_COUNT, c++ really needs constexpr for
     [&]<std::size_t... I>(std::index_sequence<I...>) {
-      (SetupInput<I>(options, transport_manager, subscriber_queues, thread_pool), ...);
+      (SetupInput<I>(options, transport_manager, subscriber_queues[I], thread_pool), ...);
     }(std::make_index_sequence<INPUT_COUNT>());
   }
 };
@@ -194,7 +192,7 @@ public:
   [[nodiscard]] std::shared_ptr<core::transport::Subscriber<T_MSG>>
   Subscribe(std::string_view topic, core::transport::SubscriberCallback<T_MSG> callback,
             basis::core::threading::ThreadPool *work_thread_pool,
-            std::shared_ptr<core::transport::OutputQueue> output_queue = nullptr,
+            basis::core::containers::SubscriberQueueSharedPtr output_queue = nullptr,
             core::serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     return transport_manager->Subscribe<T_MSG, T_Serializer>(topic, std::move(callback), work_thread_pool, output_queue,
                                                              std::move(message_type));
@@ -238,12 +236,7 @@ public:
     Unit::Update(max_sleep_duration);
     // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing
 
-    const size_t num_queues = subscriber_queues.size();
-    if (num_queues > 0) {
-      const basis::core::Duration duration_per_queue =
-          basis::core::Duration::FromNanoseconds(max_sleep_duration.nsecs / num_queues);
-      UpdateQueues(subscriber_queues, duration_per_queue);
-    }
+    subscriber_queues->ProcessCallbacks(max_sleep_duration);
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
   }
 
@@ -255,19 +248,7 @@ public:
   }
 
 protected:
-  void UpdateQueues(CallbackQueues &queues, const basis::core::Duration &max_sleep_duration) {
-    // try to get a single event, with a wait time
-    for (auto [it, q] : queues) {
-      if (auto event = q->Pop(max_sleep_duration)) {
-        (*event)();
-      }
-      while (auto event = q->Pop()) {
-        (*event)();
-      }
-    }
-  }
-
-  CallbackQueues subscriber_queues;
+  std::shared_ptr<basis::core::containers::SubscriberOverallQueue> subscriber_queues = std::make_shared<basis::core::containers::SubscriberOverallQueue>();
   basis::core::threading::ThreadPool thread_pool{4};
 };
 

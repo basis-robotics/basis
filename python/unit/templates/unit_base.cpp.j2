@@ -24,19 +24,22 @@ namespace {{handler_name}} {
     void PubSub::SetupPubSub(
         const basis::UnitInitializeOptions& options,
         basis::core::transport::TransportManager* transport_manager,
-        basis::CallbackQueues& subscriber_queues,
+        std::shared_ptr<basis::core::containers::SubscriberOverallQueue> subscriber_queues,
         basis::core::threading::ThreadPool* thread_pool) {
     {% if 'rate' in handler.sync %}
         rate_duration = basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{handler.sync.rate}}));
     {% endif %}
 
-    SetupInputs(options, transport_manager, subscriber_queues, thread_pool);
-
-    {% for input_it in handler.inputs.values() %}
-        {% if 'QoS' in input_it %}
-    subscriber_queues[{{loop.index0}}]->SetMaxSize({{input_it['QoS']['MaxQueueSize']}});
-        {% endif %}
-    {% endfor %}
+    std::array<basis::core::containers::SubscriberQueueSharedPtr, {{handler.inputs|length}}> queues {
+    {%- for input_it in handler.inputs.values() %}
+        {%- if 'QoS' in input_it %}
+      std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, {{input_it['QoS']['MaxQueueSize']}}),
+        {%- else %}
+      std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, 0),
+        {%- endif %}
+    {%- endfor %}
+    };
+    SetupInputs(options, transport_manager, queues.data(), thread_pool);
 
     outputs = {
         {% for output_name in handler.outputs.keys() %}
@@ -56,14 +59,12 @@ namespace {{handler_name}} {
     {% endif %}
     {% endfor %}
     {% if 'rate' in handler.sync %}
-    
-    std::shared_ptr<basis::core::transport::OutputQueue> rate_subscriber_queue = std::make_shared<basis::core::transport::OutputQueue>();
-    subscriber_queues[input_count] = rate_subscriber_queue;
+    rate_subscriber_queue = std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, 0);
     if(options.create_subscribers) {
         rate_subscriber = std::make_unique<basis::core::transport::RateSubscriber>(
             *rate_duration,
-            [this, rate_subscriber_queue](basis::core::MonotonicTime time) {
-            rate_subscriber_queue->Emplace([this, time]() {
+            [this](basis::core::MonotonicTime time) {
+            rate_subscriber_queue->AddCallback([this, time]() {
                 OnRateSubscriber(time);
             });
             }
