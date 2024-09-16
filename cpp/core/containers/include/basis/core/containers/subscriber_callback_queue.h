@@ -1,9 +1,9 @@
 
 #pragma once
+
 #include <chrono>
 #include <condition_variable>
 #include <deque>
-#include <iostream> // TODO for debugging only
 #include <functional>
 #include <list>
 #include <memory>
@@ -14,22 +14,16 @@
 namespace basis::core::containers {
 
 class SubscriberOverallQueue {
-public:
-  // Add a callback to the overall queue
-  void AddCallback(const std::shared_ptr<std::function<void()>> &cb_ptr) {
-    {
-      std::lock_guard<std::mutex> lock(mutex);
-      queue.emplace_back(cb_ptr); // Store as weak_ptr
-    }
-    cv.notify_one(); // Notify that a new callback is available
-  }
+  friend class SubscriberQueue;
 
+public:
   // Process callbacks, waiting for new items or until timeout
   void ProcessCallbacks(const basis::core::Duration &max_sleep_duration) {
     std::unique_lock<std::mutex> lock(mutex);
-  
+
     // Wait until notified or timeout
-    cv.wait_for(lock, std::chrono::duration<double>(max_sleep_duration.ToSeconds()), [this]() { return !queue.empty(); });
+    cv.wait_for(lock, std::chrono::duration<double>(max_sleep_duration.ToSeconds()),
+                [this]() { return !queue.empty(); });
 
     if (queue.empty()) {
       // No callbacks to process, return
@@ -51,6 +45,14 @@ public:
   }
 
 private:
+  void AddCallback(const std::shared_ptr<std::function<void()>> &cb_ptr) {
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      queue.emplace_back(cb_ptr);
+    }
+    cv.notify_one();
+  }
+
   std::list<std::weak_ptr<std::function<void()>>> queue; // Stores weak_ptrs to callbacks
   std::mutex mutex;                                      // Mutex to protect the queue
   std::condition_variable cv;                            // Condition variable to signal when new callbacks are added
@@ -58,7 +60,6 @@ private:
 
 class SubscriberQueue {
 public:
-  // Constructor: associates with the SubscriberOverallQueue and sets the limit
   SubscriberQueue(std::shared_ptr<SubscriberOverallQueue> overall_queue, size_t limit)
       : overall_queue(std::move(overall_queue)), limit(limit) {}
 
@@ -79,7 +80,7 @@ public:
       EnforceLimit();
     }
 
-    overall_queue->AddCallback(cb_ptr); // Pass shared_ptr to SubscriberOverallQueue
+    overall_queue->AddCallback(cb_ptr);
   }
 
 private:
@@ -88,12 +89,8 @@ private:
       return;
     }
 
-    if (callbacks.size() > limit) {
-      std::cerr << "SubscriberQueue limit reached " << callbacks.size() << " --> " << limit << std::endl;
-    }
     while (callbacks.size() > limit) {
-      // Remove the oldest callback
-      callbacks.pop_front(); // shared_ptr destroyed here, possibly destroying the callback
+      callbacks.pop_front();
     }
   }
 
@@ -105,4 +102,4 @@ private:
 
 using SubscriberQueueSharedPtr = std::shared_ptr<SubscriberQueue>;
 
-}
+} // namespace basis::core::containers
