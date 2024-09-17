@@ -22,16 +22,6 @@ public:
   void Emplace(T &&item) {
     {
       std::lock_guard lock(queue_mutex);
-      if (max_size > 0) {
-        if (queue.size() >= max_size) {
-          // TODO: only for debugging
-          std::cerr << "Queue full " << queue.size() << "/" << max_size << ", dropping item" << std::endl;
-        }
-        while (queue.size() >= max_size) {
-          queue.pop();
-        }
-      }
-
       queue.emplace(std::move(item));
     }
     queue_cv.notify_one();
@@ -60,24 +50,12 @@ public:
     return ret;
   }
 
-  void SetMaxSize(size_t size) {
-    std::unique_lock lock(queue_mutex);
-
-    const size_t prev_max_size = max_size;
-    max_size = size;
-    if (max_size < prev_max_size) {
-      while(queue.size() > max_size) {
-        queue.pop();
-      }
-    }
-  }
 
   // todo: add PopAll()
 
   std::mutex queue_mutex;
   std::condition_variable queue_cv;
   std::queue<T> queue;
-  size_t max_size = 0;
 };
 
 } // namespace basis::core::containers

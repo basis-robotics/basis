@@ -31,7 +31,10 @@ public:
   /**
    * Construct a sender, given an already created+valid socket.
    */
-  TcpSender(core::networking::TcpSocket socket) : TcpConnection(std::move(socket)) { StartThread(); }
+  TcpSender(core::networking::TcpSocket socket, size_t max_queue_size = 0)
+      : TcpConnection(std::move(socket)), max_queue_size(max_queue_size) {
+    StartThread();
+  }
 
   /**
    * Destruct.

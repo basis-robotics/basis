@@ -223,7 +223,8 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_EQ(recv_msg->GetPayload().size(), sizeof(TestStruct));
   ASSERT_EQ(memcmp(recv_msg->GetPayload().data(), send_msg.get(), sizeof(TestStruct)), 0);
 
-  auto output_queue = std::make_shared<basis::core::containers::SubscriberQueue>();
+  auto overall_queue = std::make_shared<basis::core::containers::SubscriberOverallQueue>();
+  auto output_queue = std::make_shared<basis::core::containers::SubscriberQueue>(overall_queue, 0);
 
   transport_manager.Update();
 
@@ -274,7 +275,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_EQ(callback_times, 1);
 
   // Check queue subscriber
-  auto event = output_queue->Pop(basis::core::Duration::FromSecondsNanoseconds(10, 0));
+  auto event = overall_queue->Pop(basis::core::Duration::FromSecondsNanoseconds(10, 0));
   ASSERT_NE(event, std::nullopt);
   (*event)();
   ASSERT_EQ(callback_times, 2);
@@ -547,7 +548,8 @@ TEST_F(TestTcpTransport, Torture) {
   auto poller = std::make_unique<Epoll>();
   ThreadPool thread_pool(4);
 
-  containers::SubscriberQueue output_queue;
+  auto overall_queue = std::make_shared<basis::core::containers::SubscriberOverallQueue>();
+  basis::core::containers::SubscriberQueue output_queue(overall_queue, 0);
 
   /**
    * Create callback, storing in the bind
@@ -581,7 +583,7 @@ TEST_F(TestTcpTransport, Torture) {
         // OutputQueueEvent event = {
         //     .topic_name = channel_name, .packet = std::move(msg), .callback = TypeErasedSubscriberCallback()};
         //  todo
-        output_queue.Emplace([]() {});
+        output_queue.AddCallback([]() {});
 
         // TODO: peek
         break;
@@ -661,14 +663,14 @@ TEST_F(TestTcpTransport, Torture) {
   spdlog::warn("Done sending, waiting now");
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  spdlog::warn("Done waiting, queue size is {}", output_queue.Size());
+  spdlog::warn("Done waiting, queue size is {}", overall_queue->Size());
 
-  ASSERT_EQ(output_queue.Size(), MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT);
+  ASSERT_EQ(overall_queue->Size(), MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT);
 
   std::unordered_map<std::string, size_t> counts;
 
   for (int i = 0; i < MESSAGES_PER_SENDER * RECEIVERS_PER_SENDER * SENDER_COUNT; i++) {
-    auto event = output_queue.Pop();
+    auto event = overall_queue->Pop();
     ASSERT_NE(event, std::nullopt);
     // std::string hello = "Hello, World! " + event->topic_name;
     // ASSERT_STREQ(hello.c_str(), (char *)event->packet->GetPayload().data());
@@ -703,7 +705,7 @@ TEST_F(TestTcpTransport, Torture) {
     poller->RemoveFd(r->GetSocket().GetFd());
   }
   spdlog::warn("Done removing fds");
-  spdlog::warn("queue size is {}", output_queue.Size());
+  spdlog::warn("queue size is {}", overall_queue->Size());
   spdlog::warn("Exiting");
 }
 

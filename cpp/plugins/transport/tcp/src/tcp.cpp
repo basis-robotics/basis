@@ -11,7 +11,6 @@ void TcpSender::StartThread() {
 
   send_thread = std::thread([this]() {
     while (!stop_thread) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       std::vector<std::shared_ptr<const core::transport::MessagePacket>> buffer;
       {
         std::unique_lock lock(send_mutex);
@@ -101,8 +100,7 @@ size_t TcpPublisher::CheckForNewSubscriptions() {
 
   while (auto maybe_sender_socket = listen_socket.Accept(0)) {
     std::lock_guard lock(senders_mutex);
-    auto sender = std::make_unique<TcpSender>(std::move(maybe_sender_socket.value()));
-    sender->SetMaxQueueSize(max_queue_size);
+    auto sender = std::make_unique<TcpSender>(std::move(maybe_sender_socket.value()), max_queue_size);
     senders.emplace_back(std::move(sender));
     num++;
   }

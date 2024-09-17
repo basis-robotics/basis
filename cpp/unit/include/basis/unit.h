@@ -235,8 +235,16 @@ public:
   virtual void Update(const basis::core::Duration &max_sleep_duration) override {
     Unit::Update(max_sleep_duration);
     // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing
+    // try to get a single event, with a wait time
+    if (auto event = subscriber_queues->Pop(max_sleep_duration)) {
+      (*event)();
+    }
 
-    subscriber_queues->ProcessCallbacks(max_sleep_duration);
+    // Try to drain the buffer of events
+    while (auto event = subscriber_queues->Pop()) {
+      (*event)();
+    }
+
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
   }
 

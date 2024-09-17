@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
-#include <list>
+#include <queue>
 #include <memory>
 #include <mutex>
 
@@ -17,44 +17,41 @@ class SubscriberOverallQueue {
   friend class SubscriberQueue;
 
 public:
-  // Process callbacks, waiting for new items or until timeout
-  void ProcessCallbacks(const basis::core::Duration &max_sleep_duration) {
-    std::unique_lock<std::mutex> lock(mutex);
 
-    // Wait until notified or timeout
-    cv.wait_for(lock, std::chrono::duration<double>(max_sleep_duration.ToSeconds()),
-                [this]() { return !queue.empty(); });
-
+  std::optional<std::function<void()>> Pop(const Duration &sleep = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
+    std::unique_lock lock(mutex);
     if (queue.empty()) {
-      // No callbacks to process, return
-      return;
+      cv.wait_for(lock, std::chrono::duration<double>(sleep.ToSeconds()), [this] { return !queue.empty(); });
     }
 
-    // Swap the queue with a local one
-    std::list<std::weak_ptr<std::function<void()>>> callbacks_to_process;
-    callbacks_to_process.swap(queue);
-    lock.unlock();
-
-    // Process callbacks outside the lock
-    for (auto &weak_cb_ptr : callbacks_to_process) {
-      if (auto cb_ptr = weak_cb_ptr.lock()) {
-        // Callback is still valid
-        (*cb_ptr)();
+    std::optional<std::function<void()>> ret;
+    if (!queue.empty()) {
+      auto front = queue.front();
+      if (auto front_ptr = front.lock()) {
+        ret = std::move(*front_ptr);
       }
+      queue.pop();
     }
+
+    return ret;
+  }
+
+  size_t Size() const {
+    std::lock_guard lock(mutex);
+    return queue.size();
   }
 
 private:
   void AddCallback(const std::shared_ptr<std::function<void()>> &cb_ptr) {
     {
       std::lock_guard<std::mutex> lock(mutex);
-      queue.emplace_back(cb_ptr);
+      queue.emplace(cb_ptr);
     }
     cv.notify_one();
   }
 
-  std::list<std::weak_ptr<std::function<void()>>> queue; // Stores weak_ptrs to callbacks
-  std::mutex mutex;                                      // Mutex to protect the queue
+  std::queue<std::weak_ptr<std::function<void()>>> queue; // Stores weak_ptrs to callbacks
+  mutable std::mutex mutex;                                      // Mutex to protect the queue
   std::condition_variable cv;                            // Condition variable to signal when new callbacks are added
 };
 
