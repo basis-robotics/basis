@@ -24,16 +24,18 @@ public:
       cv.wait_for(lock, std::chrono::duration<double>(sleep.ToSeconds()), [this] { return !queue.empty(); });
     }
 
-    std::optional<std::function<void()>> ret;
-    if (!queue.empty()) {
+    while (!queue.empty()) {
       auto front = queue.front();
       if (auto front_ptr = front.lock()) {
-        ret = std::move(*front_ptr);
+        queue.pop();
+        return std::move(*front_ptr);
       }
-      queue.pop();
+      else {
+        queue.pop();
+      }
     }
 
-    return ret;
+    return std::nullopt;
   }
 
   size_t Size() const {
