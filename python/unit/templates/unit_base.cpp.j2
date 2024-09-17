@@ -32,11 +32,7 @@ namespace {{handler_name}} {
 
     std::array<basis::core::containers::SubscriberQueueSharedPtr, {{handler.inputs|length}}> queues {
     {%- for input_it in handler.inputs.values() %}
-        {%- if 'QoS' in input_it %}
-      std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, {{input_it['QoS']['MaxQueueSize']}}),
-        {%- else %}
-      std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, 0),
-        {%- endif %}
+      std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, {{input_it['qos']['depth']}}),
     {%- endfor %}
     };
     SetupInputs(options, transport_manager, queues.data(), thread_pool);
@@ -54,9 +50,7 @@ namespace {{handler_name}} {
         transport_manager->Advertise<{{output.cpp_message_type}}>
     {% endif %}
         ("{{topic_name}}");
-    {% if 'QoS' in output %}
-        {{output.cpp_topic_name}}_publisher->SetMaxQueueSize({{output['QoS']['MaxQueueSize']}});
-    {% endif %}
+        {{output.cpp_topic_name}}_publisher->SetMaxQueueSize({{output['qos']['depth']}});
     {% endfor %}
     {% if 'rate' in handler.sync %}
     rate_subscriber_queue = std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, 0);

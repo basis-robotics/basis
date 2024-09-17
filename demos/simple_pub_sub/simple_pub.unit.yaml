@@ -10,5 +10,5 @@ handlers:
     outputs:
       /chatter:
         type: protobuf:StringMessage
-        QoS:
-          MaxQueueSize: 1
+        qos:
+          depth: 1
