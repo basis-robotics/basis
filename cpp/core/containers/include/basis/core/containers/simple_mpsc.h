@@ -50,7 +50,6 @@ public:
     return ret;
   }
 
-
   // todo: add PopAll()
 
   std::mutex queue_mutex;

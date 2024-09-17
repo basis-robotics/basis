@@ -22,7 +22,6 @@ TEST(TestCoordinator, BasicTest) {
   spdlog::cfg::load_env_levels();
 
   basis::core::transport::Coordinator coordinator = *basis::core::transport::Coordinator::Create();
-return;
 
   auto connector = basis::core::transport::CoordinatorConnector::Create();
   ASSERT_NE(connector, nullptr);
