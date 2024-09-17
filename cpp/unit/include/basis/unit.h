@@ -245,7 +245,6 @@ public:
 
     // Try to drain the buffer of events
     while (auto event = overall_queue->Pop()) {
-      BASIS_LOG_INFO("overall_queue->Pop() found an event");
       (*event)();
       // TODO: this is somewhat of a kludge to rest of the Unit to Update() - we need to move towards a system where those updates can happen
       if(update_until < basis::core::MonotonicTime::Now()) {
