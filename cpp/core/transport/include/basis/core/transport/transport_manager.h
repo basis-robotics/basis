@@ -274,9 +274,6 @@ protected:
                            std::shared_ptr<basis::core::transport::MessagePacket>
                                message) { output_queue->AddCallback([callback, message]() { callback(message); }); }
                      : callback;
-    if (output_queue) {
-      BASIS_LOG_INFO("HAS output_queue for topic {}", topic);
-    }
     
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Subscribe(topic, outer_callback, work_thread_pool, message_type));
