@@ -67,8 +67,6 @@ private:
   size_t progress_counter = 0;
 };
 
-using OutputQueue = containers::SimpleMPSCQueue<std::function<void()>>;
-
 class Transport {
 public:
   Transport() = default;

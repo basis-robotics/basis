@@ -72,6 +72,7 @@ struct Duration : public TimeBase {
     return {TimeBase::SecondsToNanoseconds(seconds) + nanoseconds};
   }
   static Duration FromSeconds(double seconds) { return {TimeBase::SecondsToNanoseconds(seconds)}; }
+  static Duration FromNanoseconds(int64_t nanoseconds) { return {nanoseconds}; }
 
 
   std::pair<int32_t, int32_t> ToRosDuration() { return {nsecs / NSECS_IN_SECS, nsecs % NSECS_IN_SECS}; }

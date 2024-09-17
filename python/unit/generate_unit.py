@@ -45,6 +45,13 @@ def generate_unit(unit_path, output_dir, source_dir):
     
     # todo: set default sync to 'all'
     
+    qos_defaults = {'depth': 10}
+    def merge_qos_defaults(topic: dict, defaults: dict) -> None:
+        if 'qos' in topic:
+            topic['qos'] = {**defaults, **topic['qos']}
+        else:
+            topic['qos'] = defaults
+        
     # Write handler headers
     for handler_name, handler in unit['handlers'].items():
         handler.setdefault('inputs', {})
@@ -56,6 +63,9 @@ def generate_unit(unit_path, output_dir, source_dir):
             cpp_topic_name = topic_name.lstrip('/').replace('/', '_')
             io['cpp_topic_name'] = cpp_topic_name
             type_serializer, cpp_type = io['type'].split(':', 1)
+
+            merge_qos_defaults(io, qos_defaults)
+
             # Kludge, fixup protobuf type names
             cpp_type = cpp_type.replace(".", "::")
 

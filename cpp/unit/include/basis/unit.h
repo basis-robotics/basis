@@ -1,6 +1,7 @@
 #pragma once
 #include "basis/core/time.h"
 #include "basis/synchronizers/synchronizer_base.h"
+#include <basis/core/containers/subscriber_callback_queue.h>
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/logging.h>
 #include <basis/core/threading/thread_pool.h>
@@ -115,8 +116,7 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
 
   template <int INDEX>
   void SetupInput(const basis::UnitInitializeOptions &options,
-                  basis::core::transport::TransportManager *transport_manager,
-                  std::shared_ptr<basis::core::transport::OutputQueue> output_queue,
+                  basis::core::transport::TransportManager *transport_manager, basis::core::containers::SubscriberQueueSharedPtr& subscriber_queue,
                   basis::core::threading::ThreadPool *thread_pool) {
     T_DERIVED *derived = ((T_DERIVED *)this);
 
@@ -126,22 +126,21 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
       auto subscriber_member_ptr = std::get<INDEX>(T_DERIVED::subscribers);
 
       constexpr bool is_raw = std::string_view(T_DERIVED::subscription_serializers[INDEX]) == "raw";
-
       derived->*subscriber_member_ptr =
           transport_manager->Subscribe<MessageType, typename RawSerializationHelper<MessageType, is_raw>::type>(
-              derived->subscription_topics[INDEX], CreateOnMessageCallback<INDEX>(), thread_pool, output_queue);
+              derived->subscription_topics[INDEX], CreateOnMessageCallback<INDEX>(), thread_pool,
+              subscriber_queue);
     }
 
     type_erased_callbacks[derived->subscription_topics[INDEX]] = CreateTypeErasedOnMessageCallback<INDEX>();
   }
 
   void SetupInputs(const basis::UnitInitializeOptions &options,
-                   basis::core::transport::TransportManager *transport_manager,
-                   std::shared_ptr<basis::core::transport::OutputQueue> output_queue,
+                   basis::core::transport::TransportManager *transport_manager, std::array<basis::core::containers::SubscriberQueueSharedPtr, INPUT_COUNT>& subscriber_queues,
                    basis::core::threading::ThreadPool *thread_pool) {
     // Magic to iterate from 0...INPUT_COUNT, c++ really needs constexpr for
     [&]<std::size_t... I>(std::index_sequence<I...>) {
-      (SetupInput<I>(options, transport_manager, output_queue, thread_pool), ...);
+      (SetupInput<I>(options, transport_manager, subscriber_queues[I], thread_pool), ...);
     }(std::make_index_sequence<INPUT_COUNT>());
   }
 };
@@ -194,7 +193,7 @@ public:
   [[nodiscard]] std::shared_ptr<core::transport::Subscriber<T_MSG>>
   Subscribe(std::string_view topic, core::transport::SubscriberCallback<T_MSG> callback,
             basis::core::threading::ThreadPool *work_thread_pool,
-            std::shared_ptr<core::transport::OutputQueue> output_queue = nullptr,
+            basis::core::containers::SubscriberQueueSharedPtr output_queue = nullptr,
             core::serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     return transport_manager->Subscribe<T_MSG, T_Serializer>(topic, std::move(callback), work_thread_pool, output_queue,
                                                              std::move(message_type));
@@ -235,28 +234,25 @@ public:
   using Unit::Unit;
 
   virtual void Update(std::atomic<bool> *stop_token, const basis::core::Duration &max_execution_duration) override {
-    Unit::Update(stop_token, max_execution_duration);
-
     basis::core::MonotonicTime update_until = basis::core::MonotonicTime::Now() + max_execution_duration;
 
-    // TODO: this won't necessarily sleep the max amount - this might be okay but could be confusing
-
+    Unit::Update(stop_token, max_execution_duration);
+    // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing
     // try to get a single event, with a wait time
-    if (auto event = output_queue->Pop(max_execution_duration)) {
+    if (auto event = overall_queue->Pop(max_execution_duration)) {
       (*event)();
     }
 
     // Try to drain the buffer of events
-    while (auto event = output_queue->Pop()) {
-      if ((stop_token != nullptr && *stop_token)) {
-        break;
-      }
+    while (auto event = overall_queue->Pop()) {
+      BASIS_LOG_INFO("overall_queue->Pop() found an event");
       (*event)();
       // TODO: this is somewhat of a kludge to rest of the Unit to Update() - we need to move towards a system where those updates can happen
       if(update_until < basis::core::MonotonicTime::Now()) {
         break;
       }
     }
+
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
   }
 
@@ -267,8 +263,8 @@ public:
     return Unit::Subscribe<T_MSG, T_Serializer>(topic, callback, &thread_pool, nullptr, std::move(message_type));
   }
 
-  std::shared_ptr<basis::core::transport::OutputQueue> output_queue =
-      std::make_shared<basis::core::transport::OutputQueue>();
+protected:
+  std::shared_ptr<basis::core::containers::SubscriberOverallQueue> overall_queue = std::make_shared<basis::core::containers::SubscriberOverallQueue>();
   basis::core::threading::ThreadPool thread_pool{4};
 };
 

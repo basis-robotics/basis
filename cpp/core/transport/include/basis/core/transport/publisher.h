@@ -38,6 +38,8 @@ public:
   virtual std::string GetConnectionInformation() = 0;
 
   virtual size_t GetSubscriberCount() = 0;
+
+  virtual void SetMaxQueueSize(size_t max_queue_size) = 0;
 };
 
 /**
@@ -54,6 +56,12 @@ public:
   virtual ~PublisherBase() = default;
 
   PublisherInfo GetPublisherInfo();
+
+  void SetMaxQueueSize(size_t max_queue_size) {
+    for (auto &pub : transport_publishers) {
+      pub->SetMaxQueueSize(max_queue_size);
+    }
+  }
 
 protected:
   void PublishRaw(std::shared_ptr<MessagePacket> packet, basis::core::MonotonicTime now) {
