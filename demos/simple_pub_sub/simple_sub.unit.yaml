@@ -9,3 +9,5 @@ handlers:
     inputs:
       /chatter:
         type: protobuf:StringMessage
+        qos:
+          depth: 1

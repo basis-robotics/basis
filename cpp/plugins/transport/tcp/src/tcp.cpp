@@ -40,10 +40,29 @@ void TcpSender::StartThread() {
   });
 }
 
+void TcpSender::SetMaxQueueSize(size_t max_queue_size) {
+  this->max_queue_size = max_queue_size;
+
+  if (max_queue_size > 0) {
+    std::lock_guard lock(send_mutex);
+    while (send_buffer.size() >= max_queue_size)
+      send_buffer.erase(send_buffer.begin());
+  }
+}
+
 void TcpSender::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
   BASIS_LOG_TRACE("Queueing a message of size {}", message->GetPacket().size());
-
   std::lock_guard lock(send_mutex);
+
+  if (max_queue_size > 0) {
+    if (send_buffer.size() >= max_queue_size) {
+      BASIS_LOG_INFO("TcpSender::SendMessage trimming queue {} -> {}", send_buffer.size() + 1, max_queue_size);
+    }
+
+    while (send_buffer.size() >= max_queue_size)
+      send_buffer.erase(send_buffer.begin());
+  }
+
   send_buffer.emplace_back(std::move(message));
   send_cv.notify_one();
 }
@@ -62,6 +81,13 @@ TcpPublisher::TcpPublisher(core::networking::TcpListenSocket listen_socket) : li
 
 uint16_t TcpPublisher::GetPort() { return listen_socket.GetPort(); }
 
+void TcpPublisher::SetMaxQueueSize(size_t max_queue_size) {
+  this->max_queue_size = max_queue_size;
+  for (auto &sender : senders) {
+    sender->SetMaxQueueSize(max_queue_size);
+  }
+}
+
 void TcpPublisher::SendMessage(std::shared_ptr<core::transport::MessagePacket> message) {
   std::lock_guard lock(senders_mutex);
   for (auto &sender : senders) {
@@ -74,7 +100,8 @@ size_t TcpPublisher::CheckForNewSubscriptions() {
 
   while (auto maybe_sender_socket = listen_socket.Accept(0)) {
     std::lock_guard lock(senders_mutex);
-    senders.emplace_back(std::make_unique<TcpSender>(std::move(maybe_sender_socket.value())));
+    auto sender = std::make_unique<TcpSender>(std::move(maybe_sender_socket.value()), max_queue_size);
+    senders.emplace_back(std::move(sender));
     num++;
   }
   return num;

@@ -10,6 +10,7 @@
 #include "subscriber.h"
 
 #include <basis/core/serialization.h>
+#include <basis/core/containers/subscriber_callback_queue.h>
 #include <string>
 #include <string_view>
 
@@ -140,7 +141,7 @@ public:
   [[nodiscard]] std::shared_ptr<SubscriberBase> SubscribeRaw(std::string_view topic,
                                                              TypeErasedSubscriberCallback callback,
                                                              basis::core::threading::ThreadPool *work_thread_pool,
-                                                             std::shared_ptr<core::transport::OutputQueue> output_queue,
+                                                             std::shared_ptr<basis::core::containers::SubscriberQueue> output_queue,
                                                              serialization::MessageTypeInfo message_type) {
     return SubscribeInternal<SubscriberBase>(topic, callback, work_thread_pool, output_queue, message_type, {});
   }
@@ -149,7 +150,7 @@ public:
   [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
   Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
             basis::core::threading::ThreadPool *work_thread_pool,
-            std::shared_ptr<core::transport::OutputQueue> output_queue = nullptr,
+            std::shared_ptr<basis::core::containers::SubscriberQueue> output_queue = nullptr,
             serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
 
@@ -167,7 +168,7 @@ public:
       inproc_subscriber = inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg) {
         if (output_queue) {
 
-          output_queue->Emplace([callback = callback, message = msg.message]() { callback(message); });
+          output_queue->AddCallback([callback = callback, message = msg.message]() { callback(message); });
         } else {
           callback(std::move(msg.message));
         }
@@ -263,7 +264,7 @@ protected:
   template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
   [[nodiscard]] std::shared_ptr<T_SUBSCRIBER> SubscribeInternal(
       std::string_view topic, TypeErasedSubscriberCallback callback,
-      basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<core::transport::OutputQueue> output_queue,
+      basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<containers::SubscriberQueue> output_queue,
       serialization::MessageTypeInfo message_type, std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
@@ -271,9 +272,9 @@ protected:
     TypeErasedSubscriberCallback outer_callback =
         output_queue ? [callback, output_queue](
                            std::shared_ptr<basis::core::transport::MessagePacket>
-                               message) { output_queue->Emplace([callback, message]() { callback(message); }); }
+                               message) { output_queue->AddCallback([callback, message]() { callback(message); }); }
                      : callback;
-
+    
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Subscribe(topic, outer_callback, work_thread_pool, message_type));
     }
