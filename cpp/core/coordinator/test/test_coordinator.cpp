@@ -100,12 +100,6 @@ TEST(TestCoordinator, TestPubSubOrder) {
   TestTransportManager transport_manager;
   transport_manager.RegisterTransport("net_tcp", std::make_unique<TcpTransport>());
 
-  std::atomic<int> callback_times{0};
-  SubscriberCallback<TestRawStruct> callback = [&](std::shared_ptr<const TestRawStruct> t) {
-    spdlog::warn("Got the message {} {} {}", t->foo, t->bar, t->baz);
-    callback_times++;
-  };
-
   auto update = [&](int expected_publishers) {
     // local to transport manager
     {
@@ -139,12 +133,17 @@ TEST(TestCoordinator, TestPubSubOrder) {
     }
   };
 
+
+  std::atomic<int> callback_times{0};
+  TypeErasedSubscriberCallback callback = std::function([&]([[maybe_unused]] std::shared_ptr<MessagePacket> raw_msg) {
+    callback_times++;
+  });
+
   update(0);
   {
 
-    std::shared_ptr<Subscriber<TestRawStruct>> prev_sub =
-        transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
-                                                                                              &work_thread_pool);
+    auto prev_sub =
+        transport_manager.SubscribeRaw("test_struct", callback, &work_thread_pool, nullptr, {});
 
     update(0);
     auto test_publisher =
@@ -155,9 +154,8 @@ TEST(TestCoordinator, TestPubSubOrder) {
     ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
 
     {
-      std::shared_ptr<Subscriber<TestRawStruct>> after_sub =
-          transport_manager.Subscribe<TestRawStruct, basis::core::serialization::RawSerializer>("test_struct", callback,
-                                                                                                &work_thread_pool);
+      auto after_sub =
+          transport_manager.SubscribeRaw("test_struct", callback, &work_thread_pool, nullptr, {});
       update(1);
       ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
       auto send_msg = std::make_shared<const TestRawStruct>();

@@ -5,9 +5,10 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
-#include <queue>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <queue>
 
 #include <basis/core/time.h>
 
