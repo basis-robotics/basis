@@ -77,7 +77,7 @@ bool TcpConnection::Receive(std::byte *buffer, size_t buffer_len, int timeout_s)
       return false;
     }
     if (recv_size < 0) {
-      printf("Error: %i", errno);
+      BASIS_LOG_ERROR("TcpConnection::Receive Error: %i", errno);
       // should disconnect here
       return false;
     }
@@ -91,8 +91,15 @@ bool TcpConnection::Send(const std::byte *data, size_t len) {
   // TODO: this loop should go on a helper on Socket(?)
   while (len) {
     int sent_size = socket.Send(data, len);
-    BASIS_LOG_TRACE("Sent {} bytes", sent_size);
+    BASIS_LOG_TRACE("TCP Sent {} bytes", sent_size);
     if (sent_size < 0) {
+      // Very large sends can cause EAGAIN if we fill the send buffer
+      if(errno == EAGAIN || errno == EWOULDBLOCK) {
+        // We should consider a very small sleep here
+        continue;
+      }
+
+      BASIS_LOG_ERROR("TcpConnection::Send Error: {}", errno);      
       return false;
     }
     len -= sent_size;

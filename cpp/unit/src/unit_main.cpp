@@ -15,7 +15,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   unit->Initialize();
 
   while (true) {
-    unit->Update(basis::core::Duration::FromSecondsNanoseconds(1, 0));
+    unit->Update(nullptr, basis::core::Duration::FromSecondsNanoseconds(1, 0));
   }
 
   return 0;

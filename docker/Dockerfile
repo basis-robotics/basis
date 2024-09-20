@@ -1,15 +1,17 @@
 # Note: all versions will need pinned here
 
 # focal as this is the last version that ROS1 supports
-FROM ubuntu:focal as basis-env
+ARG BASE_IMAGE=ubuntu:focal
+FROM $BASE_IMAGE AS basis-env
 
-LABEL org.opencontainers.image.source https://github.com/basis-robotics/basis
+LABEL org.opencontainers.image.source=https://github.com/basis-robotics/basis
 
 RUN rm -f /etc/apt/apt.conf.d/docker-clean
 # Basic dependencies
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
 <<EOF
+    set -e
     apt update
     apt install --no-install-recommends -y \
         sudo \
@@ -39,6 +41,9 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1A127079A92F09ED
 EOF
 
+# nvidia's image preinstalls cmake, nuke it
+RUN rm /usr/local/bin/cmake || true
+
 ARG LLVM_VERSION=18
 
 # Upgrade clang
@@ -48,6 +53,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     apt install clang-format-${LLVM_VERSION}
 
 RUN <<EOF
+    set -e
 update-alternatives \
     --install /usr/bin/llvm-config       llvm-config      /usr/bin/llvm-config-${LLVM_VERSION} 100 \
     --slave   /usr/bin/llvm-ar           llvm-ar          /usr/bin/llvm-ar-${LLVM_VERSION} \
@@ -92,8 +98,8 @@ update-alternatives \
     --slave   /usr/bin/lldb                  lldb                  /usr/bin/lldb-${LLVM_VERSION} \
     --slave   /usr/bin/lldb-server           lldb-server           /usr/bin/lldb-server-${LLVM_VERSION}
 EOF
-ENV CC clang
-ENV CXX clang++
+ENV CC=clang
+ENV CXX=clang++
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
@@ -116,6 +122,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 RUN useradd -ms /bin/bash basis
 RUN adduser basis sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+# Grant webcam permissions
+RUN usermod -a -G video basis
 
 # Install python dependencies
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
@@ -124,18 +132,22 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 RUN curl -s https://bootstrap.pypa.io/get-pip.py |  python3
 RUN pip -q install jsonschema pyyaml jinja2
 
+
 USER basis
+
+RUN echo "source /basis/bash/source_env.sh" >> /home/basis/.bashrc
 
 WORKDIR /basis
 
 # Basis image with ROS dependencies added in
-FROM basis-env as basis-env-ros
+FROM basis-env AS basis-env-ros
 
 USER root
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
 <<EOF
+    set -e
     sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
     curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
     apt update

@@ -136,7 +136,7 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
   }
 
   void SetupInputs(const basis::UnitInitializeOptions &options,
-                   basis::core::transport::TransportManager *transport_manager, basis::core::containers::SubscriberQueueSharedPtr *subscriber_queues,
+                   basis::core::transport::TransportManager *transport_manager, std::array<basis::core::containers::SubscriberQueueSharedPtr, INPUT_COUNT>& subscriber_queues,
                    basis::core::threading::ThreadPool *thread_pool) {
     // Magic to iterate from 0...INPUT_COUNT, c++ really needs constexpr for
     [&]<std::size_t... I>(std::index_sequence<I...>) {
@@ -176,7 +176,8 @@ public:
   // override this, should be called once by main()
   virtual void Initialize(const UnitInitializeOptions &options = {}) = 0;
 
-  virtual void Update([[maybe_unused]] const basis::core::Duration &max_sleep_duration =
+  virtual void Update([[maybe_unused]] std::atomic<bool> *stop_token = nullptr,
+                      [[maybe_unused]] const basis::core::Duration &max_execution_duration =
                           basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
     StandardUpdate(transport_manager.get(), coordinator_connector.get());
   }
@@ -232,17 +233,23 @@ public:
   using Unit::Initialize;
   using Unit::Unit;
 
-  virtual void Update(const basis::core::Duration &max_sleep_duration) override {
-    Unit::Update(max_sleep_duration);
+  virtual void Update(std::atomic<bool> *stop_token, const basis::core::Duration &max_execution_duration) override {
+    basis::core::MonotonicTime update_until = basis::core::MonotonicTime::Now() + max_execution_duration;
+
+    Unit::Update(stop_token, max_execution_duration);
     // TODO: this won't neccessarily sleep the max amount - this might be okay but could be confusing
     // try to get a single event, with a wait time
-    if (auto event = subscriber_queues->Pop(max_sleep_duration)) {
+    if (auto event = overall_queue->Pop(max_execution_duration)) {
       (*event)();
     }
 
     // Try to drain the buffer of events
-    while (auto event = subscriber_queues->Pop()) {
+    while (auto event = overall_queue->Pop()) {
       (*event)();
+      // TODO: this is somewhat of a kludge to rest of the Unit to Update() - we need to move towards a system where those updates can happen
+      if(update_until < basis::core::MonotonicTime::Now()) {
+        break;
+      }
     }
 
     // todo: it's possible that we may want to periodically schedule Update() for the output queue
@@ -256,7 +263,7 @@ public:
   }
 
 protected:
-  std::shared_ptr<basis::core::containers::SubscriberOverallQueue> subscriber_queues = std::make_shared<basis::core::containers::SubscriberOverallQueue>();
+  std::shared_ptr<basis::core::containers::SubscriberOverallQueue> overall_queue = std::make_shared<basis::core::containers::SubscriberOverallQueue>();
   basis::core::threading::ThreadPool thread_pool{4};
 };
 

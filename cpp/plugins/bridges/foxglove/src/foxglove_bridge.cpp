@@ -47,8 +47,8 @@ FoxgloveBridge::~FoxgloveBridge() {
 
 void FoxgloveBridge::Initialize([[maybe_unused]] const UnitInitializeOptions &options) { init(); }
 
-void FoxgloveBridge::Update(const basis::core::Duration &max_sleep_duration) {
-  SingleThreadedUnit::Update(max_sleep_duration);
+void FoxgloveBridge::Update(std::atomic<bool> *stop_token, const basis::core::Duration &max_sleep_duration) {
+  SingleThreadedUnit::Update(stop_token, max_sleep_duration);
   updateAdvertisedTopics();
 }
 
@@ -363,6 +363,10 @@ void FoxgloveBridge::updateAdvertisedTopics() {
   // Add new channels for new topics
   std::vector<::foxglove::ChannelWithoutId> channelsToAdd;
   for (const auto &topicAndDatatype : latestTopics) {
+    if(topicAndDatatype.schema_serializer == "raw") {
+       // For now - skip any raw channels, later it would be good to work with Foxglove to show them as existing but unsubscribable
+      continue;
+    }
     if (std::find_if(advertisedTopics.begin(), advertisedTopics.end(),
                      [topicAndDatatype](const auto &channelIdAndChannel) {
                        const auto &channel = channelIdAndChannel.second;
@@ -387,18 +391,19 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     const std::string schemaId = topicAndDatatype.schema_serializer + ":" + topicAndDatatype.schema;
     const auto msgDescription = coordinator_connector->TryGetSchema(schemaId);
 
-    if (msgDescription) {
-      std::string schema =
-          msgDescription->schema_efficient().empty() ? msgDescription->schema() : msgDescription->schema_efficient();
-      newChannel.schema = ::foxglove::base64Encode(schema);
-      channelsToAdd.push_back(newChannel);
-      BASIS_LOG_INFO("newChannel -- topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic,
-                     newChannel.schemaName, newChannel.encoding, newChannel.schema);
-    } else {
-      coordinator_connector->RequestSchemas({&schemaId, 1});
+    if (!msgDescription) {
+      BASIS_LOG_INFO("Could not find definition for type {}, requesting from Coordinator...", topicAndDatatype.schema);
 
-      BASIS_LOG_WARN("Could not find definition for type {}", topicAndDatatype.schema);
+      coordinator_connector->RequestSchemas({&schemaId, 1});
+      continue;
     }
+
+    std::string schema =
+          msgDescription->schema_efficient().empty() ? msgDescription->schema() : msgDescription->schema_efficient();
+    newChannel.schema = ::foxglove::base64Encode(schema);
+    channelsToAdd.push_back(newChannel);
+    BASIS_LOG_DEBUG("newChannel -- topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic,
+                  newChannel.schemaName, newChannel.encoding, newChannel.schema);
   }
 
   const auto channelIds = server->addChannels(channelsToAdd);

@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON PARENT_SCOPE)
 
+# Enforce c++20 even for FetchContent dependencies
+# This is only needed under l4t cuda image, which changes headers around in a weird manner
+add_compile_options("--std=c++20")
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Workaround for std::expected not available in clang
   add_compile_options(

@@ -24,7 +24,7 @@ namespace {{handler_name}} {
     void PubSub::SetupPubSub(
         const basis::UnitInitializeOptions& options,
         basis::core::transport::TransportManager* transport_manager,
-        std::shared_ptr<basis::core::containers::SubscriberOverallQueue> subscriber_queues,
+        std::shared_ptr<basis::core::containers::SubscriberOverallQueue> overall_queue,
         basis::core::threading::ThreadPool* thread_pool) {
     {% if 'rate' in handler.sync %}
         rate_duration = basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{handler.sync.rate}}));
@@ -32,10 +32,10 @@ namespace {{handler_name}} {
 
     std::array<basis::core::containers::SubscriberQueueSharedPtr, {{handler.inputs|length}}> queues {
     {%- for input_it in handler.inputs.values() %}
-      std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, {{input_it['qos']['depth']}}),
+      std::make_shared<basis::core::containers::SubscriberQueue>(overall_queue, {{input_it['qos']['depth']}}),
     {%- endfor %}
     };
-    SetupInputs(options, transport_manager, queues.data(), thread_pool);
+    SetupInputs(options, transport_manager, queues, thread_pool);
 
     outputs = {
         {% for output_name in handler.outputs.keys() %}
@@ -53,16 +53,20 @@ namespace {{handler_name}} {
         {{output.cpp_topic_name}}_publisher->SetMaxQueueSize({{output['qos']['depth']}});
     {% endfor %}
     {% if 'rate' in handler.sync %}
-    rate_subscriber_queue = std::make_shared<basis::core::containers::SubscriberQueue>(subscriber_queues, 0);
     if(options.create_subscribers) {
         rate_subscriber = std::make_unique<basis::core::transport::RateSubscriber>(
             *rate_duration,
-            [this](basis::core::MonotonicTime time) {
-            rate_subscriber_queue->AddCallback([this, time]() {
-                OnRateSubscriber(time);
+            [this, overall_queue](basis::core::MonotonicTime time) {
+                // Don't allow more than 1 rate subscriber callback in the queue, to avoid overload
+                // We may eventually want this configurable
+                if(!rate_subscriber_queued_message) {
+                    rate_subscriber_queued_message = std::make_shared<std::function<void()>>([this, time]() {
+                        rate_subscriber_queued_message = nullptr;
+                        OnRateSubscriber(time);
+                    });
+                    overall_queue->AddCallback(rate_subscriber_queued_message);
+                }
             });
-            }
-            );
     }
     {% endif %}
     }

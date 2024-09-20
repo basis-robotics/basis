@@ -8,6 +8,7 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 
 #include "serialization/message_type_info.h"
@@ -121,11 +122,6 @@ public:
     memcpy(span.data(), &message, sizeof(message));
 
     return true;
-  }
-
-  template <typename T_MSG> static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
-    // TODO: this may need a check for alignment - might need to use memcpy instead
-    return std::make_unique<T_MSG>(*reinterpret_cast<const T_MSG *>(bytes.data()));
   }
 };
 

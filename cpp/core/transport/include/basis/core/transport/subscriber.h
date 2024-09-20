@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <thread>
+#include <unordered_map>
 
 class TestTcpTransport;
 
@@ -33,6 +34,12 @@ public:
 
   virtual ~TransportSubscriber() = default;
   const std::string transport_name;
+};
+
+struct Hash128 {
+    size_t operator()(__uint128_t var) const {
+        return std::hash<uint64_t>{}((uint64_t)var ^ (uint64_t)(var >> 64));
+    }
 };
 
 /**
@@ -71,7 +78,7 @@ protected:
    * Map associating a publisher ID to a transport that is assigned to handle it.
    * nullptr is valid and is a sentinal value for the inproc transport.
    */
-  std::unordered_map<__uint128_t, TransportSubscriber *> publisher_id_to_transport_sub;
+  std::unordered_map<__uint128_t, TransportSubscriber *, Hash128> publisher_id_to_transport_sub;
 };
 
 template <typename T_MSG> class Subscriber : public SubscriberBase {

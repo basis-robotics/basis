@@ -5,6 +5,10 @@
 
 #include <vector>
 
+#include <spdlog/spdlog.h>
+
+spdlog::logger logger("test_unit_generation");
+
 template <typename T_PUBSUB> auto CreateCallbacks(T_PUBSUB &pubsub) {
   return [&]<std::size_t... I>(std::index_sequence<I...>) {
     return std::make_tuple(pubsub.template CreateOnMessageCallback<I>()...);
@@ -42,7 +46,7 @@ TEST(TestUnitGeneration, TestAllHandler) {
   bool callback_called = false;
   bool pub_callback_called = false;
 
-  unit::test_unit::AllTest::PubSub pubsub(
+  unit::test_unit::AllTest::PubSub pubsub(&logger,
       [&](auto input) {
         callback_called = true;
         return unit::test_unit::AllTest::Output();
@@ -75,7 +79,7 @@ TEST(TestUnitGeneration, TestFieldHandler) {
   bool callback_called = false;
   bool pub_callback_called = false;
 
-  unit::test_unit::StereoMatch::PubSub pubsub(
+  unit::test_unit::StereoMatch::PubSub pubsub(&logger,
       [&](auto input) {
         callback_called = true;
         return unit::test_unit::StereoMatch::Output();
@@ -121,7 +125,7 @@ TEST(TestUnitGeneration, TestApproxHandler) {
   bool callback_called = false;
   bool pub_callback_called = false;
 
-  unit::test_unit::ApproxTest::PubSub pubsub(
+  unit::test_unit::ApproxTest::PubSub pubsub(&logger,
       [&](auto input) {
         callback_called = true;
         return unit::test_unit::ApproxTest::Output();
@@ -215,7 +219,7 @@ TEST(TestUnitGeneration, TestEqualOptions) {
 
   unit::test_unit::TestEqualOptions::Input gotten_input;
 
-  unit::test_unit::TestEqualOptions::PubSub pubsub(
+  unit::test_unit::TestEqualOptions::PubSub pubsub(&logger,
       [&](auto input) {
         callback_called = true;
         gotten_input = input;

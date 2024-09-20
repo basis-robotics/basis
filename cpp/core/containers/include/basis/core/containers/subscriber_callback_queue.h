@@ -5,17 +5,16 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
-#include <queue>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <queue>
 
 #include <basis/core/time.h>
 
 namespace basis::core::containers {
 
 class SubscriberOverallQueue {
-  friend class SubscriberQueue;
-
 public:
 
   std::optional<std::function<void()>> Pop(const Duration &sleep = basis::core::Duration::FromSecondsNanoseconds(0, 0)) {
@@ -43,7 +42,6 @@ public:
     return queue.size();
   }
 
-private:
   void AddCallback(const std::shared_ptr<std::function<void()>> &cb_ptr) {
     {
       std::lock_guard<std::mutex> lock(mutex);
@@ -52,6 +50,7 @@ private:
     cv.notify_one();
   }
 
+private:
   std::queue<std::weak_ptr<std::function<void()>>> queue; // Stores weak_ptrs to callbacks
   mutable std::mutex mutex;                                      // Mutex to protect the queue
   std::condition_variable cv;                            // Condition variable to signal when new callbacks are added

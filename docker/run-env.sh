@@ -5,5 +5,5 @@ if [ "$(docker ps -a -q -f name=basis)" ]; then
     docker exec -it basis /bin/bash $@
 else
     # Note: this relies on macos specific user mapping magic to mount with the proper permissions
-    docker run -v $BASIS_ROOT:/basis -v $BASIS_ROOT/../deterministic_replay:/deterministic_replay --name basis --rm -it basis-env-ros /bin/bash $@
+    docker run $BASIS_DOCKER_ADDITIONAL_ARGS -v $BASIS_ROOT:/basis -v $BASIS_ROOT/../deterministic_replay:/deterministic_replay --privileged --name basis --rm -it basis-env-ros /bin/bash $@
 fi
