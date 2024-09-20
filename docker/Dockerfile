@@ -11,6 +11,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
 <<EOF
+    set -e
     apt update
     apt install --no-install-recommends -y \
         sudo \
@@ -52,6 +53,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     apt install clang-format-${LLVM_VERSION}
 
 RUN <<EOF
+    set -e
 update-alternatives \
     --install /usr/bin/llvm-config       llvm-config      /usr/bin/llvm-config-${LLVM_VERSION} 100 \
     --slave   /usr/bin/llvm-ar           llvm-ar          /usr/bin/llvm-ar-${LLVM_VERSION} \
@@ -145,6 +147,7 @@ USER root
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
 <<EOF
+    set -e
     sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
     curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
     apt update
