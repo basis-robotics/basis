@@ -363,9 +363,8 @@ void FoxgloveBridge::updateAdvertisedTopics() {
   // Add new channels for new topics
   std::vector<::foxglove::ChannelWithoutId> channelsToAdd;
   for (const auto &topicAndDatatype : latestTopics) {
-    if (topicAndDatatype.schema_serializer == "raw") {
-      // For now - skip any raw channels, later it would be good to work with Foxglove to show them as existing but
-      // unsubscribable
+    if(topicAndDatatype.schema_serializer == "raw") {
+       // For now - skip any raw channels, later it would be good to work with Foxglove to show them as existing but unsubscribable
       continue;
     }
     if (std::find_if(advertisedTopics.begin(), advertisedTopics.end(),
@@ -400,11 +399,11 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     }
 
     std::string schema =
-        msgDescription->schema_efficient().empty() ? msgDescription->schema() : msgDescription->schema_efficient();
+          msgDescription->schema_efficient().empty() ? msgDescription->schema() : msgDescription->schema_efficient();
     newChannel.schema = ::foxglove::base64Encode(schema);
     channelsToAdd.push_back(newChannel);
     BASIS_LOG_DEBUG("newChannel -- topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic,
-                    newChannel.schemaName, newChannel.encoding, newChannel.schema);
+                  newChannel.schemaName, newChannel.encoding, newChannel.schema);
   }
 
   const auto channelIds = server->addChannels(channelsToAdd);

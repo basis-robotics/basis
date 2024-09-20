@@ -123,13 +123,6 @@ public:
 
     return true;
   }
-
-/**
-  template <typename T_MSG> static std::unique_ptr<T_MSG> DeserializeFromSpan(std::span<const std::byte> bytes) {
-    // TODO: this may need a check for alignment - might need to use memcpy instead
-    return std::make_unique<T_MSG>(*reinterpret_cast<const T_MSG *>(bytes.data()));
-  }
-  **/
 };
 
 } // namespace core::serialization
