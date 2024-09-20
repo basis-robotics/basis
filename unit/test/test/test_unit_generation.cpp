@@ -5,7 +5,9 @@
 
 #include <vector>
 
-spdlog::Logger logger;
+#include <spdlog/spdlog.h>
+
+spdlog::logger logger("test_unit_generation");
 
 template <typename T_PUBSUB> auto CreateCallbacks(T_PUBSUB &pubsub) {
   return [&]<std::size_t... I>(std::index_sequence<I...>) {
