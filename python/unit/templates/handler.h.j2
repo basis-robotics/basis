@@ -24,7 +24,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
     struct Output {
 {% for output_name, output in outputs.items() %}
         // {{output_name}}
-        {{output.cpp_type}} {{output.cpp_topic_name}};
+        {{'inproc_type' in output and output.inproc_cpp_type or output.cpp_type}} {{output.cpp_topic_name}};
 {% endfor %}
         // TODO: diagnostics, error state, etc
         // TODO: should we take as unique_ptr instead?
@@ -177,7 +177,11 @@ public:
 {% endfor %}
 {% for output_name, output in outputs.items() %}
         // {{output_name}}
-        std::shared_ptr<basis::core::transport::Publisher<{{output.cpp_message_type}}>> {{output.cpp_topic_name}}_publisher;
+        std::shared_ptr<basis::core::transport::Publisher<{{output.cpp_message_type}}
+        {% if 'inproc_type' in output %}
+            , {{output.inproc_type}}
+        {% endif %}
+        >> {{output.cpp_topic_name}}_publisher;
 {%- endfor %}
 
         std::unique_ptr<Synchronizer> synchronizer;

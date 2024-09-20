@@ -27,6 +27,7 @@ but bad things will happen if the implementation changes and you don't recompile
 
 template <typename T_MSG> struct InprocConnectorInterface {
   virtual void Publish(const std::string &topic, std::shared_ptr<const T_MSG> msg) = 0;
+  virtual bool HasSubscribersFast(const std::string& topic) = 0;
 };
 
 // TODO: this can manage its own subscribers, right?
@@ -38,6 +39,9 @@ public:
   // void Publish(const T_MSG &msg) { coordinator->Publish(this->topic, std::make_shared<const T_MSG>(msg)); }
   void Publish(std::shared_ptr<const T_MSG> msg) { coordinator->Publish(this->topic, std::move(msg)); }
 
+  bool HasSubscribersFast() {
+    return coordinator->HasSubscribersFast(topic);
+  }
 private:
   std::string topic;
   InprocConnectorInterface<T_MSG> *coordinator;
@@ -80,12 +84,15 @@ public:
     return subscriber;
   }
 
+  // Returns true if any subscribers exist. If subscribers are removed they will continue to show until the next Publish() call.
+  virtual bool HasSubscribersFast(const std::string& topic) override {
+    return subscribers.contains(topic);
+  }
+
 private:
-  virtual void Publish(const std::string &topic, std::shared_ptr<const T_MSG> msg) {
+  virtual void Publish(const std::string &topic, std::shared_ptr<const T_MSG> msg) override {
     auto range = subscribers.equal_range(topic);
-    if (range.first == range.second) {
-      return;
-    }
+
     for (auto it = range.first; it != range.second;) {
       if(auto subscriber = it->second.lock()) {
         subscriber->OnMessage(msg);

@@ -151,13 +151,13 @@ TEST(TestCoordinator, TestPubSubOrder) {
 
     update(1);
 
-    ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+    ASSERT_EQ(test_publisher->GetTransportSubscriberCount(), 1);
 
     {
       auto after_sub =
           transport_manager.SubscribeRaw("test_struct", callback, &work_thread_pool, nullptr, {});
       update(1);
-      ASSERT_EQ(test_publisher->GetSubscriberCount(), 2);
+      ASSERT_EQ(test_publisher->GetTransportSubscriberCount(), 2);
       auto send_msg = std::make_shared<const TestRawStruct>();
       test_publisher->Publish(send_msg);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));

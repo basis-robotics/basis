@@ -104,15 +104,19 @@ public:
   }
 
   // todo: deducing a raw type should be an error unless requested
-  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-  [[nodiscard]] std::shared_ptr<Publisher<T_MSG>> Advertise(
+  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type, typename T_CONVERTABLE_INPROC=NoAdditionalInproc>
+  [[nodiscard]] std::shared_ptr<Publisher<T_MSG, T_CONVERTABLE_INPROC>> Advertise(
       std::string_view topic,
       const serialization::MessageTypeInfo &message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
     auto *schema = schema_manager.RegisterType<T_MSG, T_Serializer>(message_type);
 
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
+    std::shared_ptr<InprocPublisher<T_CONVERTABLE_INPROC>> additional_inproc_publisher;
     if (inproc) {
       inproc_publisher = inproc->Advertise<T_MSG>(topic);
+      if constexpr (!std::is_same_v<T_CONVERTABLE_INPROC, NoAdditionalInproc>) {
+        additional_inproc_publisher = inproc->Advertise<T_CONVERTABLE_INPROC>(topic);
+      }
     }
     std::vector<std::shared_ptr<TransportPublisher>> tps = AdvertiseOnTransports(topic, message_type);
 
@@ -126,7 +130,7 @@ public:
     SerializeWriteSpanCallback<T_MSG> write_span_cb = T_Serializer::template SerializeToSpan<T_MSG>;
 
     auto publisher =
-        std::make_shared<Publisher<T_MSG>>(topic, message_type, std::move(tps), inproc_publisher,
+        std::make_shared<Publisher<T_MSG, T_CONVERTABLE_INPROC>>(topic, message_type, std::move(tps), inproc_publisher,
                                            std::move(get_size_cb), std::move(write_span_cb), recorder_for_publisher);
     publishers.emplace(std::string(topic), publisher);
     return publisher;

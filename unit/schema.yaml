@@ -91,6 +91,7 @@ properties:
                 type: boolean
               # https://github.com/redhat-developer/yaml-language-server/issues/478
               type: True
+              inproc_type: True
               optional: True
               allow_transports: True
               deny_transports: True
@@ -106,6 +107,7 @@ properties:
             properties:
               # https://github.com/redhat-developer/yaml-language-server/issues/478
               type: True
+              inproc_type: True
               optional: True
               allow_transports: True
               deny_transports: True
@@ -147,6 +149,8 @@ $defs:
     properties:
       type:
         $ref: "#/$defs/message_type"
+      inproc_type:
+        type: string
       qos:
         type: object
         properties:

@@ -72,6 +72,8 @@ def generate_unit(unit_path, output_dir, source_dir):
             io['cpp_message_type'] = cpp_type
 
             cpp_type = f'std::shared_ptr<const {cpp_type}>'
+            if 'inproc_type' in io:
+                io['inproc_cpp_type'] = f'std::shared_ptr<const {io["inproc_type"]}>'
             io['serializer'] = type_serializer
             if type_serializer != "raw":
                 serializers.add(type_serializer)
