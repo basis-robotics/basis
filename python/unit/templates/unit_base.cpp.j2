@@ -59,9 +59,19 @@ namespace {{handler_name}} {
             [this, overall_queue](basis::core::MonotonicTime time) {
                 // Don't allow more than 1 rate subscriber callback in the queue, to avoid overload
                 // We may eventually want this configurable
-                if(!rate_subscriber_queued_message) {
+                bool has_queued_message;
+                {
+                    std::lock_guard lock(rate_subscriber_queued_message_mutex);
+                    has_queued_message = rate_subscriber_queued_message != nullptr;
+                }
+
+                if(!has_queued_message) {
+                    // No need to relock - we are about to queue the only thing that could change the pointer
                     rate_subscriber_queued_message = std::make_shared<std::function<void()>>([this, time]() {
-                        rate_subscriber_queued_message = nullptr;
+                        {
+                            std::lock_guard lock(rate_subscriber_queued_message_mutex);
+                            rate_subscriber_queued_message = nullptr;
+                        }
                         OnRateSubscriber(time);
                     });
                     overall_queue->AddCallback(rate_subscriber_queued_message);

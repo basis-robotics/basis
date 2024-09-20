@@ -164,7 +164,9 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 private:
 
     std::unique_ptr<basis::core::transport::RateSubscriber> rate_subscriber;
-    std::atomic<std::shared_ptr<std::function<void()>>> rate_subscriber_queued_message; // Queue of one
+    std::shared_ptr<std::function<void()>> rate_subscriber_queued_message; // Queue of one
+    // std::atomic shared_ptr isn't widely implemented
+    std::mutex rate_subscriber_queued_message_mutex;
 
 public:
 {% endif %}
