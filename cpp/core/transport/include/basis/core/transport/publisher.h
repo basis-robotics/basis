@@ -104,7 +104,6 @@ public:
         convertable_inproc(convertable_inproc), get_message_size_cb(std::move(get_message_size_cb)),
         write_message_to_span_cb(std::move(write_message_to_span_cb)) {}
 
-  // TODO: this should probably include inproc
   size_t GetTransportSubscriberCount() {
     size_t n = 0;
     for (auto &transport_publisher : transport_publishers) {

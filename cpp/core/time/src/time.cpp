@@ -16,7 +16,9 @@ MonotonicTime MonotonicTime::FromNanoseconds(int64_t ns) {
 }
 
 MonotonicTime MonotonicTime::FromSeconds(double seconds) { return {TimeBase::SecondsToNanoseconds(seconds)}; }
-
+MonotonicTime MonotonicTime::FromSecondsNanoseconds(int64_t seconds, int64_t nanoseconds) {
+    return {TimeBase::SecondsToNanoseconds(seconds) + nanoseconds};
+  }
 MonotonicTime MonotonicTime::Now(bool ignore_simulated_time) {
   if (!ignore_simulated_time && UsingSimulatedTime()) {
     return {simulated_time_ns};

@@ -113,10 +113,10 @@ public:
     std::shared_ptr<InprocPublisher<T_MSG>> inproc_publisher;
     std::shared_ptr<InprocPublisher<T_CONVERTABLE_INPROC>> additional_inproc_publisher;
     if (inproc) {
-      inproc_publisher = inproc->Advertise<T_MSG>(topic);
       if constexpr (!std::is_same_v<T_CONVERTABLE_INPROC, NoAdditionalInproc>) {
-        additional_inproc_publisher = inproc->Advertise<T_CONVERTABLE_INPROC>(topic);
+        additional_inproc_publisher = inproc->Advertise<T_CONVERTABLE_INPROC>(topic, nullptr);
       }
+      inproc_publisher = inproc->Advertise<T_MSG>(topic, additional_inproc_publisher ? additional_inproc_publisher->GetConnector() : nullptr);
     }
     std::vector<std::shared_ptr<TransportPublisher>> tps = AdvertiseOnTransports(topic, message_type);
 
@@ -196,9 +196,9 @@ public:
       if constexpr (!std::is_same_v<T_ADDITIONAL_INPROC, NoAdditionalInproc>) {
         assert(additional_callback);
         additional_inproc_subscriber =
-            CreateInprocSubscriber<T_ADDITIONAL_INPROC>(topic, output_queue, additional_callback);
+            CreateInprocSubscriber<T_ADDITIONAL_INPROC>(topic, output_queue, additional_callback, nullptr);
       }
-      inproc_subscriber = CreateInprocSubscriber<T_MSG>(topic, output_queue, callback);
+      inproc_subscriber = CreateInprocSubscriber<T_MSG>(topic, output_queue, callback, additional_inproc_subscriber ? additional_inproc_subscriber->GetConnector() : nullptr);
     }
 
     return SubscribeInternal<Subscriber<T_MSG, T_ADDITIONAL_INPROC>>(topic, outer_callback, work_thread_pool,
@@ -334,13 +334,13 @@ protected:
   template <typename T_MSG, typename T_CALLBACK>
   std::shared_ptr<InprocSubscriber<T_MSG>>
   CreateInprocSubscriber(std::string_view topic, std::shared_ptr<basis::core::containers::SubscriberQueue> output_queue,
-                         T_CALLBACK &callback) {
+                         T_CALLBACK &callback, basis::core::transport::InprocConnectorBase* primary_inproc_connector) {
     if (output_queue) {
       return inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg) {
         output_queue->AddCallback([callback = callback, message = msg.message]() { callback(message); });
-      });
+      }, primary_inproc_connector);
     } else {
-      return inproc->Subscribe<T_MSG>(topic, [callback](MessageEvent<T_MSG> msg) { callback(std::move(msg.message)); });
+      return inproc->Subscribe<T_MSG>(topic, [callback](MessageEvent<T_MSG> msg) { callback(std::move(msg.message)); }, primary_inproc_connector);
     }
   }
 

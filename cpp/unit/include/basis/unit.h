@@ -97,7 +97,6 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
     // Otherwise, create a message of the proper type
     else {
       return std::function([this](std::shared_ptr<const MessageType> msg) {
-        SPDLOG_INFO(IS_ALTERNATE_INPROC ? "inproc message" : "typed message");
         T_DERIVED *derived = ((T_DERIVED *)this);
         return OnMessageHelper<INDEX>(
             derived->synchronizer.get(), msg,
