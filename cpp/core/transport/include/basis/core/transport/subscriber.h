@@ -1,5 +1,6 @@
 #pragma once
 
+#include "convertable_inproc.h"
 #include "inproc.h"
 #include "message_event.h"
 #include "message_packet.h"
@@ -81,17 +82,18 @@ protected:
   std::unordered_map<__uint128_t, TransportSubscriber *, Hash128> publisher_id_to_transport_sub;
 };
 
-template <typename T_MSG> class Subscriber : public SubscriberBase {
+template <typename T_MSG, typename T_ADDITIONAL_INPROC=NoAdditionalInproc> class Subscriber : public SubscriberBase {
 public:
   using MessageType = T_MSG;
   Subscriber(std::string_view topic, serialization::MessageTypeInfo type_info,
              std::vector<std::shared_ptr<TransportSubscriber>> transport_subscribers,
-             std::shared_ptr<InprocSubscriber<T_MSG>> inproc)
+             std::shared_ptr<InprocSubscriber<T_MSG>> inproc, std::shared_ptr<InprocSubscriber<T_ADDITIONAL_INPROC>> additional_inproc=nullptr)
       : SubscriberBase(topic, std::move(type_info), std::move(transport_subscribers), inproc != nullptr),
-        inproc(std::move(inproc)) {}
+        inproc(std::move(inproc)), additional_inproc(std::move(additional_inproc)) {}
 
 protected:
   std::shared_ptr<InprocSubscriber<T_MSG>> inproc;
+  std::shared_ptr<InprocSubscriber<T_ADDITIONAL_INPROC>> additional_inproc;
 };
 
 class RateSubscriber {

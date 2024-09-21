@@ -172,7 +172,12 @@ public:
 {% endif %}
 {% for input_name, input in inputs.items() %}
         // {{input_name}}
-        std::shared_ptr<basis::core::transport::Subscriber<{{input.cpp_message_type}}>> {{input.cpp_topic_name}}_subscriber;
+        std::shared_ptr<basis::core::transport::Subscriber<
+            {{input.cpp_message_type}}
+            {% if 'inproc_type' in input %}
+            , {{input.inproc_type}}
+            {% endif %}
+            >> {{input.cpp_topic_name}}_subscriber;
         basis::core::containers::SubscriberQueueSharedPtr {{input.cpp_topic_name}}_queue;
 {% endfor %}
 {% for output_name, output in outputs.items() %}
@@ -198,6 +203,18 @@ public:
             "{{ input.serializer }}",
 {%- endfor %}
         };
+        static constexpr std::array<const char*, INPUT_SIZE> subscription_message_type_names = {
+{%- for input in inputs.values() %}
+            "{{ input.cpp_message_type }}",
+{%- endfor %}
+        };
+        static constexpr std::array<const char*, INPUT_SIZE> subscription_inproc_message_type_names = {
+{%- for input in inputs.values() %}
+            "{{ 'inproc_type' in input and input.inproc_type or ''}}",
+{%- endfor %}
+        };
+
+
 
         static constexpr std::tuple<
         {%- set comma = joiner(", ") %}

@@ -2,15 +2,14 @@
 
 #include <memory>
 
-#include <spdlog/spdlog.h>
-
+#include "basis/core/transport/convertable_inproc.h"
 #include "inproc.h"
 #include "publisher.h"
 #include "publisher_info.h"
 #include "subscriber.h"
 
-#include <basis/core/serialization.h>
 #include <basis/core/containers/subscriber_callback_queue.h>
+#include <basis/core/serialization.h>
 #include <string>
 #include <string_view>
 
@@ -104,7 +103,8 @@ public:
   }
 
   // todo: deducing a raw type should be an error unless requested
-  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type, typename T_CONVERTABLE_INPROC=NoAdditionalInproc>
+  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type,
+            typename T_CONVERTABLE_INPROC = NoAdditionalInproc>
   [[nodiscard]] std::shared_ptr<Publisher<T_MSG, T_CONVERTABLE_INPROC>> Advertise(
       std::string_view topic,
       const serialization::MessageTypeInfo &message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
@@ -129,9 +129,9 @@ public:
     SerializeGetSizeCallback<T_MSG> get_size_cb = T_Serializer::template GetSerializedSize<T_MSG>;
     SerializeWriteSpanCallback<T_MSG> write_span_cb = T_Serializer::template SerializeToSpan<T_MSG>;
 
-    auto publisher =
-        std::make_shared<Publisher<T_MSG, T_CONVERTABLE_INPROC>>(topic, message_type, std::move(tps), inproc_publisher,
-                                           std::move(get_size_cb), std::move(write_span_cb), recorder_for_publisher);
+    auto publisher = std::make_shared<Publisher<T_MSG, T_CONVERTABLE_INPROC>>(
+        topic, message_type, std::move(tps), inproc_publisher, std::move(get_size_cb), std::move(write_span_cb),
+        recorder_for_publisher, additional_inproc_publisher);
     publishers.emplace(std::string(topic), publisher);
     return publisher;
   }
@@ -142,21 +142,42 @@ public:
    * @warning This will not subscribe to messages sent over the `inproc` transport, as they are not serialized in the
    * first place.
    */
-  [[nodiscard]] std::shared_ptr<SubscriberBase> SubscribeRaw(std::string_view topic,
-                                                             TypeErasedSubscriberCallback callback,
-                                                             basis::core::threading::ThreadPool *work_thread_pool,
-                                                             std::shared_ptr<basis::core::containers::SubscriberQueue> output_queue,
-                                                             serialization::MessageTypeInfo message_type) {
-    return SubscribeInternal<SubscriberBase>(topic, callback, work_thread_pool, output_queue, message_type, {});
+  [[nodiscard]] std::shared_ptr<SubscriberBase>
+  SubscribeRaw(std::string_view topic, TypeErasedSubscriberCallback callback,
+               basis::core::threading::ThreadPool *work_thread_pool,
+               std::shared_ptr<basis::core::containers::SubscriberQueue> output_queue,
+               serialization::MessageTypeInfo message_type) {
+    return SubscribeInternal<SubscriberBase>(topic, callback, work_thread_pool, output_queue, message_type, {}, {});
   }
 
-  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type>
-  [[nodiscard]] std::shared_ptr<Subscriber<T_MSG>>
+  /*
+    Inferred case, taking an std function
+  */
+  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type,
+            typename T_ADDITIONAL_INPROC = NoAdditionalInproc>
+  [[nodiscard]] std::shared_ptr<Subscriber<T_MSG, T_ADDITIONAL_INPROC>>
   Subscribe(std::string_view topic, SubscriberCallback<T_MSG> callback,
             basis::core::threading::ThreadPool *work_thread_pool,
             std::shared_ptr<basis::core::containers::SubscriberQueue> output_queue = nullptr,
-            serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>()) {
+            serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>(),
+            SubscriberCallback<T_ADDITIONAL_INPROC> additional_callback = {}) {
+    return SubscribeCallable<T_MSG, T_Serializer, T_ADDITIONAL_INPROC>(topic, callback, work_thread_pool, output_queue,
+                                                                       message_type, additional_callback);
+  }
+
+  /*
+    Allows any callable - more optimized but forces declaring what type T_MSG is
+  */
+  template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type,
+            typename T_ADDITIONAL_INPROC = NoAdditionalInproc>
+  [[nodiscard]] std::shared_ptr<Subscriber<T_MSG, T_ADDITIONAL_INPROC>>
+  SubscribeCallable(std::string_view topic, auto callback, basis::core::threading::ThreadPool *work_thread_pool,
+                    std::shared_ptr<basis::core::containers::SubscriberQueue> output_queue = nullptr,
+                    serialization::MessageTypeInfo message_type = T_Serializer::template DeduceMessageTypeInfo<T_MSG>(),
+                    SubscriberCallback<T_ADDITIONAL_INPROC> additional_callback = {}) {
+
     std::shared_ptr<InprocSubscriber<T_MSG>> inproc_subscriber;
+    std::shared_ptr<InprocSubscriber<T_ADDITIONAL_INPROC>> additional_inproc_subscriber;
 
     TypeErasedSubscriberCallback outer_callback;
     if constexpr (!std::is_same_v<T_Serializer, serialization::RawSerializer>) {
@@ -171,19 +192,18 @@ public:
       };
     }
 
-    if (inproc) {
-      inproc_subscriber = inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg) {
-        if (output_queue) {
-
-          output_queue->AddCallback([callback = callback, message = msg.message]() { callback(message); });
-        } else {
-          callback(std::move(msg.message));
-        }
-      });
+  if (inproc) {
+      if constexpr (!std::is_same_v<T_ADDITIONAL_INPROC, NoAdditionalInproc>) {
+        assert(additional_callback);
+        additional_inproc_subscriber =
+            CreateInprocSubscriber<T_ADDITIONAL_INPROC>(topic, output_queue, additional_callback);
+      }
+      inproc_subscriber = CreateInprocSubscriber<T_MSG>(topic, output_queue, callback);
     }
 
-    return SubscribeInternal<Subscriber<T_MSG>>(topic, outer_callback, work_thread_pool, output_queue, message_type,
-                                                inproc_subscriber);
+    return SubscribeInternal<Subscriber<T_MSG, T_ADDITIONAL_INPROC>>(topic, outer_callback, work_thread_pool,
+                                                                     output_queue, message_type, inproc_subscriber,
+                                                                     additional_inproc_subscriber);
   }
 
   /**
@@ -268,11 +288,14 @@ protected:
    * @param inproc_subscriber can be nullptr for SubscriberBase
    * @return std::shared_ptr<T_SUBSCRIBER>
    */
-  template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void>
-  [[nodiscard]] std::shared_ptr<T_SUBSCRIBER> SubscribeInternal(
-      std::string_view topic, TypeErasedSubscriberCallback callback,
-      basis::core::threading::ThreadPool *work_thread_pool, std::shared_ptr<containers::SubscriberQueue> output_queue,
-      serialization::MessageTypeInfo message_type, std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber) {
+  template <typename T_SUBSCRIBER, typename T_INPROC_SUBSCRIBER = void,
+            typename T_ADDITIONAL_INPROC_SUBSCRIBER = NoAdditionalInproc>
+  [[nodiscard]] std::shared_ptr<T_SUBSCRIBER>
+  SubscribeInternal(std::string_view topic, TypeErasedSubscriberCallback callback,
+                    basis::core::threading::ThreadPool *work_thread_pool,
+                    std::shared_ptr<containers::SubscriberQueue> output_queue,
+                    serialization::MessageTypeInfo message_type, std::shared_ptr<T_INPROC_SUBSCRIBER> inproc_subscriber,
+                    std::shared_ptr<T_ADDITIONAL_INPROC_SUBSCRIBER> additional_inproc_subscriber) {
 
     std::vector<std::shared_ptr<TransportSubscriber>> tps;
 
@@ -281,7 +304,7 @@ protected:
                            std::shared_ptr<basis::core::transport::MessagePacket>
                                message) { output_queue->AddCallback([callback, message]() { callback(message); }); }
                      : callback;
-    
+
     for (auto &[transport_name, transport] : transports) {
       tps.push_back(transport->Subscribe(topic, outer_callback, work_thread_pool, message_type));
     }
@@ -290,7 +313,8 @@ protected:
     if constexpr (std::is_same_v<T_SUBSCRIBER, SubscriberBase>) {
       subscriber = std::make_shared<T_SUBSCRIBER>(topic, message_type, std::move(tps), false);
     } else {
-      subscriber = std::make_shared<T_SUBSCRIBER>(topic, message_type, std::move(tps), inproc_subscriber);
+      subscriber = std::make_shared<T_SUBSCRIBER>(topic, message_type, std::move(tps), inproc_subscriber,
+                                                  additional_inproc_subscriber);
     }
     subscribers.emplace(std::string(topic), subscriber);
 
@@ -303,6 +327,22 @@ protected:
   }
   /// @todo id? probably not needed, pid is fine, unless we _really_ need multiple transport managers
   /// ...which might be needed for integration testing
+
+  /**
+    Internal helper to allow for subscribing to different inprocs
+   */
+  template <typename T_MSG, typename T_CALLBACK>
+  std::shared_ptr<InprocSubscriber<T_MSG>>
+  CreateInprocSubscriber(std::string_view topic, std::shared_ptr<basis::core::containers::SubscriberQueue> output_queue,
+                         T_CALLBACK &callback) {
+    if (output_queue) {
+      return inproc->Subscribe<T_MSG>(topic, [output_queue, callback](MessageEvent<T_MSG> msg) {
+        output_queue->AddCallback([callback = callback, message = msg.message]() { callback(message); });
+      });
+    } else {
+      return inproc->Subscribe<T_MSG>(topic, [callback](MessageEvent<T_MSG> msg) { callback(std::move(msg.message)); });
+    }
+  }
 
   /**
    * Publisher summary from last Update() call

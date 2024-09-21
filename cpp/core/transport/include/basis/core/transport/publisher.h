@@ -18,15 +18,7 @@
 
 #include <basis/recorder.h>
 
-namespace basis {
-
-// Default conversion from struct to message, override if T_CONVERTABLE_INPROC isn't modifyable
-template <typename T_MSG, typename T_CONVERTABLE_INPROC>
-std::shared_ptr<const T_MSG> ConvertToMessage(const std::shared_ptr<const T_CONVERTABLE_INPROC>& in) {
-  return in->ToMessage();
-}
-
-}
+#include "convertable_inproc.h"
 
 namespace basis::core::transport {
 
@@ -101,22 +93,16 @@ public:
   using PublisherBase::PublishRaw;
 };
 
-class NoAdditionalInproc {
-
-};
-
-
-template <typename T_MSG, typename T_CONVERTABLE_INPROC=NoAdditionalInproc> class Publisher : public PublisherBase {
+template <typename T_MSG, typename T_CONVERTABLE_INPROC = NoAdditionalInproc> class Publisher : public PublisherBase {
 public:
   Publisher(std::string_view topic, serialization::MessageTypeInfo type_info,
             std::vector<std::shared_ptr<TransportPublisher>> transport_publishers,
             std::shared_ptr<InprocPublisher<T_MSG>> inproc, SerializeGetSizeCallback<T_MSG> get_message_size_cb,
-            SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb, basis::RecorderInterface *recorder = nullptr, 
+            SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb, basis::RecorderInterface *recorder = nullptr,
             std::shared_ptr<InprocPublisher<T_CONVERTABLE_INPROC>> convertable_inproc = nullptr)
-      : PublisherBase(topic, type_info, inproc != nullptr, transport_publishers, recorder), inproc(inproc), convertable_inproc(convertable_inproc),
-        get_message_size_cb(std::move(get_message_size_cb)),
+      : PublisherBase(topic, type_info, inproc != nullptr, transport_publishers, recorder), inproc(inproc),
+        convertable_inproc(convertable_inproc), get_message_size_cb(std::move(get_message_size_cb)),
         write_message_to_span_cb(std::move(write_message_to_span_cb)) {}
-
 
   // TODO: this should probably include inproc
   size_t GetTransportSubscriberCount() {
@@ -127,17 +113,15 @@ public:
     return n;
   }
 
-  virtual void Publish(std::shared_ptr<const T_CONVERTABLE_INPROC> msg) {   
+  virtual void Publish(std::shared_ptr<const T_CONVERTABLE_INPROC> msg) {
     if constexpr (!std::is_same_v<T_CONVERTABLE_INPROC, NoAdditionalInproc>) {
-        if (convertable_inproc) {
-          convertable_inproc->Publish(msg);
-        }
+      assert(convertable_inproc);
+      convertable_inproc->Publish(msg);
 
-        if(GetTransportSubscriberCount() > 0 || inproc->HasSubscribersFast()) {
-
-          // This can someday be made async
-          Publish(ConvertToMessage<T_MSG>(msg));
-        }
+      if (GetTransportSubscriberCount() > 0 || inproc->HasSubscribersFast()) {
+        // This can someday be made async
+        Publish(ConvertToMessage<T_MSG>(msg));
+      }
     }
   }
 
@@ -146,7 +130,7 @@ public:
       inproc->Publish(msg);
     }
 
-    if(!GetTransportSubscriberCount()) {
+    if (!GetTransportSubscriberCount()) {
       return;
     }
 

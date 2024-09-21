@@ -59,7 +59,7 @@ def generate_unit(unit_path, output_dir, source_dir):
         for output in handler['outputs'].values():
             output.setdefault('optional', False)
 
-        for topic_name, io in itertools.chain(handler['inputs'].items(), handler['outputs'].items()):
+        def handle_io(topic_name, io, input_or_output):
             cpp_topic_name = topic_name.lstrip('/').replace('/', '_')
             io['cpp_topic_name'] = cpp_topic_name
             type_serializer, cpp_type = io['type'].split(':', 1)
@@ -72,17 +72,25 @@ def generate_unit(unit_path, output_dir, source_dir):
             io['cpp_message_type'] = cpp_type
 
             cpp_type = f'std::shared_ptr<const {cpp_type}>'
-            if 'inproc_type' in io:
-                io['inproc_cpp_type'] = f'std::shared_ptr<const {io["inproc_type"]}>'
+
             io['serializer'] = type_serializer
             if type_serializer != "raw":
                 serializers.add(type_serializer)
+
+            io['cpp_type'] = cpp_type
+            if 'inproc_type' in io:
+                io['inproc_cpp_type'] = f'std::shared_ptr<const {io["inproc_type"]}>'
+                io['cpp_type'] = f"std::variant<std::monostate, {io['cpp_type']}, {io['inproc_cpp_type']}>"
+
             if io.get('accumulate'):
                 # TODO: actually set max size
-                cpp_type = f'std::vector<{cpp_type}>'
-            io['cpp_type'] = cpp_type
+                io['cpp_type'] = f"std::vector<{io['cpp_type']}>"
 
-
+        for topic_name, input in handler['inputs'].items():
+            handle_io(topic_name, input, 'input')
+        for topic_name, output in handler['outputs'].items():
+            handle_io(topic_name, output, 'output')
+            
         template = jinja_env.get_template("handler.h.j2")
         template_output = template.render(unit_name=unit_name, handler_name=handler_name, serializers=serializers, **handler)
         
