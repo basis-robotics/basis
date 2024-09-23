@@ -105,23 +105,43 @@ handlers:
       /inproc_test:
         type: "protobuf: ::TimeTest"
         inproc_type: "TimeTestInproc"
-  TestInprocTypeSubA:
+  TestInprocTypeSubEither:
     sync:
       type: all
     inputs:
       /inproc_test:
         type: "protobuf: ::TimeTest"
         inproc_type: "TimeTestInproc"
-  TestInprocTypeSubB:
+  TestInprocTypeSubOnlyMessage:
     sync:
       type: all
     inputs:
       /inproc_test:
         type: "protobuf: ::TimeTest"
-  TestInprocTypeSubC:
+
+  TestInprocTypeSubOnlyInproc:
     sync:
       type: all
     inputs:
       /inproc_test:
         type: raw:TimeTestInproc
-        accumulate: 3
+
+  TestInprocTypeSubAccumulate:
+    sync:
+      type: all
+    inputs:
+      /inproc_test:
+        type: "protobuf: ::TimeTest"
+        inproc_type: "TimeTestInproc"
+        accumulate: 10
+      /inproc_test_accumulate_trigger:
+        type: raw:bool
+  
+  TestInprocTypeSubAvoidPointlessConversion:
+    sync:
+      type: all
+    inputs:
+      /inproc_test_avoid_conversion:        
+        type: "protobuf: ::TimeTest"
+        inproc_type: "TimeTestInproc"
+        accumulate: 10
