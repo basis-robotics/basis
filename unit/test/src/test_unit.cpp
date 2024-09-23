@@ -32,3 +32,20 @@ test_unit::TestEqualOptions(const TestEqualOptions::Input &input) {
   spdlog::info("Got approximate output");
   return {};
 }
+
+
+TestInprocTypePub::Output test_unit::TestInprocTypePub(const TestInprocTypePub::Input& input) {
+    return {input.inproc_test_trigger};
+}
+
+TestInprocTypeSubA::Output test_unit::TestInprocTypeSubA(const TestInprocTypeSubA::Input& input) {
+    return {};
+}
+
+TestInprocTypeSubB::Output test_unit::TestInprocTypeSubB(const TestInprocTypeSubB::Input& input) {
+    return {};
+}
+
+TestInprocTypeSubC::Output test_unit::TestInprocTypeSubC(const TestInprocTypeSubC::Input& input) {
+    return {};
+}

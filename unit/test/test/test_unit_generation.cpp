@@ -11,7 +11,7 @@ spdlog::logger logger("test_unit_generation");
 
 template <typename T_PUBSUB> auto CreateCallbacks(T_PUBSUB &pubsub) {
   return [&]<std::size_t... I>(std::index_sequence<I...>) {
-    return std::make_tuple(pubsub.template CreateOnMessageCallback<I>()...);
+    return std::make_tuple(pubsub.template CreateOnMessageCallback<I, false>()...);
   }(std::make_index_sequence<T_PUBSUB::input_count>());
 }
 

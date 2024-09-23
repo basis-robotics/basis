@@ -26,4 +26,16 @@ public:
   virtual unit::test_unit::TestEqualOptions::Output
   TestEqualOptions(const unit::test_unit::TestEqualOptions::Input &input) override;
 
+  virtual unit::test_unit::TestInprocTypePub::Output
+  TestInprocTypePub(const unit::test_unit::TestInprocTypePub::Input &input) override;
+
+  virtual unit::test_unit::TestInprocTypeSubA::Output
+  TestInprocTypeSubA(const unit::test_unit::TestInprocTypeSubA::Input &input) override;
+
+  virtual unit::test_unit::TestInprocTypeSubB::Output
+  TestInprocTypeSubB(const unit::test_unit::TestInprocTypeSubB::Input &input) override;
+
+  virtual unit::test_unit::TestInprocTypeSubC::Output
+  TestInprocTypeSubC(const unit::test_unit::TestInprocTypeSubC::Input &input) override;
+
 };

@@ -10,12 +10,12 @@ TEST(Inproc, PubSub) {
   // Create a Coordinator
   InprocConnector<int> coordinator;
   // Create a publisher
-  auto publisher = coordinator.Advertise("topic");
+  auto publisher = coordinator.Advertise("topic", nullptr);
 
   std::atomic<int> num_recv = 0;
 
   auto subscriber = coordinator.Subscribe(
-      "topic", [&num_recv](const MessageEvent<int> &message) { GTEST_ASSERT_EQ(*message.message, num_recv++); });
+      "topic", [&num_recv](const MessageEvent<int> &message) { GTEST_ASSERT_EQ(*message.message, num_recv++); }, nullptr);
 
   for (int i = 0; i < 10; i++) {
     publisher->Publish(std::make_shared<int>(i));
@@ -28,12 +28,12 @@ TEST(Inproc, PubSubWait) {
   // Create a Coordinator
   InprocConnector<int> coordinator;
   // Create a publisher
-  auto publisher = coordinator.Advertise("topic");
+  auto publisher = coordinator.Advertise("topic", nullptr);
 
   std::atomic<int> num_recv = 0;
 
   auto subscriber = coordinator.Subscribe(
-      "topic", [&num_recv](const MessageEvent<int> &message) { ASSERT_EQ(*message.message, num_recv++); });
+      "topic", [&num_recv](const MessageEvent<int> &message) { ASSERT_EQ(*message.message, num_recv++); }, nullptr);
 
   std::thread pub_thread([&]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

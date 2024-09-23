@@ -26,3 +26,19 @@ ApproxTest::Output test_unit::ApproxTest(const ApproxTest::Input& input) {
 TestEqualOptions::Output test_unit::TestEqualOptions(const TestEqualOptions::Input& input) {
     static_assert(false, "Implement me");
 }
+
+TestInprocTypePub::Output test_unit::TestInprocTypePub(const TestInprocTypePub::Input& input) {
+    static_assert(false, "Implement me");
+}
+
+TestInprocTypeSubA::Output test_unit::TestInprocTypeSubA(const TestInprocTypeSubA::Input& input) {
+    static_assert(false, "Implement me");
+}
+
+TestInprocTypeSubB::Output test_unit::TestInprocTypeSubB(const TestInprocTypeSubB::Input& input) {
+    static_assert(false, "Implement me");
+}
+
+TestInprocTypeSubC::Output test_unit::TestInprocTypeSubC(const TestInprocTypeSubC::Input& input) {
+    static_assert(false, "Implement me");
+}
