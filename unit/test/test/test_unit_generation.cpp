@@ -349,7 +349,20 @@ TEST(TestUnitGeneration, TestInprocType) {
   reset();
   
   //////////////////////////////////////////////////////////////////
-  // Excercise the accumulation code
+  // Publishing an invalid type
+  auto bad_pub = inproc_transport.Advertise<bool>("/inproc_test", nullptr);
+  bad_pub->Publish(std::make_shared<bool>());
+  unit.Update(nullptr, basis::core::Duration::FromSeconds(0.1));
+
+  // Nothing should execute
+  ASSERT_FALSE(unit.test_inproc_either_variant_executed);
+  ASSERT_FALSE(unit.test_inproc_only_message_executed);
+  ASSERT_FALSE(unit.test_inproc_only_inproc_executed);
+  ASSERT_FALSE(unit.test_inproc_accumulated_input_executed);
+  reset();
+
+  //////////////////////////////////////////////////////////////////
+  // Exercise the accumulation code
   auto accumulate_trigger_pub = inproc_transport.Advertise<bool>("/inproc_test_accumulate_trigger", nullptr);
   accumulate_trigger_pub->Publish(std::make_shared<bool>());
   unit.Update(nullptr, basis::core::Duration::FromSeconds(0.1));

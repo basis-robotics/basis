@@ -27,7 +27,7 @@ struct UnitInitializeOptions {
   bool create_subscribers = true;
 };
 
-struct HandlerPubSub {
+struct HandlerPubSub {  
   using TopicMap = std::map<std::string, std::shared_ptr<const void>>;
   using HandlerExecutingCallback = std::function<TopicMap()>;
   using TypeErasedCallback =
@@ -35,6 +35,9 @@ struct HandlerPubSub {
 
   virtual void OnRateSubscriberTypeErased(basis::core::MonotonicTime now, HandlerExecutingCallback *callback) = 0;
 
+  HandlerPubSub(spdlog::logger * const logger) : AUTO_LOGGER(logger) {}
+
+  spdlog::logger * const AUTO_LOGGER;
   std::map<std::string, TypeErasedCallback> type_erased_callbacks;
   std::vector<std::string> outputs;
   std::optional<basis::core::Duration> rate_duration;
@@ -65,6 +68,7 @@ template <typename MessageType> struct VariantHelper<MessageType, true> {
 
 template <typename T_DERIVED, bool HAS_RATE, size_t INPUT_COUNT>
 struct HandlerPubSubWithOptions : public HandlerPubSub {
+  using HandlerPubSub::HandlerPubSub;
   constexpr static size_t input_count = INPUT_COUNT;
 
   template <int INDEX, typename ON_CONSUME>
@@ -141,10 +145,11 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
       }
 
       // Type mismatch, do nothing
-      // This likely is okay, but let's warn for the short term
-      // BASIS_LOG_WARN("Type mismatch between {} and {}{}, will not run type erased callback", type_name, T_DERIVED::subscription_message_type_names[INDEX], 
-      // std::is_same_v<typename Helper::inproc_type, core::transport::NoAdditionalInproc> ? "", "/" + T_DERIVED::subscription_inproc_message_type_names[INDEX]
-      // )
+      // This likely is okay, but let's error anyhow
+      // This code is really only executed in deterministic replay
+      BASIS_LOG_ERROR("Type mismatch between {} and {}{}, will not run type erased callback", type_name, T_DERIVED::subscription_message_type_names[INDEX], 
+       std::is_same_v<typename Helper::inproc_type, core::transport::NoAdditionalInproc> ? "" : std::string("/") + T_DERIVED::subscription_inproc_message_type_names[INDEX]
+      );
     };
   }
 
