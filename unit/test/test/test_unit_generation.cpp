@@ -1,4 +1,4 @@
-#include "basis/core/time.h"
+#include <basis/core/time.h>
 #include <gtest/gtest.h>
 
 #include <test_unit.h>
@@ -11,7 +11,7 @@ spdlog::logger logger("test_unit_generation");
 
 template <typename T_PUBSUB> auto CreateCallbacks(T_PUBSUB &pubsub) {
   return [&]<std::size_t... I>(std::index_sequence<I...>) {
-    return std::make_tuple(pubsub.template CreateOnMessageCallback<I>()...);
+    return std::make_tuple(pubsub.template CreateOnMessageCallback<I, false>()...);
   }(std::make_index_sequence<T_PUBSUB::input_count>());
 }
 
@@ -285,4 +285,106 @@ TEST(TestUnitGeneration, TestEqualOptions) {
   ASSERT_NE(gotten_input.optional, nullptr);
   ASSERT_NE(gotten_input.required_a, nullptr);
   ASSERT_NE(gotten_input.required_b, nullptr);
+}
+
+// Test that "magic" conversion from an inproc type to a message type works
+TEST(TestUnitGeneration, TestInprocType) {  
+  test_unit unit;
+
+  unit.CreateTransportManager();
+  unit.Initialize({});
+
+  basis::core::transport::InprocTransport inproc_transport;
+  auto reset = [&]() {
+    unit.test_inproc_either_variant_executed = false;
+    unit.test_inproc_variant_index = -1;
+    unit.test_inproc_only_message_executed = false;
+    unit.test_inproc_only_inproc_executed = false;
+    unit.test_inproc_accumulated_input_executed = false;
+  };
+
+  //////////////////////////////////////////////////////////////////
+  // Publishing from a dual publisher...
+  auto trigger_pub = inproc_transport.Advertise<TimeTestInproc>("/inproc_test_trigger", nullptr);
+  trigger_pub->Publish(std::make_shared<TimeTestInproc>(basis::core::MonotonicTime::Now()));
+  unit.Update(nullptr, basis::core::Duration::FromSeconds(0.1));
+
+  // dual subscriber gets it, uses the original type without conversion
+  ASSERT_TRUE(unit.test_inproc_either_variant_executed);
+  ASSERT_EQ(unit.test_inproc_variant_index, basis::MessageVariant::INPROC_TYPE_MESSAGE);
+  // and both types of subscriber get it
+  ASSERT_TRUE(unit.test_inproc_only_message_executed);
+  ASSERT_TRUE(unit.test_inproc_only_inproc_executed);
+  ASSERT_FALSE(unit.test_inproc_accumulated_input_executed);
+  reset();
+
+  //////////////////////////////////////////////////////////////////
+  // Publishing from inproc only
+  auto inproc_type_pub = inproc_transport.Advertise<TimeTestInproc>("/inproc_test", nullptr);
+  inproc_type_pub->Publish(std::make_shared<TimeTestInproc>(basis::core::MonotonicTime::Now()));
+  unit.Update(nullptr, basis::core::Duration::FromSeconds(0.1));
+
+  // dual subscriber gets it, uses the original type without conversion
+  ASSERT_TRUE(unit.test_inproc_either_variant_executed);
+  ASSERT_EQ(unit.test_inproc_variant_index, basis::MessageVariant::INPROC_TYPE_MESSAGE);
+  // Because this publisher doesn't know about the conversion, the regular typed subscriber doesn't get it
+  ASSERT_FALSE(unit.test_inproc_only_message_executed);
+  // but obviously the inproc one does
+  ASSERT_TRUE(unit.test_inproc_only_inproc_executed);
+  ASSERT_FALSE(unit.test_inproc_accumulated_input_executed);
+  reset();
+
+  //////////////////////////////////////////////////////////////////
+  // Publishing from the protobuf type only
+  auto type_pub = inproc_transport.Advertise<TimeTest>("/inproc_test", nullptr);
+  type_pub->Publish(std::make_shared<TimeTest>());
+  unit.Update(nullptr, basis::core::Duration::FromSeconds(0.1));
+
+  // Same thing, but opposite
+  ASSERT_TRUE(unit.test_inproc_either_variant_executed);
+  ASSERT_EQ(unit.test_inproc_variant_index, basis::MessageVariant::TYPE_MESSAGE);
+  ASSERT_TRUE(unit.test_inproc_only_message_executed);
+  ASSERT_FALSE(unit.test_inproc_only_inproc_executed);
+  ASSERT_FALSE(unit.test_inproc_accumulated_input_executed);
+  reset();
+  
+  //////////////////////////////////////////////////////////////////
+  // Publishing an invalid type
+  auto bad_pub = inproc_transport.Advertise<bool>("/inproc_test", nullptr);
+  bad_pub->Publish(std::make_shared<bool>());
+  unit.Update(nullptr, basis::core::Duration::FromSeconds(0.1));
+
+  // Nothing should execute
+  ASSERT_FALSE(unit.test_inproc_either_variant_executed);
+  ASSERT_FALSE(unit.test_inproc_only_message_executed);
+  ASSERT_FALSE(unit.test_inproc_only_inproc_executed);
+  ASSERT_FALSE(unit.test_inproc_accumulated_input_executed);
+  reset();
+
+  //////////////////////////////////////////////////////////////////
+  // Exercise the accumulation code
+  auto accumulate_trigger_pub = inproc_transport.Advertise<bool>("/inproc_test_accumulate_trigger", nullptr);
+  accumulate_trigger_pub->Publish(std::make_shared<bool>());
+  unit.Update(nullptr, basis::core::Duration::FromSeconds(0.1));
+  ASSERT_TRUE(unit.test_inproc_accumulated_input_executed);
+  // We've published three messages
+  ASSERT_EQ(unit.test_inproc_accumulated_input.size(), 3);
+  ASSERT_EQ(unit.test_inproc_accumulated_input[0].index(), basis::MessageVariant::INPROC_TYPE_MESSAGE);
+  ASSERT_EQ(unit.test_inproc_accumulated_input[1].index(), basis::MessageVariant::INPROC_TYPE_MESSAGE);
+  ASSERT_EQ(unit.test_inproc_accumulated_input[2].index(), basis::MessageVariant::TYPE_MESSAGE);
+  
+
+  //////////////////////////////////////////////////////////////////
+  // Check that we don't convert unless we actually have a reason to.
+  // This could be due to the recorder or due to a subscription to the other type, in this case we have neither
+  auto dont_convert = std::make_shared<TimeTestInproc>();
+  ASSERT_FALSE(dont_convert->ran_conversion_function);
+  auto avoid_pointless_conversion_pub = inproc_transport.Advertise<TimeTestInproc>("/inproc_test_avoid_conversion", nullptr);
+  avoid_pointless_conversion_pub->Publish(dont_convert);
+  unit.Update(nullptr, basis::core::Duration::FromSeconds(0.1));
+  // Ensure that we both ran the callback and _didnt_ run the conversion function
+  ASSERT_TRUE(unit.test_inproc_avoid_pointless_conversion_executed);
+  ASSERT_FALSE(dont_convert->ran_conversion_function);
+  
+  // For the future, it would be useful to excercise the TCP layer and recording bits of this
 }

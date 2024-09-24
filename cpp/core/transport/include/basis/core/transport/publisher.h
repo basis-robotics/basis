@@ -18,6 +18,8 @@
 
 #include <basis/recorder.h>
 
+#include "convertable_inproc.h"
+
 namespace basis::core::transport {
 
 extern std::atomic<uint32_t> publisher_id_counter;
@@ -91,18 +93,18 @@ public:
   using PublisherBase::PublishRaw;
 };
 
-template <typename T_MSG> class Publisher : public PublisherBase {
+template <typename T_MSG, typename T_CONVERTABLE_INPROC = NoAdditionalInproc> class Publisher : public PublisherBase {
 public:
   Publisher(std::string_view topic, serialization::MessageTypeInfo type_info,
             std::vector<std::shared_ptr<TransportPublisher>> transport_publishers,
             std::shared_ptr<InprocPublisher<T_MSG>> inproc, SerializeGetSizeCallback<T_MSG> get_message_size_cb,
-            SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb, basis::RecorderInterface *recorder = nullptr)
-
+            SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb, basis::RecorderInterface *recorder = nullptr,
+            std::shared_ptr<InprocPublisher<T_CONVERTABLE_INPROC>> convertable_inproc = nullptr)
       : PublisherBase(topic, type_info, inproc != nullptr, transport_publishers, recorder), inproc(inproc),
-        get_message_size_cb(std::move(get_message_size_cb)),
+        convertable_inproc(convertable_inproc), get_message_size_cb(std::move(get_message_size_cb)),
         write_message_to_span_cb(std::move(write_message_to_span_cb)) {}
 
-  size_t GetSubscriberCount() {
+  size_t GetTransportSubscriberCount() {
     size_t n = 0;
     for (auto &transport_publisher : transport_publishers) {
       n += transport_publisher->GetSubscriberCount();
@@ -110,16 +112,30 @@ public:
     return n;
   }
 
+  virtual void Publish(std::shared_ptr<const T_CONVERTABLE_INPROC> msg) {
+    if constexpr (!std::is_same_v<T_CONVERTABLE_INPROC, NoAdditionalInproc>) {
+      assert(convertable_inproc);
+      convertable_inproc->Publish(msg);
+
+      if (GetTransportSubscriberCount() > 0 || inproc->HasSubscribersFast()) {
+        // This can someday be made async
+        Publish(ConvertToMessage<T_MSG>(msg));
+      }
+    }
+  }
+
   virtual void Publish(std::shared_ptr<const T_MSG> msg) {
     if (inproc) {
       inproc->Publish(msg);
     }
 
-    // TODO: early out if there are no transport subscribers, to avoid serialization
+    if (!GetTransportSubscriberCount()) {
+      return;
+    }
+
     // TODO: if the cost of serialization is high, it may be good to move the work onto a different thread
 
     // Serialize
-
     basis::core::MonotonicTime now = basis::core::MonotonicTime::Now();
 
     // Request size of payload from serializer
@@ -139,7 +155,7 @@ public:
 
 private:
   std::shared_ptr<InprocPublisher<T_MSG>> inproc;
-
+  std::shared_ptr<InprocPublisher<T_CONVERTABLE_INPROC>> convertable_inproc;
   SerializeGetSizeCallback<T_MSG> get_message_size_cb;
   SerializeWriteSpanCallback<T_MSG> write_message_to_span_cb;
 };

@@ -209,7 +209,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
 
   transport_manager.Update();
 
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+  ASSERT_EQ(test_publisher->GetTransportSubscriberCount(), 1);
   test_publisher->Publish(send_msg);
   // auto string_publisher = transport_manager.Advertise("test_string");
   // ASSERT_NE(publisher, nullptr);
@@ -247,7 +247,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   auto &pub_info = transport_manager.GetLastPublisherInfo();
   transport_manager.Update();
 
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 4);
+  ASSERT_EQ(test_publisher->GetTransportSubscriberCount(), 4);
 
   std::array<std::shared_ptr<SubscriberBase>, 3> subscribers = {queue_subscriber, immediate_subscriber,
                                                                 immediate_raw_subscriber};
@@ -256,7 +256,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   ASSERT_EQ(immediate_subscriber->GetPublisherCount(), 1);
 
   transport_manager.Update();
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 4);
+  ASSERT_EQ(test_publisher->GetTransportSubscriberCount(), 4);
 
   // todo: why do we have to manually connect this? the transport manager should be doing this
   for (auto &subscriber : subscribers) {
@@ -268,7 +268,7 @@ TEST_F(TestTcpTransport, TestWithManager) {
   }
 
   transport_manager.Update();
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 4);
+  ASSERT_EQ(test_publisher->GetTransportSubscriberCount(), 4);
 
   test_publisher->Publish(send_msg);
 
@@ -328,7 +328,7 @@ TEST_F(TestTcpTransport, TestWithProtobuf) {
 #endif
   transport_manager.Update();
 
-  ASSERT_EQ(test_publisher->GetSubscriberCount(), 1);
+  ASSERT_EQ(test_publisher->GetTransportSubscriberCount(), 1);
 
   test_publisher->Publish(send_msg);
 

@@ -56,7 +56,7 @@ void TcpSender::SendMessage(std::shared_ptr<core::transport::MessagePacket> mess
 
   if (max_queue_size > 0) {
     if (send_buffer.size() >= max_queue_size) {
-      BASIS_LOG_INFO("TcpSender::SendMessage trimming queue {} -> {}", send_buffer.size() + 1, max_queue_size);
+      BASIS_LOG_DEBUG("TcpSender::SendMessage trimming queue {} -> {}", send_buffer.size() + 1, max_queue_size);
     }
 
     while (send_buffer.size() >= max_queue_size)

@@ -26,4 +26,22 @@ public:
   virtual unit::test_unit::TestEqualOptions::Output
   TestEqualOptions(const unit::test_unit::TestEqualOptions::Input &input) override;
 
+  virtual unit::test_unit::TestInprocTypePub::Output
+  TestInprocTypePub(const unit::test_unit::TestInprocTypePub::Input &input) override;
+
+  virtual unit::test_unit::TestInprocTypeSubEither::Output
+  TestInprocTypeSubEither(const unit::test_unit::TestInprocTypeSubEither::Input &input) override;
+
+  virtual unit::test_unit::TestInprocTypeSubOnlyMessage::Output
+  TestInprocTypeSubOnlyMessage(const unit::test_unit::TestInprocTypeSubOnlyMessage::Input &input) override;
+
+  virtual unit::test_unit::TestInprocTypeSubOnlyInproc::Output
+  TestInprocTypeSubOnlyInproc(const unit::test_unit::TestInprocTypeSubOnlyInproc::Input &input) override;
+
+  virtual unit::test_unit::TestInprocTypeSubAccumulate::Output
+  TestInprocTypeSubAccumulate(const unit::test_unit::TestInprocTypeSubAccumulate::Input &input) override;
+
+  virtual unit::test_unit::TestInprocTypeSubAvoidPointlessConversion::Output
+  TestInprocTypeSubAvoidPointlessConversion(const unit::test_unit::TestInprocTypeSubAvoidPointlessConversion::Input &input) override;
+
 };

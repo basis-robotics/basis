@@ -106,6 +106,8 @@ struct MonotonicTime : public TimePoint {
 
   static MonotonicTime FromSeconds(double seconds);
 
+  static MonotonicTime FromSecondsNanoseconds(int64_t seconds, int64_t nanoseconds);
+
   static MonotonicTime Now(bool ignore_simulated_time = false);
 
   MonotonicTime &operator+=(const Duration &duration) {

@@ -26,3 +26,27 @@ ApproxTest::Output test_unit::ApproxTest(const ApproxTest::Input& input) {
 TestEqualOptions::Output test_unit::TestEqualOptions(const TestEqualOptions::Input& input) {
     static_assert(false, "Implement me");
 }
+
+TestInprocTypePub::Output test_unit::TestInprocTypePub(const TestInprocTypePub::Input& input) {
+    static_assert(false, "Implement me");
+}
+
+TestInprocTypeSubEither::Output test_unit::TestInprocTypeSubEither(const TestInprocTypeSubEither::Input& input) {
+    static_assert(false, "Implement me");
+}
+
+TestInprocTypeSubOnlyMessage::Output test_unit::TestInprocTypeSubOnlyMessage(const TestInprocTypeSubOnlyMessage::Input& input) {
+    static_assert(false, "Implement me");
+}
+
+TestInprocTypeSubOnlyInproc::Output test_unit::TestInprocTypeSubOnlyInproc(const TestInprocTypeSubOnlyInproc::Input& input) {
+    static_assert(false, "Implement me");
+}
+
+TestInprocTypeSubAccumulate::Output test_unit::TestInprocTypeSubAccumulate(const TestInprocTypeSubAccumulate::Input& input) {
+    static_assert(false, "Implement me");
+}
+
+TestInprocTypeSubAvoidPointlessConversion::Output test_unit::TestInprocTypeSubAvoidPointlessConversion(const TestInprocTypeSubAvoidPointlessConversion::Input& input) {
+    static_assert(false, "Implement me");
+}

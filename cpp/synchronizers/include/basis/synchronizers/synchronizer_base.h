@@ -5,6 +5,7 @@
 #include <mutex>
 #include <optional>
 #include <tuple>
+#include <variant>
 
 #include <basis/core/time.h>
 
@@ -31,6 +32,20 @@ concept HasPushBack = requires {
   { std::declval<T>().push_back(std::declval<typename T::value_type>()) } -> std::same_as<void>;
 };
 
+template <typename T> struct IsStdVariant : std::false_type {};
+
+template <typename... Args> struct IsStdVariant<std::variant<Args...>> : std::true_type {};
+
+template <class T> struct ExtractFromContainer {
+  using Type = T;
+};
+
+template <class T>
+  requires HasPushBack<T>
+struct ExtractFromContainer<T> {
+  using Type = T::value_type;
+};
+
 template <class T> struct ExtractMessageType;
 
 template <class T>
@@ -53,7 +68,7 @@ struct ExtractMessageType<T> {
 // };
 
 template <typename T_MSG_CONTAINER> struct Storage {
-  using T_MSG = ExtractMessageType<T_MSG_CONTAINER>::Type;
+  // using T_MSG = ExtractMessageType<T_MSG_CONTAINER>::Type;
   MessageMetadata<T_MSG_CONTAINER> metadata;
   T_MSG_CONTAINER data;
 
@@ -63,12 +78,14 @@ template <typename T_MSG_CONTAINER> struct Storage {
     }
     if constexpr (HasPushBack<T_MSG_CONTAINER>) {
       return !data.empty();
+    } else if constexpr (IsStdVariant<T_MSG_CONTAINER>::value) {
+      return data.index() != 0;
     } else {
       return data != nullptr;
     }
   }
 
-  void ApplyMessage(std::shared_ptr<T_MSG> message) {
+  void ApplyMessage(auto message) {
     if constexpr (HasPushBack<T_MSG_CONTAINER>) {
       data.push_back(message);
     } else {
@@ -93,25 +110,24 @@ public:
 
 template <typename... T_MSG_CONTAINERs> class SynchronizerBase : Synchronizer {
 public:
-  using Callback = std::function<void(const basis::core::MonotonicTime&, T_MSG_CONTAINERs...)>;
+  using Callback = std::function<void(const basis::core::MonotonicTime &, T_MSG_CONTAINERs...)>;
   using MessageSumType = std::tuple<T_MSG_CONTAINERs...>;
 
   SynchronizerBase(MessageMetadata<T_MSG_CONTAINERs> &&...metadatas)
       : SynchronizerBase(std::forward_as_tuple(metadatas...)) {}
 
-  SynchronizerBase(std::tuple<MessageMetadata<T_MSG_CONTAINERs>...> &&metadatas = {})
-      : storage(metadatas) {}
+  SynchronizerBase(std::tuple<MessageMetadata<T_MSG_CONTAINERs>...> &&metadatas = {}) : storage(metadatas) {}
 
   virtual ~SynchronizerBase() = default;
 
   /**
-   * 
-   * @tparam INDEX 
-   * @param msg 
+   *
+   * @tparam INDEX
+   * @param msg
    * @param out Optional - to consume while still holding the lock, rather than as a separate call
-   * @return bool 
+   * @return bool
    */
-  template <size_t INDEX> bool OnMessage(auto msg, MessageSumType* out = nullptr) {
+  template <size_t INDEX> bool OnMessage(auto msg, MessageSumType *out = nullptr) {
     std::lock_guard lock(mutex);
     std::get<INDEX>(storage).ApplyMessage(msg);
     return PostApplyMessage(out);
@@ -125,10 +141,11 @@ public:
     std::lock_guard lock(mutex);
     return IsReadyNoLock();
   }
+
 protected:
-  bool PostApplyMessage(MessageSumType* out) {
-    if(IsReadyNoLock()) {
-      if(out) {
+  bool PostApplyMessage(MessageSumType *out) {
+    if (IsReadyNoLock()) {
+      if (out) {
         *out = ConsumeMessagesNoLock();
       }
       return true;

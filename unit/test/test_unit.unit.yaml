@@ -12,6 +12,7 @@ cpp_includes:
   - sensor_msgs/PointCloud2.h
   - test.pb.h
   - basis_example.pb.h
+  - time_test_inproc.h
 
 handlers:
   # This handler looks for two image messages coming in with the same timestamp and outputs one stereo image
@@ -93,3 +94,54 @@ handlers:
         type: rosmsg:sensor_msgs::Image
         # TODO: We may end up providing default sync_fields for some serializer or message types to reduce boilerplate
         optional: True
+  TestInprocTypePub:
+    sync:
+      # require exact field matching
+      type: all
+    inputs:
+      /inproc_test_trigger:
+        type: "raw:TimeTestInproc"
+    outputs:
+      /inproc_test:
+        type: "protobuf: ::TimeTest"
+        inproc_type: "TimeTestInproc"
+  TestInprocTypeSubEither:
+    sync:
+      type: all
+    inputs:
+      /inproc_test:
+        type: "protobuf: ::TimeTest"
+        inproc_type: "TimeTestInproc"
+  TestInprocTypeSubOnlyMessage:
+    sync:
+      type: all
+    inputs:
+      /inproc_test:
+        type: "protobuf: ::TimeTest"
+
+  TestInprocTypeSubOnlyInproc:
+    sync:
+      type: all
+    inputs:
+      /inproc_test:
+        type: raw:TimeTestInproc
+
+  TestInprocTypeSubAccumulate:
+    sync:
+      type: all
+    inputs:
+      /inproc_test:
+        type: "protobuf: ::TimeTest"
+        inproc_type: "TimeTestInproc"
+        accumulate: 10
+      /inproc_test_accumulate_trigger:
+        type: raw:bool
+  
+  TestInprocTypeSubAvoidPointlessConversion:
+    sync:
+      type: all
+    inputs:
+      /inproc_test_avoid_conversion:        
+        type: "protobuf: ::TimeTest"
+        inproc_type: "TimeTestInproc"
+        accumulate: 10

@@ -289,10 +289,10 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
     basis::CreateLogHandler(*system_transport_manager);
 
     basis::core::threading::ThreadPool time_thread_pool(1);
-    auto time_subscriber = system_transport_manager->Subscribe(
-        "/time", std::function([](std::shared_ptr<const basis::core::transport::proto::Time> msg) {
+    auto time_subscriber = system_transport_manager->Subscribe<basis::core::transport::proto::Time>(
+        "/time", [](std::shared_ptr<const basis::core::transport::proto::Time> msg) {
           basis::core::MonotonicTime::SetSimulatedTime(msg->nsecs(), msg->run_token());
-        }),
+        },
         &time_thread_pool);
 
     {
