@@ -2,6 +2,15 @@
 # the default name of the unit
 # name: example
 
+args:
+  string_arg:
+    type: string
+  int_arg:
+    type: int
+  optional_string_arg:
+    type: string
+    optional: True
+
 # The ways handlers are allowed to interact with eachother 
 threading_model:
   # single - by default all handlers run mutually exclusive from eachother

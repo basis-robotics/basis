@@ -9,6 +9,20 @@ additionalProperties: False
 unevaluatedProperties: False
 
 properties:
+  args:
+    type: object
+    title: Unit Arguments
+    patternProperties:
+      .*:
+        type: object
+        properties:
+          type: 
+            type: string
+          description:
+            type: string
+          help:
+            type: boolean
+          default: {}
   cpp_includes:
     type: array
     title: C++ Includes

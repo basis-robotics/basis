@@ -45,6 +45,9 @@ def generate_unit(unit_path, output_dir, source_dir):
     
     # todo: set default sync to 'all'
     
+    unit.setdefault('args', {})
+
+    
     qos_defaults = {'depth': 10}
     def merge_qos_defaults(topic: dict, defaults: dict) -> None:
         if 'qos' in topic:
