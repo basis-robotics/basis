@@ -5,11 +5,13 @@
 args:
   string_arg:
     type: string
+    help: a string argument
   int_arg:
     type: int
   optional_string_arg:
     type: string
-    optional: True
+    default: foobar
+    
 
 # The ways handlers are allowed to interact with eachother 
 threading_model:

@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <basis/unit.h>
+#include <basis/unit/args.h>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -16,9 +17,35 @@
 {% endfor %}
 
 namespace unit::{{unit_name}} {
+    using namespace std;
+    struct Args : public basis::unit::UnitArguments<Args> {    
+        {% for argument_name, argument in args.items() %}
+            {% if argument.get('optional', False) %}
+                std::optional<{{argument.type}}> {{argument_name}};
+            {% else %}
+                {{argument.type}} {{argument_name}};
+            {% endif %}
+        {% endfor %}
+
+        static std::array<std::unique_ptr<basis::unit::ArgumentMetadataBase>, {{args|length}}> argument_metadatas;
+
+        void HandleParsedArgs(argparse::ArgumentParser parser) {
+        {% for argument_name, argument in args.items() %}
+            {% if argument.get('optional', False) %}
+                parser.present("--{{argument_name}}", {{argument_name}});
+            {% else %}
+                {{argument_name}} = parser.get<{{argument.type}}>("--{{argument_name}}");
+            {% endif %}
+        {% endfor %}
+        }
+    };
+}
+
+namespace unit::{{unit_name}} {
+
     // TODO: this won't work with multi threaded units, obviously
     class Base : public basis::SingleThreadedUnit {
-    
+
         void SetupSerializationHelpers();
 
         void CreatePublishersSubscribers(const basis::UnitInitializeOptions& options) {

@@ -1,6 +1,23 @@
 #include <unit/{{unit_name}}/unit_base.h>
 
 namespace unit::{{unit_name}} {
+    
+std::array<std::unique_ptr<basis::unit::ArgumentMetadataBase>, {{args|length}}> Args::argument_metadatas = {
+{% for argument_name, argument in args.items() %}
+    std::make_unique<
+        basis::unit::ArgumentMetadata<{{argument.type}}>
+    >
+    (
+        "{{argument_name}}",
+        "{{argument.get('help')}}",
+        "{{argument.type}}",
+        {{argument.get('optional', False) | lower}}
+        {% if 'default' in argument %}
+            , {{argument.default|tojson}}
+        {% endif %}),
+{% endfor %}
+    
+};
 
 void Base::SetupSerializationHelpers() {
 {% set all_deserialize_types = {} -%}
@@ -17,10 +34,13 @@ void Base::SetupSerializationHelpers() {
 }
 
 
-{# PubSub impls, to avoid weird linker errors and to speed up compilation time #}
 {% for handler_name, handler in handlers.items() %}
+
 namespace {{handler_name}} {
-    
+
+
+{# PubSub impls, to avoid weird linker errors and to speed up compilation time #}
+
     void PubSub::SetupPubSub(
         const basis::UnitInitializeOptions& options,
         basis::core::transport::TransportManager* transport_manager,

@@ -36,10 +36,4 @@ void StandardUpdate(basis::core::transport::TransportManager *transport_manager,
   }
 }
 
-struct ExampleArgs {
-  std::string foobar;
-};
-
-auto foo = unit::ArgumentMetadata<ExampleArgs, std::string>("test", "help text", "string", false, &ExampleArgs::foobar, {});
-
 } // namespace basis

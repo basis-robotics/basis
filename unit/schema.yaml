@@ -18,10 +18,8 @@ properties:
         properties:
           type: 
             type: string
-          description:
-            type: string
           help:
-            type: boolean
+            type: string
           default: {}
   cpp_includes:
     type: array
