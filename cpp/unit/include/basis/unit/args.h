@@ -50,11 +50,15 @@ struct ArgumentMetadata : public ArgumentMetadataBase {
         auto& arg = parser.add_argument("--" + ArgumentMetadataBase::name)
             .help(ArgumentMetadataBase::help_text);
 
+        // If we aren't optional, we're required
         if(!ArgumentMetadataBase::optional) {
             arg.required();
         }
 
-        if constexpr (std::is_floating_point_v<T_ARGUMENT_TYPE>) {
+        if constexpr (std::is_same_v<T_ARGUMENT_TYPE, bool>) {
+            // Do nothing
+        }
+        else if constexpr (std::is_floating_point_v<T_ARGUMENT_TYPE>) {
             arg.template scan<'g', T_ARGUMENT_TYPE>();
         } else if constexpr (std::is_arithmetic_v<T_ARGUMENT_TYPE>) {
             arg.template scan<'i', T_ARGUMENT_TYPE>();

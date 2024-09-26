@@ -19,19 +19,20 @@ properties:
         properties:
           type: 
             type: string
+            optional: False
           help:
             type: string
             optional: True
           optional:
             type: boolean
             optional: True
-          default: {}
-        oneOf:
-          - type: object
-            required: 
-              - optional
-          - type: object
+          default:
+            optional: True
+          # Make optional and default mutually exclusive
+          not:
+            type: object
             required:
+              - optional
               - default
             
   cpp_includes:
