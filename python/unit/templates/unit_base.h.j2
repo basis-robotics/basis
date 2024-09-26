@@ -31,7 +31,7 @@ namespace unit::{{unit_name}} {
         {% for argument_name, argument in args.items() %}
             {{ comma() }}
             const 
-            {% if argument.get('optional', False) %}
+            {% if argument.get('optional', False) and not argument.type.startswith('vector') %}
                 std::optional<{{argument.type}}>
             {% else %}
                 {{argument.type}}
@@ -51,7 +51,7 @@ namespace unit::{{unit_name}} {
 
 
         {% for argument_name, argument in args.items() %}
-            {% if argument.get('optional', False) %}
+            {% if argument.get('optional', False) and not argument.type.startswith('vector') %}
                 std::optional<{{argument.type}}> {{argument_name}};
             {% else %}
                 {{argument.type}} {{argument_name}} = {};
@@ -62,7 +62,7 @@ namespace unit::{{unit_name}} {
 
         void HandleParsedArgs(const argparse::ArgumentParser& parser) {
         {% for argument_name, argument in args.items() %}
-            {% if argument.get('optional', False) %}
+            {% if argument.get('optional', False) and not argument.type.startswith('vector') %}
                 {{argument_name}} = parser.present("--{{argument_name}}");
             {% else %}
                 {{argument_name}} = parser.get<{{argument.type}}>("--{{argument_name}}");
