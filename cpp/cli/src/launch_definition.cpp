@@ -1,5 +1,9 @@
 #include <basis/launch/launch_definition.h>
 
+#include <basis/launch.h>
+
+namespace basis::launch {
+
 RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml) {
   RecordingSettings settings;
 
@@ -41,6 +45,8 @@ LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node &yaml) {
           unit.args.emplace_back(std::pair{kv.first.as<std::string>(), kv.second.as<std::string>()});
         }
       }
+
+      process.units.emplace("/" + unit_name, std::move(unit));
     }
     launch.processes.emplace(process_yaml.first.as<std::string>(), std::move(process));
   }
@@ -48,4 +54,6 @@ LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node &yaml) {
     launch.recording_settings = ParseRecordingSettingsYAML(yaml["recording"]);
   }
   return launch;
+}
+
 }

@@ -13,6 +13,8 @@
 
 #include <basis/recorder/glob.h>
 
+namespace basis::launch {
+
 struct UnitDefinition {
   std::string unit_type;
   std::vector<std::pair<std::string, std::string>> args;
@@ -35,3 +37,5 @@ struct LaunchDefinition {
 
 RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml);
 LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node &yaml);
+
+}
