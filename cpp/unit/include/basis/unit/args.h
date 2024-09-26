@@ -87,26 +87,38 @@ struct UnitArguments {
         }, command_line);
     }
 
-    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(const std::vector<std::pair<std::string, std::string>>& command_line) {
-        std::vector<std::string> command_line_exploded(command_line.size() * 2);
-        for(auto& [k, v] : command_line) {
-            command_line_exploded.push_back("--" + k);
-            command_line_exploded.push_back(v);
+    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(const std::vector<std::pair<std::string, std::string>>& argument_pairs) {
+        std::vector<std::string> command_line(argument_pairs.size() * 2 + 1);
+        // Handle "program name" argument
+        command_line.push_back("");
+        for(auto& [k, v] : argument_pairs) {
+            command_line.push_back("--" + k);
+            command_line.push_back(v);
         }
 
-        return ParseArguments(command_line_exploded);
+        return ParseArgumentsInternal(command_line);
     }
 
-    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(std::pair<int, const char*const*> argc_argv) {
+    static nonstd::expected<T_DERIVED, std::string> ParseArguments(std::pair<int, const char*const*> argc_argv) {
+        // In this case, it's assumed you have a raw command line from main()
         return ParseArguments(argc_argv.first, argc_argv.second);
     }
 
-    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(int argc, const char*const* argv) {
+    static nonstd::expected<T_DERIVED, std::string> ParseArguments(int argc, const char*const* argv) {
         // https://github.com/p-ranav/argparse/blob/v3.1/include/argparse/argparse.hpp#L1868
-        return ParseArguments(std::vector<std::string>{argv, argv + argc});
+        return ParseArgumentsInternal(std::vector<std::string>{argv, argv + argc});
     }
 
-    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(const std::vector<std::string>& command_line) {
+    static nonstd::expected<T_DERIVED, std::string> ParseArguments(const std::vector<std::string>& command_line) {
+        std::vector<std::string> command_line_with_program(command_line.size() + 1);
+        // Handle "program name" argument
+        command_line_with_program.push_back("");
+        command_line_with_program.insert(command_line_with_program.end(), command_line.begin(), command_line.end());
+        return ParseArgumentsInternal(command_line_with_program);
+    }
+
+private:
+    static nonstd::expected<T_DERIVED, std::string> ParseArgumentsInternal(const std::vector<std::string>& command_line) {
         T_DERIVED out;
 
         auto parser = CreateArgumentParser();
