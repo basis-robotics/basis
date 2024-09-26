@@ -1,5 +1,7 @@
 #pragma once
 
+#include <nonstd/expected.hpp>
+
 #include <basis/unit.h>
 
 #include <foxglove/websocket/websocket_server.hpp>
@@ -16,7 +18,7 @@ class FoxgloveBridge : public basis::SingleThreadedUnit {
       std::map<ConnectionHandle, std::shared_ptr<basis::core::transport::SubscriberBase>, std::owner_less<>>;
 
 public:
-  FoxgloveBridge(std::string unit_name);
+  FoxgloveBridge(const std::optional<std::string_view>& unit_name);
 
   ~FoxgloveBridge();
 

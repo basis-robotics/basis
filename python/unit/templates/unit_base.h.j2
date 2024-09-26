@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <basis/unit.h>
+#include <basis/unit/args.h>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -16,9 +17,66 @@
 {% endfor %}
 
 namespace unit::{{unit_name}} {
+    using namespace std;
+    struct Args : public basis::unit::UnitArguments<Args> {
+    private:
+        friend class basis::unit::UnitArguments<Args>;
+        {# avoid double declaration of empty args list #}
+        {% if args %}
+        Args() = default;
+        {% endif %}
+    public:
+        Args(
+        {%- set comma = joiner(", ") %}
+        {% for argument_name, argument in args.items() %}
+            {{ comma() }}
+            const 
+            {% if argument.get('optional', False) and not argument.type.startswith('vector') %}
+                std::optional<{{argument.type}}>
+            {% else %}
+                {{argument.type}}
+            {% endif %}&
+            {{argument_name}}
+        {% endfor %}
+        ) 
+        {% if args %} :
+            {%- set comma = joiner(", ") %}
+            {% for argument_name, argument in args.items() %}
+                {{ comma() }} {{argument_name}}({{argument_name}})
+            {% endfor %}
+        {% endif %}
+         {
+
+        }
+
+
+        {% for argument_name, argument in args.items() %}
+            {% if argument.get('optional', False) and not argument.type.startswith('vector') %}
+                std::optional<{{argument.type}}> {{argument_name}};
+            {% else %}
+                {{argument.type}} {{argument_name}} = {};
+            {% endif %}
+        {% endfor %}
+
+        static std::array<std::unique_ptr<basis::unit::ArgumentMetadataBase>, {{args|length}}> argument_metadatas;
+
+        void HandleParsedArgs(const argparse::ArgumentParser& parser) {
+        {% for argument_name, argument in args.items() %}
+            {% if argument.get('optional', False) and not argument.type.startswith('vector') %}
+                {{argument_name}} = parser.present("--{{argument_name}}");
+            {% else %}
+                {{argument_name}} = parser.get<{{argument.type}}>("--{{argument_name}}");
+            {% endif %}
+        {% endfor %}
+        }
+    };
+}
+
+namespace unit::{{unit_name}} {
+
     // TODO: this won't work with multi threaded units, obviously
     class Base : public basis::SingleThreadedUnit {
-    
+
         void SetupSerializationHelpers();
 
         void CreatePublishersSubscribers(const basis::UnitInitializeOptions& options) {
@@ -29,8 +87,8 @@ namespace unit::{{unit_name}} {
         }
 
     public:
-        Base(std::optional<std::string> name_override = {}) 
-        : basis::SingleThreadedUnit(name_override.value_or("{{unit_name}}")) {
+        Base(std::optional<std::string_view> name_override = {}) 
+            : basis::SingleThreadedUnit(name_override.value_or("{{unit_name}}")) {
 
         }
 

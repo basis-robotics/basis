@@ -11,7 +11,7 @@
 
 class {{unit_name}} : public unit::{{unit_name}}::Base {
 public:
-  {{unit_name}}(std::optional<std::string> name_override = {}) 
+  {{unit_name}}(const Args& args, const std::optional<std::string_view>& name_override = {}) 
   : unit::{{unit_name}}::Base(name_override)
   {}
 

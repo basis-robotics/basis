@@ -78,7 +78,7 @@ public:
     for (const auto &[unit_name, unit] : process.units) {
       std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
       if (unit_so_path) {
-        if (!LaunchSharedObjectInThread(*unit_so_path, unit_name, recorder)) {
+        if (!LaunchSharedObjectInThread(*unit_so_path, unit_name, recorder, unit.args)) {
           return false;
         }
       } else {
@@ -96,8 +96,8 @@ public:
    */
 
   bool LaunchSharedObjectInThread(const std::filesystem::path &path, std::string_view unit_name,
-                                  basis::RecorderInterface *recorder) {
-    std::unique_ptr<basis::Unit> unit(CreateUnit(path, unit_name));
+                                  basis::RecorderInterface *recorder, const basis::unit::CommandLineTypes& command_line) {
+    std::unique_ptr<basis::Unit> unit(CreateUnitWithLoader(path, unit_name, command_line));
 
     if (!unit) {
       return false;
@@ -289,7 +289,7 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
     basis::CreateLogHandler(*system_transport_manager);
 
     basis::core::threading::ThreadPool time_thread_pool(1);
-    auto time_subscriber = system_transport_manager->Subscribe<basis::core::transport::proto::Time>(
+    auto time_subscriber = system_transport_manager->SubscribeCallable<basis::core::transport::proto::Time>(
         "/time", [](std::shared_ptr<const basis::core::transport::proto::Time> msg) {
           basis::core::MonotonicTime::SetSimulatedTime(msg->nsecs(), msg->run_token());
         },

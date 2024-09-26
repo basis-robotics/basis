@@ -35,4 +35,5 @@ void StandardUpdate(basis::core::transport::TransportManager *transport_manager,
     }
   }
 }
+
 } // namespace basis

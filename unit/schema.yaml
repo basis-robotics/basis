@@ -9,6 +9,43 @@ additionalProperties: False
 unevaluatedProperties: False
 
 properties:
+  args:
+    type: object
+    title: Unit Arguments
+    patternProperties:
+      .*:
+        type: object
+        additionalProperties: False
+        properties:
+          type:
+            description: |
+              The type to use for the argument, corresponds to a c++ type. Generally: "bool", "string", "float", "double", "int", "int32_t", etc.
+              Avoid using std:: in this declaration.
+              Note that vector isn't yet supported.
+            type: string
+            optional: False
+          help:
+            description: An optional help string to display on errors and with --help.
+            type: string
+            optional: True
+          optional:
+            description: |
+              Allow this argument to not be specified. Will wrap the generated argument with 'std::optional'.
+              Mutually exclusive with 'default'.
+            type: boolean
+            optional: True
+          default:
+            description: |
+              The default value to use when the argument is not specified.
+              Mutually exclusive with 'optional'.
+            optional: True
+          # Make optional and default mutually exclusive
+          not:
+            type: object
+            required:
+              - optional
+              - default
+            
   cpp_includes:
     type: array
     title: C++ Includes

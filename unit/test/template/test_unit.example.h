@@ -9,7 +9,7 @@
 
 class test_unit : public unit::test_unit::Base {
 public:
-  test_unit(std::optional<std::string> name_override = {}) 
+  test_unit(const Args& args, const std::optional<std::string_view>& name_override = {}) 
   : unit::test_unit::Base(name_override)
   {}
 

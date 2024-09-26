@@ -8,8 +8,8 @@
 
 class test_unit : public unit::test_unit::Base {
 public:
-  test_unit(std::optional<std::string> name_override = {})
-      : unit::test_unit::Base(name_override) {}
+  test_unit(const unit::test_unit::Args& args, const std::optional<std::string_view>& unit_name_override = {})
+      : unit::test_unit::Base(unit_name_override) {}
 
   virtual unit::test_unit::StereoMatch::Output
   StereoMatch(const unit::test_unit::StereoMatch::Input &input) override;

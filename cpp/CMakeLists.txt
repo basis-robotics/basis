@@ -60,7 +60,7 @@ set(ARGPARSE_BUILD_TESTS OFF CACHE INTERNAL "force argparse tests to off")
 FetchContent_Declare(
   argparse
   GIT_REPOSITORY https://github.com/p-ranav/argparse.git
-  GIT_TAG v3.0
+  GIT_TAG v3.1
 )
 FetchContent_MakeAvailable(argparse)
 

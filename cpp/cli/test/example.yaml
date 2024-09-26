@@ -13,7 +13,7 @@ processes:
         # Including the same unit twice in one process requires disambigution on the name
         unit: pathfinder
         args:
-          - use_experimental_algo=1
+          use_experimental_algo: 1
     env:
       MAP_DIR: /home/basis/maps/oakland
   lidar:
