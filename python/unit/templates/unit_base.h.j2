@@ -63,7 +63,7 @@ namespace unit::{{unit_name}} {
         void HandleParsedArgs(const argparse::ArgumentParser& parser) {
         {% for argument_name, argument in args.items() %}
             {% if argument.get('optional', False) %}
-                parser.present("--{{argument_name}}", {{argument_name}});
+                {{argument_name}} = parser.present("--{{argument_name}}");
             {% else %}
                 {{argument_name}} = parser.get<{{argument.type}}>("--{{argument_name}}");
             {% endif %}
