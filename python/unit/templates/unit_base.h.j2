@@ -18,18 +18,23 @@
 
 namespace unit::{{unit_name}} {
     using namespace std;
-    struct Args : public basis::unit::UnitArguments<Args> {    
+    struct Args : public basis::unit::UnitArguments<Args> {
+    private:
+        friend class basis::unit::UnitArguments<Args>;
+        Args() = default;
+    public:
+
         {% for argument_name, argument in args.items() %}
             {% if argument.get('optional', False) %}
                 std::optional<{{argument.type}}> {{argument_name}};
             {% else %}
-                {{argument.type}} {{argument_name}};
+                {{argument.type}} {{argument_name}} = {};
             {% endif %}
         {% endfor %}
 
         static std::array<std::unique_ptr<basis::unit::ArgumentMetadataBase>, {{args|length}}> argument_metadatas;
 
-        void HandleParsedArgs(argparse::ArgumentParser parser) {
+        void HandleParsedArgs(const argparse::ArgumentParser& parser) {
         {% for argument_name, argument in args.items() %}
             {% if argument.get('optional', False) %}
                 parser.present("--{{argument_name}}", {{argument_name}});

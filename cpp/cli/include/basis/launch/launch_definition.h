@@ -15,6 +15,7 @@
 
 struct UnitDefinition {
   std::string unit_type;
+  std::vector<std::pair<std::string, std::string>> args;
 };
 
 struct ProcessDefinition {

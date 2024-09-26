@@ -36,7 +36,11 @@ LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node &yaml) {
         unit.unit_type = unit_name;
       }
 
-      process.units.emplace("/" + unit_name, std::move(unit));
+      if (unit_yaml["args"]) {
+        for (const auto &kv : unit_yaml["args"]) {
+          unit.args.emplace_back(std::pair{kv.first.as<std::string>(), kv.second.as<std::string>()});
+        }
+      }
     }
     launch.processes.emplace(process_yaml.first.as<std::string>(), std::move(process));
   }

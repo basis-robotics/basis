@@ -1,15 +1,19 @@
-#include <spdlog/cfg/env.h>
+#include <nonstd/expected.hpp>
 
 #include <basis/unit.h>
+#include <basis/unit/create_unit.h>
 
-extern "C" {
-basis::Unit *CreateUnit();
-}
-
-int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
+int main(int argc, char *argv[]) {
   basis::core::logging::InitializeLoggingSystem();
 
-  auto unit = std::unique_ptr<basis::Unit>(CreateUnit());
+  std::unique_ptr<basis::Unit> unit(CreateUnit("", std::pair{argc, argv}, [](const char* msg) {
+    std::cerr << msg << std::endl;
+  }));
+
+  if(!unit) {
+    return 1;
+  }
+
   unit->WaitForCoordinatorConnection();
   unit->CreateTransportManager();
   unit->Initialize();

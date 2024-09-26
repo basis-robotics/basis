@@ -1,5 +1,7 @@
 #pragma once
 
+#include <nonstd/expected.hpp>
+
 #include <basis/unit.h>
 
 #include <foxglove/websocket/websocket_server.hpp>

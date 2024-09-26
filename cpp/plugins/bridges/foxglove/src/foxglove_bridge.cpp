@@ -420,7 +420,9 @@ void FoxgloveBridge::updateAdvertisedTopics() {
 
 extern "C" {
 
-basis::Unit *CreateUnit(std::string unit_name) {
+basis::Unit *CreateUnit(std::string unit_name, [[maybe_unused]] const basis::unit::CommandLineTypes& command_line) {
+  // TODO: create args for Foxglove
+
   return new basis::plugins::bridges::foxglove::FoxgloveBridge(unit_name);
 }
 }

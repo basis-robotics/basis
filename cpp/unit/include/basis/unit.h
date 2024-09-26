@@ -10,6 +10,8 @@
 #include <basis/core/threading/thread_pool.h>
 #include <basis/core/transport/transport_manager.h>
 
+#include "unit/args_command_line.h"
+
 #include <memory>
 #include <tuple>
 #include <type_traits>

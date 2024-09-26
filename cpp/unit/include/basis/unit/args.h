@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "args_command_line.h"
+
 namespace basis::unit {
 
 struct ArgumentMetadataBase {
@@ -69,7 +71,7 @@ struct ArgumentMetadata : public ArgumentMetadataBase {
 
 template<typename T_DERIVED>
 struct UnitArguments {
-    std::unique_ptr<argparse::ArgumentParser> CreateArgumentParser() {
+    static std::unique_ptr<argparse::ArgumentParser> CreateArgumentParser() {
         auto parser = std::make_unique<argparse::ArgumentParser>();
 
         for(auto& arg : T_DERIVED::argument_metadatas) {
@@ -79,31 +81,46 @@ struct UnitArguments {
         return parser;
     }
 
-    T_DERIVED ParseArguments(const std::map<std::string, std::string>& args) {
-        std::vector<std::string> command_line(args.size() * 2);
-        for(auto& [k, v] : args) {
-            command_line.push_back("--" + k);
-            command_line.push_back(v);
+    static nonstd::expected<T_DERIVED, std::string> ParseArgumentsVariant(const CommandLineTypes& command_line) {
+        return std::visit([](auto&& command_line) { 
+            return ParseArguments(command_line);
+        }, command_line);
+    }
+
+    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(const std::vector<std::pair<std::string, std::string>>& command_line) {
+        std::vector<std::string> command_line_exploded(command_line.size() * 2);
+        for(auto& [k, v] : command_line) {
+            command_line_exploded.push_back("--" + k);
+            command_line_exploded.push_back(v);
         }
 
-        return ParseArguments(command_line);
+        return ParseArguments(command_line_exploded);
     }
-    T_DERIVED ParseArguments(int argc, const char* argv[]) {
+
+    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(std::pair<int, const char*const*> argc_argv) {
+        return ParseArguments(argc_argv.first, argc_argv.second);
+    }
+
+    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(int argc, const char*const* argv) {
         // https://github.com/p-ranav/argparse/blob/v3.1/include/argparse/argparse.hpp#L1868
         return ParseArguments(std::vector<std::string>{argv, argv + argc});
     }
 
-    T_DERIVED ParseArguments(const std::vector<std::string>& command_line) {
+    static nonstd::expected<T_DERIVED, std::string>  ParseArguments(const std::vector<std::string>& command_line) {
         T_DERIVED out;
 
         auto parser = CreateArgumentParser();
         
-        parser->parse_args(command_line);
+        try {
+            parser->parse_args(command_line);
+        }
+        catch (const std::exception& err) {
+            return nonstd::make_unexpected(err.what());
+        }
 
-        out.HandleParsedArgs(parser);
-        // TODO: this can be doing via metadata
+        // TODO: this can likely be done via metadata
+        out.HandleParsedArgs(*parser);
 
-        // TODO
         return out;
     }
 };
