@@ -56,7 +56,18 @@ struct ArgumentMetadata : public ArgumentMetadataBase {
         }
 
         if constexpr (std::is_same_v<T_ARGUMENT_TYPE, bool>) {
-            // Do nothing
+            arg.action([&](const std::string& value) { 
+                std::string lowered = value;
+                std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+                    [](unsigned char c){ return std::tolower(c); });
+                if(lowered == "true" or lowered == "1") {
+                    return true;
+                }
+                if(lowered == "false" or lowered == "0") {
+                    return false;
+                }
+                throw std::runtime_error(fmt::format("[--{} {}] can't be converted to bool, must be '0', '1', 'true', or 'false' (case insensitive)", ArgumentMetadataBase::name, value));
+            });
         }
         else if constexpr (std::is_floating_point_v<T_ARGUMENT_TYPE>) {
             arg.template scan<'g', T_ARGUMENT_TYPE>();
@@ -66,7 +77,6 @@ struct ArgumentMetadata : public ArgumentMetadataBase {
         if(default_value) {
             arg.default_value(*default_value);
         }
-        
     }
 
     std::optional<T_ARGUMENT_TYPE> default_value;
