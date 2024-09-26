@@ -15,12 +15,25 @@ properties:
     patternProperties:
       .*:
         type: object
+        additionalProperties: False
         properties:
           type: 
             type: string
           help:
             type: string
+            optional: True
+          optional:
+            type: boolean
+            optional: True
           default: {}
+        oneOf:
+          - type: object
+            required: 
+              - optional
+          - type: object
+            required:
+              - default
+            
   cpp_includes:
     type: array
     title: C++ Includes
