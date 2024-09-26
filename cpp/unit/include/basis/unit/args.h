@@ -88,7 +88,11 @@ struct UnitArguments {
     }
 
     static nonstd::expected<T_DERIVED, std::string>  ParseArguments(const std::vector<std::pair<std::string, std::string>>& argument_pairs) {
-        std::vector<std::string> command_line(argument_pairs.size() * 2 + 1);
+        std::vector<std::string> command_line;
+
+        command_line.push_back("");
+        command_line.reserve(command_line.size());
+        
         for(auto& [k, v] : argument_pairs) {
             command_line.push_back("--" + k);
             command_line.push_back(v);
@@ -108,7 +112,8 @@ struct UnitArguments {
     }
 
     static nonstd::expected<T_DERIVED, std::string> ParseArguments(const std::vector<std::string>& command_line) {
-        std::vector<std::string> command_line_with_program(command_line.size() + 1);
+        std::vector<std::string> command_line_with_program;
+        command_line_with_program.reserve(command_line.size() + 1);
         // Handle "program name" argument
         command_line_with_program.push_back("");
         command_line_with_program.insert(command_line_with_program.end(), command_line.begin(), command_line.end());
