@@ -6,7 +6,7 @@
 int main(int argc, char *argv[]) {
   basis::core::logging::InitializeLoggingSystem();
 
-  std::unique_ptr<basis::Unit> unit(CreateUnit("", std::pair{argc, argv}, [](const char* msg) {
+  std::unique_ptr<basis::Unit> unit(CreateUnit({}, std::pair{argc, argv}, [](const char* msg) {
     std::cerr << msg << std::endl;
   }));
 

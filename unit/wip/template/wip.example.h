@@ -9,7 +9,7 @@
 
 class wip : public unit::wip::Base {
 public:
-  wip(std::optional<std::string> name_override = {}) 
+  wip(const Args& args, const std::optional<std::string_view>& name_override = {}) 
   : unit::wip::Base(name_override)
   {}
 

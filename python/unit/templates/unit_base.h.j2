@@ -21,8 +21,34 @@ namespace unit::{{unit_name}} {
     struct Args : public basis::unit::UnitArguments<Args> {
     private:
         friend class basis::unit::UnitArguments<Args>;
+        {# avoid double declaration of empty args list #}
+        {% if args %}
         Args() = default;
+        {% endif %}
     public:
+        Args(
+        {%- set comma = joiner(", ") %}
+        {% for argument_name, argument in args.items() %}
+            {{ comma() }}
+            const 
+            {% if argument.get('optional', False) %}
+                std::optional<{{argument.type}}>
+            {% else %}
+                {{argument.type}}
+            {% endif %}&
+            {{argument_name}}
+        {% endfor %}
+        ) 
+        {% if args %} :
+            {%- set comma = joiner(", ") %}
+            {% for argument_name, argument in args.items() %}
+                {{ comma() }} {{argument_name}}({{argument_name}})
+            {% endfor %}
+        {% endif %}
+         {
+
+        }
+
 
         {% for argument_name, argument in args.items() %}
             {% if argument.get('optional', False) %}
@@ -61,8 +87,8 @@ namespace unit::{{unit_name}} {
         }
 
     public:
-        Base(std::optional<std::string> name_override = {}) 
-        : basis::SingleThreadedUnit(name_override.value_or("{{unit_name}}")) {
+        Base(std::optional<std::string_view> name_override = {}) 
+            : basis::SingleThreadedUnit(name_override.value_or("{{unit_name}}")) {
 
         }
 

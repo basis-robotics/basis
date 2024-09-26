@@ -97,7 +97,7 @@ public:
 
   bool LaunchSharedObjectInThread(const std::filesystem::path &path, std::string_view unit_name,
                                   basis::RecorderInterface *recorder, const basis::unit::CommandLineTypes& command_line) {
-    std::unique_ptr<basis::Unit> unit(CreateUnit(path, unit_name, command_line));
+    std::unique_ptr<basis::Unit> unit(CreateUnitWithLoader(path, unit_name, command_line));
 
     if (!unit) {
       return false;

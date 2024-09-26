@@ -37,7 +37,7 @@ std::vector<std::regex> parseRegexPatterns(const std::vector<std::string> &patte
   return result;
 }
 
-FoxgloveBridge::FoxgloveBridge(std::string unit_name) : SingleThreadedUnit(unit_name) {}
+FoxgloveBridge::FoxgloveBridge(const std::optional<std::string_view>& unit_name) : SingleThreadedUnit(unit_name.value_or("FoxgloveBridge")) {}
 
 FoxgloveBridge::~FoxgloveBridge() {
   if (server) {
@@ -420,9 +420,9 @@ void FoxgloveBridge::updateAdvertisedTopics() {
 
 extern "C" {
 
-basis::Unit *CreateUnit(std::string unit_name, [[maybe_unused]] const basis::unit::CommandLineTypes& command_line) {
+basis::Unit *CreateUnit(const std::optional<std::string_view>& unit_name_override, [[maybe_unused]] const basis::unit::CommandLineTypes& command_line) {
   // TODO: create args for Foxglove
 
-  return new basis::plugins::bridges::foxglove::FoxgloveBridge(unit_name);
+  return new basis::plugins::bridges::foxglove::FoxgloveBridge(unit_name_override);
 }
 }

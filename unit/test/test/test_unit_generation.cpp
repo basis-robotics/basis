@@ -15,7 +15,11 @@ template <typename T_PUBSUB> auto CreateCallbacks(T_PUBSUB &pubsub) {
   }(std::make_index_sequence<T_PUBSUB::input_count>());
 }
 
-TEST(TestUnitGeneration, TestInitialization) { test_unit unit; }
+unit::test_unit::Args CreateTestUnitArgs() {
+  return unit::test_unit::Args("a", 1, "b");
+}
+
+TEST(TestUnitGeneration, TestInitialization) { test_unit unit(CreateTestUnitArgs()); }
 
 template <class T, template <class...> class U>
 inline constexpr bool is_instance_of_v = std::false_type{};
@@ -41,7 +45,7 @@ static_assert(
         std::shared_ptr<const sensor_msgs::Image>>);
 
 TEST(TestUnitGeneration, TestAllHandler) {
-  test_unit unit;
+  test_unit unit(CreateTestUnitArgs());
 
   bool callback_called = false;
   bool pub_callback_called = false;
@@ -74,7 +78,7 @@ static_assert(std::is_same_v<
               std::shared_ptr<const sensor_msgs::Image>>);
 
 TEST(TestUnitGeneration, TestFieldHandler) {
-  test_unit unit;
+  test_unit unit(CreateTestUnitArgs());
 
   bool callback_called = false;
   bool pub_callback_called = false;
@@ -120,7 +124,7 @@ static_assert(
         std::shared_ptr<const sensor_msgs::PointCloud2>>);
 
 TEST(TestUnitGeneration, TestApproxHandler) {
-  test_unit unit;
+  test_unit unit(CreateTestUnitArgs());
 
   bool callback_called = false;
   bool pub_callback_called = false;
@@ -212,7 +216,7 @@ static_assert(std::is_same_v<
               std::shared_ptr<const sensor_msgs::Image>>);
 
 TEST(TestUnitGeneration, TestEqualOptions) {
-  test_unit unit;
+  test_unit unit(CreateTestUnitArgs());
 
   bool callback_called = false;
   bool pub_callback_called = false;
@@ -289,7 +293,7 @@ TEST(TestUnitGeneration, TestEqualOptions) {
 
 // Test that "magic" conversion from an inproc type to a message type works
 TEST(TestUnitGeneration, TestInprocType) {  
-  test_unit unit;
+  test_unit unit(CreateTestUnitArgs());
 
   unit.CreateTransportManager();
   unit.Initialize({});
