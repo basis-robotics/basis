@@ -130,7 +130,7 @@ template <typename T_DERIVED> struct UnitArguments {
   static nonstd::expected<T_DERIVED, std::string>
   ParseArguments(const std::vector<std::pair<std::string, std::string>> &argument_pairs) {
     std::vector<std::string> command_line;
-    command_line.reserve(command_line.size() + 1);
+    command_line.reserve(argument_pairs.size() * 2 + 1);
 
     // Add fake program name
     command_line.push_back("");
