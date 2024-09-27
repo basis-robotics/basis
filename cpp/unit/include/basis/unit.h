@@ -301,8 +301,8 @@ protected:
 
   // Helpers to convert a byte buffer to a type erased message pointer
   std::unordered_map<std::string, DeserializationHelper> deserialization_helpers;
-  // Conversion from topics like /${args.camera_name}/rgb -> /webcam/rgb
 
+  // Mapping from from topics like {{args.camera_name}}/rgb -> /webcam/rgb
   std::unordered_map<std::string, std::string> templated_topic_to_runtime_topic;
 
   ////////////////////////////////////////////////////////////////////////////////////////////////

@@ -20,7 +20,7 @@ basis::Unit *CreateUnit(const std::optional<std::string_view> &unit_name_overrid
     return nullptr;
   }
 
-  auto maybe_templated_topics = basis::unit::ParseTemplatedTopics(*args, T_UNIT::all_templated_topics);
+  auto maybe_templated_topics = basis::unit::RenderTemplatedTopics(*args, T_UNIT::all_templated_topics);
   if (!maybe_templated_topics) {
     error_logger(fmt::format("Failed to parse templates for {} ({}):\t\n{}",
                              unit_name_override.value_or(unit_type_name), unit_type_name,

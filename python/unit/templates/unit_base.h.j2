@@ -98,7 +98,7 @@ namespace unit::{{unit_name}} {
             // It's assumed that we've already checked the template arguments pre-construction, anyhow, so ignore the error case and crash otherwise
             // (we're in a constructor, all we can do is throw)
             // It's unfortunate that we end up parsing the topics twice, but it shouldn't be that slow
-            templated_topic_to_runtime_topic = *basis::unit::ParseTemplatedTopics(args, all_templated_topics);
+            templated_topic_to_runtime_topic = *basis::unit::RenderTemplatedTopics(args, all_templated_topics);
         }
 
 {% for handler_name in handlers %}
