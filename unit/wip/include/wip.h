@@ -8,8 +8,9 @@
 
 class wip : public unit::wip::Base {
 public:
-  wip(const unit::wip::Args& args, const std::optional<std::string_view>& unit_name_override = {})
-      : unit::wip::Base(unit_name_override) {}
+  wip(const unit::wip::Args &args,
+      const std::optional<std::string_view> &unit_name_override = {})
+      : unit::wip::Base(args, unit_name_override) {}
 
   virtual unit::wip::StereoMatch::Output
   StereoMatch(const unit::wip::StereoMatch::Input &input) override;
