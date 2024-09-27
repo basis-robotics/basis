@@ -42,6 +42,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(yaml-cpp)
 
 FetchContent_Declare(
+  nlohmann_json
+  OVERRIDE_FIND_PACKAGE
+  GIT_REPOSITORY https://github.com/nlohmann/json/
+  GIT_TAG v3.10.5
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
+
+FetchContent_Declare(
   inja
   GIT_REPOSITORY https://github.com/pantor/inja.git
   GIT_TAG v3.4.0
