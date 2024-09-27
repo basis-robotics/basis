@@ -116,10 +116,10 @@ namespace unit::{{unit_name}}::{{handler_name}} {
             };
             Output output = std::apply(f, messages);
             
-{% for output_name, output in outputs.items() %}
+{% for output in outputs.values() %}
         {% if not output.optional %}
             if (output.{{output.cpp_topic_name}} == nullptr) {
-                BASIS_LOG_ERROR("{{unit_name}}::{{handler_name}} didn't output {{output_name}}");
+                BASIS_LOG_ERROR("{{unit_name}}::{{handler_name}} didn't output {}", outputs[{{loop.index - 1}}]);
             }
         {% endif %}
 {% endfor %}
