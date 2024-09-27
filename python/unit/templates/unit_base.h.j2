@@ -62,10 +62,15 @@ namespace unit::{{unit_name}} {
 
         void HandleParsedArgs(const argparse::ArgumentParser& parser) {
         {% for argument_name, argument in args.items() %}
+            
             {% if argument.get('optional', False) and not argument.type.startswith('vector') %}
                 {{argument_name}} = parser.present("--{{argument_name}}");
+                if({{argument_name}}) {
+                    args_map["{{argument_name}}"] = fmt::format("{}", *{{argument_name}});
+                }
             {% else %}
                 {{argument_name}} = parser.get<{{argument.type}}>("--{{argument_name}}");
+                args_map["{{argument_name}}"] = fmt::format("{}", {{argument_name}});
             {% endif %}
         {% endfor %}
         }
@@ -76,20 +81,24 @@ namespace unit::{{unit_name}} {
 
     // TODO: this won't work with multi threaded units, obviously
     class Base : public basis::SingleThreadedUnit {
-
         void SetupSerializationHelpers();
 
         void CreatePublishersSubscribers(const basis::UnitInitializeOptions& options) {
             {% for handler_name in handlers %}
-            {{handler_name}}_pubsub.SetupPubSub(options, transport_manager.get(), overall_queue, &thread_pool);
+            {{handler_name}}_pubsub.SetupPubSub(options, transport_manager.get(), overall_queue, &thread_pool, templated_topic_to_runtime_topic);
             handlers["{{handler_name}}"] = &{{handler_name}}_pubsub;
             {% endfor %}
         }
 
     public:
-        Base(std::optional<std::string_view> name_override = {}) 
-            : basis::SingleThreadedUnit(name_override.value_or("{{unit_name}}")) {
+        using Args = unit::{{unit_name}}::Args;
 
+        Base(const Args& args, std::optional<std::string_view> name_override = {}) 
+            : cached_args(args), basis::SingleThreadedUnit(name_override.value_or("{{unit_name}}")) {
+            // It's assumed that we've already checked the template arguments pre-construction, anyhow, so ignore the error case and crash otherwise
+            // (we're in a constructor, all we can do is throw)
+            // It's unfortunate that we end up parsing the topics twice, but it shouldn't be that slow
+            templated_topic_to_runtime_topic = *basis::unit::ParseTemplatedTopics(args, all_templated_topics);
         }
 
 {% for handler_name in handlers %}
@@ -110,6 +119,11 @@ namespace unit::{{unit_name}} {
             }
         };
         {% endfor %}
+
+        const unit::{{unit_name}}::Args cached_args;
+        // All inputs and outputs, to use to populate template conversion cache
+    public:
+        static std::vector<std::string> all_templated_topics;
     };
     
 }

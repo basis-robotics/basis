@@ -12,18 +12,17 @@
 
 #include <google/protobuf/wrappers.pb.h>
 
+#include "basis/cli_logger.h"
 #include "basis/core/logging/macros.h"
 #include "basis/core/time.h"
-#include "basis/cli_logger.h"
-#include <basis/launch.h>
 #include "process_manager.h"
-#include <basis/launch/unit_loader.h>
+#include <basis/launch.h>
 #include <basis/launch/launch_definition.h>
+#include <basis/launch/unit_loader.h>
 
 #include <time.pb.h>
 
 #include "backward.hpp"
-
 
 DECLARE_AUTO_LOGGER_NS(basis::launch)
 
@@ -96,7 +95,8 @@ public:
    */
 
   bool LaunchSharedObjectInThread(const std::filesystem::path &path, std::string_view unit_name,
-                                  basis::RecorderInterface *recorder, const basis::unit::CommandLineTypes& command_line) {
+                                  basis::RecorderInterface *recorder,
+                                  const basis::unit::CommandLineTypes &command_line) {
     std::unique_ptr<basis::Unit> unit(CreateUnitWithLoader(path, unit_name, command_line));
 
     if (!unit) {
@@ -142,7 +142,8 @@ protected:
  * @param args The args passed into this launch.
  * @return Process A handle to the process we ran. When destructed, will kill the process.
  */
-[[nodiscard]] cli::Process CreateSublauncherProcess(const std::string &process_name, const std::vector<std::string> &args) {
+[[nodiscard]] cli::Process CreateSublauncherProcess(const std::string &process_name,
+                                                    const std::vector<std::string> &args) {
   assert(args.size() >= 3);
 
   // Construct new arguments to pass in
@@ -290,7 +291,8 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
 
     basis::core::threading::ThreadPool time_thread_pool(1);
     auto time_subscriber = system_transport_manager->SubscribeCallable<basis::core::transport::proto::Time>(
-        "/time", [](std::shared_ptr<const basis::core::transport::proto::Time> msg) {
+        "/time",
+        [](std::shared_ptr<const basis::core::transport::proto::Time> msg) {
           basis::core::MonotonicTime::SetSimulatedTime(msg->nsecs(), msg->run_token());
         },
         &time_thread_pool);
@@ -305,7 +307,10 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
       }
 
       UnitExecutor runner;
-      runner.RunProcess(launch.processes.at(process_name_filter), recorder.get());
+      if (!runner.RunProcess(launch.processes.at(process_name_filter), recorder.get())) {
+        BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
+        global_stop = true;
+      }
 
       // Sleep until signal
       // TODO: this can be a condition variable now
@@ -339,4 +344,4 @@ void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &
   }
 }
 
-} // namespace basis
+} // namespace basis::launch

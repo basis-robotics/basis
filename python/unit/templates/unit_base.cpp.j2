@@ -19,6 +19,17 @@ std::array<std::unique_ptr<basis::unit::ArgumentMetadataBase>, {{args|length}}> 
     
 };
 
+std::vector<std::string> Base::all_templated_topics = {
+{% for handler in handlers.values() %}
+{% for topic in handler.inputs.keys() %}
+    "{{topic}}",
+{% endfor %}
+{% for topic in handler.outputs.keys() %}
+    "{{topic}}",
+{% endfor %}
+{% endfor %}
+};
+
 void Base::SetupSerializationHelpers() {
 {% set all_deserialize_types = {} -%}
 {% for handler in handlers.values() %}
@@ -29,8 +40,6 @@ void Base::SetupSerializationHelpers() {
 {% endif %}
 {% endfor %}
 {% endfor %}
-
-
 }
 
 
@@ -45,7 +54,7 @@ namespace {{handler_name}} {
         const basis::UnitInitializeOptions& options,
         basis::core::transport::TransportManager* transport_manager,
         std::shared_ptr<basis::core::containers::SubscriberOverallQueue> overall_queue,
-        basis::core::threading::ThreadPool* thread_pool) {
+        basis::core::threading::ThreadPool* thread_pool, const std::unordered_map<std::string, std::string>& templated_topic_to_runtime_topic) {
     {% if 'rate' in handler.sync %}
         rate_duration = basis::core::Duration::FromSecondsNanoseconds(0, int64_t(std::nano::den * {{handler.sync.rate}}));
     {% endif %}
@@ -55,13 +64,14 @@ namespace {{handler_name}} {
       std::make_shared<basis::core::containers::SubscriberQueue>(overall_queue, {{input_it['qos']['depth']}}),
     {%- endfor %}
     };
-    SetupInputs(options, transport_manager, queues, thread_pool);
+    SetupInputs(options, transport_manager, queues, thread_pool, templated_topic_to_runtime_topic);
 
     outputs = {
         {% for output_name in handler.outputs.keys() %}
-            "{{output_name}}",
+            templated_topic_to_runtime_topic.at("{{output_name}}"),
         {% endfor %}
     };
+
     {% for topic_name, output in handler.outputs.items() %}
     {{output.cpp_topic_name}}_publisher = 
     {% if output.serializer == "raw" %}
@@ -74,7 +84,7 @@ namespace {{handler_name}} {
         {% endif %}
             >
     {% endif %}
-        ("{{topic_name}}");
+        (templated_topic_to_runtime_topic.at("{{topic_name}}"));
         {{output.cpp_topic_name}}_publisher->SetMaxQueueSize({{output['qos']['depth']}});
     {% endfor %}
     {% if 'rate' in handler.sync %}
