@@ -1,8 +1,10 @@
 #pragma once
 
 #include <argparse/argparse.hpp>
-// TODO: we can factor the json dependency out into a cpp file, with some work, to speed up compilation
-#include <nlohmann/json.hpp>
+
+#include <nlohmann/json_fwd.hpp>
+
+#include <spdlog/fmt/fmt.h>
 
 namespace basis::arguments::types {
 using namespace std;
@@ -15,31 +17,9 @@ struct TypeMetadata {
 };
 
 template <typename T_ARGUMENT_TYPE>
-void ArgumentToJson(const argparse::ArgumentParser &arg_parser, std::string_view name, nlohmann::json &out) {
-  out = arg_parser.get<T_ARGUMENT_TYPE>("--" + std::string(name));
-}
+void ArgumentToJson(const argparse::ArgumentParser &arg_parser, std::string_view name, nlohmann::json &out);
 
-template <typename T_ARGUMENT_TYPE> void ArgumentTypeValidator(argparse::Argument &arg, std::string_view name) {
-  if constexpr (std::is_same_v<T_ARGUMENT_TYPE, bool>) {
-    arg.action([name = std::string(name)](const std::string &value) {
-      std::string lowered = value;
-      std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) { return std::tolower(c); });
-      if (lowered == "true" or lowered == "1") {
-        return true;
-      }
-      if (lowered == "false" or lowered == "0") {
-        return false;
-      }
-      throw std::runtime_error(
-          fmt::format("[--{} {}] can't be converted to bool, must be '0', '1', 'true', or 'false' (case insensitive)",
-                      name, value));
-    });
-  } else if constexpr (std::is_floating_point_v<T_ARGUMENT_TYPE>) {
-    arg.template scan<'g', T_ARGUMENT_TYPE>();
-  } else if constexpr (std::is_arithmetic_v<T_ARGUMENT_TYPE>) {
-    arg.template scan<'i', T_ARGUMENT_TYPE>();
-  }
-}
+template <typename T_ARGUMENT_TYPE> void ArgumentTypeValidator(argparse::Argument &arg, std::string_view name);
 
 // X Macros are great - they allow declaring a list once, and reusing it with the preprocessor multiple times
 // https://en.wikipedia.org/wiki/X_macro
@@ -60,6 +40,7 @@ template <typename T_ARGUMENT_TYPE> void ArgumentTypeValidator(argparse::Argumen
   X_TYPE(double)
 
 // Helper to construct a TypeMetadata from a type
+// This has the side effect of implicitly instantiating ArgumentToJson and ArgumentTypeValidator which is great
 #define DECLARE_ARGUMENT_TYPE(type)                                                                                    \
   {.type_name = #type, .validator = &ArgumentTypeValidator<type>, .to_json = &ArgumentToJson<type>}
 
@@ -84,7 +65,7 @@ template <typename T> struct TypeToTypeMetadata {};
 X_ALLOWED_ARGUMENT_TYPES
 
 #undef X_TYPE
-#undef X_ALLOWED_ARGUMENT_TYPES
 #undef DECLARE_ARGUMENT_TYPE
+#undef X_ALLOWED_ARGUMENT_TYPES
 
 } // namespace basis::arguments::types

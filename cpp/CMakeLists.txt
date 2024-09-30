@@ -47,8 +47,8 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/nlohmann/json/
   GIT_TAG v3.10.5
 )
+set(JSON_MultipleHeaders ON CACHE INTERNAL "force json to use multiple headers to allow for forward declarations")
 FetchContent_MakeAvailable(nlohmann_json)
-
 
 FetchContent_Declare(
   inja
