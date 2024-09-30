@@ -9,7 +9,7 @@
 
 class simple_pub : public unit::simple_pub::Base {
 public:
-  simple_pub(const std::optional<std::string_view>& name_override = {}) 
+  simple_pub(const Args& args, const std::optional<std::string_view>& name_override = {}) 
   : unit::simple_pub::Base(name_override)
   {}
 
