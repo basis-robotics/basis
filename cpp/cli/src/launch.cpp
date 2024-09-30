@@ -210,11 +210,9 @@ void InstallSignalHandler(int sig) {
 }
 
 /**
- * Launch a yaml
- * @param launch
- * @param args
+ * Launch a yaml, forking for child processes
  */
-void LaunchYamlParent(const LaunchDefinition &launch, const std::vector<std::string> &args) {
+void LaunchWithProcessForks(const LaunchDefinition &launch, const std::vector<std::string> &args) {
   std::vector<cli::Process> managed_processes;
   for (const auto &[process_name, _] : launch.processes) {
     managed_processes.push_back(CreateSublauncherProcess(process_name, args));
@@ -244,19 +242,22 @@ void LaunchYamlParent(const LaunchDefinition &launch, const std::vector<std::str
   }
 }
 
-void LaunchYamlChild(const LaunchDefinition &launch, std::string process_name_filter, bool sim) {
+/**
+ * Launch a single process within a launch definition
+ */
+void LaunchProcessDefinition(const ProcessDefinition &process_definition,
+                             const std::optional<RecordingSettings> &recording_settings,
+                             const std::string_view process_name_filter, const bool sim) {
   while (!global_stop) {
     // We are a child launcher
     std::unique_ptr<basis::RecorderInterface> recorder;
-    if (launch.recording_settings && launch.recording_settings->patterns.size()) {
+    if (recording_settings && recording_settings->patterns.size()) {
       std::string recorder_type;
-      if (launch.recording_settings->async) {
+      if (recording_settings->async) {
         recorder_type = " (async)";
-        recorder = std::make_unique<basis::AsyncRecorder>(launch.recording_settings->directory,
-                                                          launch.recording_settings->patterns);
+        recorder = std::make_unique<basis::AsyncRecorder>(recording_settings->directory, recording_settings->patterns);
       } else {
-        recorder = std::make_unique<basis::Recorder>(launch.recording_settings->directory,
-                                                     launch.recording_settings->patterns);
+        recorder = std::make_unique<basis::Recorder>(recording_settings->directory, recording_settings->patterns);
       }
 
       std::string record_name =
@@ -267,8 +268,7 @@ void LaunchYamlChild(const LaunchDefinition &launch, std::string process_name_fi
         record_name += "_sim";
       }
 
-      BASIS_LOG_INFO("Recording{} to {}.mcap", recorder_type,
-                     (launch.recording_settings->directory / record_name).string());
+      BASIS_LOG_INFO("Recording{} to {}.mcap", recorder_type, (recording_settings->directory / record_name).string());
 
       recorder->Start(record_name);
     }
@@ -307,7 +307,7 @@ void LaunchYamlChild(const LaunchDefinition &launch, std::string process_name_fi
       }
 
       UnitExecutor runner;
-      if (!runner.RunProcess(launch.processes.at(process_name_filter), recorder.get())) {
+      if (!runner.RunProcess(process_definition, recorder.get())) {
         BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
         global_stop = true;
       }
@@ -332,9 +332,11 @@ void LaunchYamlChild(const LaunchDefinition &launch, std::string process_name_fi
 void LaunchYamlDefinition(const LaunchDefinition &launch, const LaunchContext &context) {
   if (context.process_filter.empty()) {
     // We are the parent launcher, will fork here
-    LaunchYamlParent(launch, context.all_args);
+    LaunchWithProcessForks(launch, context.all_args);
   } else {
-    LaunchYamlChild(launch, context.process_filter, context.sim);
+    ProcessDefinition definition = launch.processes.at(context.process_filter);
+
+    LaunchProcessDefinition(definition, launch.recording_settings, context.process_filter, context.sim);
   }
 }
 
