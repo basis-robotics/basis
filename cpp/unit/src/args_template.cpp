@@ -6,7 +6,7 @@
 namespace basis::unit {
 
 nonstd::expected<std::unordered_map<std::string, std::string>, std::string>
-RenderTemplatedTopics(const UnitArgumentsBase &args, const std::vector<std::string> &topics) {
+RenderTemplatedTopics(const basis::arguments::ArgumentsBase &args, const std::vector<std::string> &topics) {
   nlohmann::json template_data;
   template_data["args"] = args.GetArgumentMapping();
   std::unordered_map<std::string, std::string> out;

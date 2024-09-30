@@ -3,7 +3,7 @@
 #include <vector>
 
 #include <basis/unit.h>
-#include <basis/unit/args.h>
+#include <basis/arguments.h>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -18,9 +18,9 @@
 
 namespace unit::{{unit_name}} {
     using namespace std;
-    struct Args : public basis::unit::UnitArguments<Args> {
+    struct Args : public basis::arguments::UnitArguments<Args> {
     private:
-        friend class basis::unit::UnitArguments<Args>;
+        friend class basis::arguments::UnitArguments<Args>;
         {# avoid double declaration of empty args list #}
         {% if args %}
         Args() = default;
@@ -58,7 +58,7 @@ namespace unit::{{unit_name}} {
             {% endif %}
         {% endfor %}
 
-        static std::array<std::unique_ptr<basis::unit::ArgumentMetadataBase>, {{args|length}}> argument_metadatas;
+        static std::array<std::unique_ptr<basis::arguments::ArgumentMetadataBase>, {{args|length}}> argument_metadatas;
 
         void HandleParsedArgs(const argparse::ArgumentParser& parser) {
         {% for argument_name, argument in args.items() %}

@@ -2,15 +2,14 @@
 
 namespace unit::{{unit_name}} {
     
-std::array<std::unique_ptr<basis::unit::ArgumentMetadataBase>, {{args|length}}> Args::argument_metadatas = {
+std::array<std::unique_ptr<basis::arguments::ArgumentMetadataBase>, {{args|length}}> Args::argument_metadatas = {
 {% for argument_name, argument in args.items() %}
     std::make_unique<
-        basis::unit::ArgumentMetadata<{{argument.type}}>
+        basis::arguments::TypedArgumentMetadata<{{argument.type}}>
     >
     (
         "{{argument_name}}",
         "{{argument.get('help')}}",
-        "{{argument.type}}",
         {{argument.get('optional', False) | lower}}
         {% if 'default' in argument %}
             , {{argument.default|tojson}}

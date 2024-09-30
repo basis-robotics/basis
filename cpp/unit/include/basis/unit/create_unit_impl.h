@@ -9,7 +9,7 @@
 namespace basis::unit {
 template <typename T_UNIT>
 basis::Unit *CreateUnit(const std::optional<std::string_view> &unit_name_override,
-                        const basis::unit::CommandLineTypes &command_line,
+                        const basis::arguments::CommandLineTypes &command_line,
                         basis::CreateUnitLoggerInterface error_logger, const std::string_view unit_type_name) {
   auto args = T_UNIT::Args::ParseArgumentsVariant(command_line);
 

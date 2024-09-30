@@ -1,5 +1,6 @@
 #pragma once
 
+#include <basis/arguments/command_line.h>
 #include <basis/core/containers/subscriber_callback_queue.h>
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/logging.h>
@@ -9,7 +10,6 @@
 #include <basis/core/transport/transport_manager.h>
 #include <basis/synchronizers/synchronizer_base.h>
 
-#include "unit/args_command_line.h"
 #include "unit/args_template.h"
 
 #include <memory>

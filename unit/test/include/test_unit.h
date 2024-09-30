@@ -8,9 +8,8 @@
 
 class test_unit : public unit::test_unit::Base {
 public:
-  test_unit(const unit::test_unit::Args &args,
-            const std::optional<std::string_view> &unit_name_override = {})
-      : unit::test_unit::Base(args, unit_name_override) {}
+  test_unit(const unit::test_unit::Args& args, const std::optional<std::string_view>& unit_name_override = {})
+      : unit::test_unit::Base(unit_name_override) {}
 
   virtual unit::test_unit::StereoMatch::Output
   StereoMatch(const unit::test_unit::StereoMatch::Input &input) override;
@@ -24,38 +23,28 @@ public:
   virtual unit::test_unit::TestEqualOptions::Output TestEqualOptions(
       const unit::test_unit::TestEqualOptions::Input &input) override;
 
-  virtual unit::test_unit::TestInprocTypePub::Output TestInprocTypePub(
-      const unit::test_unit::TestInprocTypePub::Input &input) override;
+  virtual unit::test_unit::TestInprocTypePub::Output
+  TestInprocTypePub(const unit::test_unit::TestInprocTypePub::Input &input) override;
 
   bool test_inproc_either_variant_executed = false;
   int test_inproc_variant_index = -1;
   virtual unit::test_unit::TestInprocTypeSubEither::Output
-  TestInprocTypeSubEither(
-      const unit::test_unit::TestInprocTypeSubEither::Input &input) override;
+  TestInprocTypeSubEither(const unit::test_unit::TestInprocTypeSubEither::Input &input) override;
 
   bool test_inproc_only_inproc_executed = false;
   virtual unit::test_unit::TestInprocTypeSubOnlyInproc::Output
-  TestInprocTypeSubOnlyInproc(
-      const unit::test_unit::TestInprocTypeSubOnlyInproc::Input &input)
-      override;
+  TestInprocTypeSubOnlyInproc(const unit::test_unit::TestInprocTypeSubOnlyInproc::Input &input) override;
 
   bool test_inproc_only_message_executed = false;
   virtual unit::test_unit::TestInprocTypeSubOnlyMessage::Output
-  TestInprocTypeSubOnlyMessage(
-      const unit::test_unit::TestInprocTypeSubOnlyMessage::Input &input)
-      override;
+  TestInprocTypeSubOnlyMessage(const unit::test_unit::TestInprocTypeSubOnlyMessage::Input &input) override;
 
   bool test_inproc_accumulated_input_executed = false;
-  decltype(unit::test_unit::TestInprocTypeSubAccumulate::Input::inproc_test)
-      test_inproc_accumulated_input;
+  decltype(unit::test_unit::TestInprocTypeSubAccumulate::Input::inproc_test) test_inproc_accumulated_input;
   virtual unit::test_unit::TestInprocTypeSubAccumulate::Output
-  TestInprocTypeSubAccumulate(
-      const unit::test_unit::TestInprocTypeSubAccumulate::Input &input)
-      override;
+  TestInprocTypeSubAccumulate(const unit::test_unit::TestInprocTypeSubAccumulate::Input &input) override;
 
   bool test_inproc_avoid_pointless_conversion_executed = false;
   virtual unit::test_unit::TestInprocTypeSubAvoidPointlessConversion::Output
-  TestInprocTypeSubAvoidPointlessConversion(
-      const unit::test_unit::TestInprocTypeSubAvoidPointlessConversion::Input
-          &input) override;
+  TestInprocTypeSubAvoidPointlessConversion(const unit::test_unit::TestInprocTypeSubAvoidPointlessConversion::Input &input) override;
 };

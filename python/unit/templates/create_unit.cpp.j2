@@ -6,7 +6,7 @@
 
 extern "C" {
 
-basis::Unit* CreateUnit(const std::optional<std::string_view>& unit_name_override, const basis::unit::CommandLineTypes& command_line, basis::CreateUnitLoggerInterface error_logger) {
+basis::Unit* CreateUnit(const std::optional<std::string_view>& unit_name_override, const basis::arguments::CommandLineTypes& command_line, basis::CreateUnitLoggerInterface error_logger) {
     return basis::unit::CreateUnit<{{unit_name}}>(unit_name_override, command_line, error_logger, "{{unit_name}}");
 }
 

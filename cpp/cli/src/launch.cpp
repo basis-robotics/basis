@@ -96,7 +96,7 @@ public:
 
   bool LaunchSharedObjectInThread(const std::filesystem::path &path, std::string_view unit_name,
                                   basis::RecorderInterface *recorder,
-                                  const basis::unit::CommandLineTypes &command_line) {
+                                  const basis::arguments::CommandLineTypes &command_line) {
     std::unique_ptr<basis::Unit> unit(CreateUnitWithLoader(path, unit_name, command_line));
 
     if (!unit) {
@@ -214,7 +214,7 @@ void InstallSignalHandler(int sig) {
  * @param launch
  * @param args
  */
-void LaunchYaml(const LaunchDefinition &launch, const std::vector<std::string> &args) {
+void LaunchYamlParent(const LaunchDefinition &launch, const std::vector<std::string> &args) {
   std::vector<cli::Process> managed_processes;
   for (const auto &[process_name, _] : launch.processes) {
     managed_processes.push_back(CreateSublauncherProcess(process_name, args));
@@ -244,7 +244,7 @@ void LaunchYaml(const LaunchDefinition &launch, const std::vector<std::string> &
   }
 }
 
-void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter, bool sim) {
+void LaunchYamlChild(const LaunchDefinition &launch, std::string process_name_filter, bool sim) {
   while (!global_stop) {
     // We are a child launcher
     std::unique_ptr<basis::RecorderInterface> recorder;
@@ -329,18 +329,12 @@ void LaunchChild(const LaunchDefinition &launch, std::string process_name_filter
   }
 }
 
-// todo: probably take a std::fs::path here
-void LaunchYamlPath(std::string_view yaml_path, const std::vector<std::string> &args, std::string process_name_filter,
-                    bool sim) {
-  YAML::Node loaded_yaml = YAML::LoadFile(std::string(yaml_path));
-
-  const LaunchDefinition launch = ParseLaunchDefinitionYAML(loaded_yaml);
-
-  if (process_name_filter.empty()) {
+void LaunchYamlDefinition(const LaunchDefinition &launch, const LaunchContext &context) {
+  if (context.process_filter.empty()) {
     // We are the parent launcher, will fork here
-    LaunchYaml(launch, args);
+    LaunchYamlParent(launch, context.all_args);
   } else {
-    LaunchChild(launch, process_name_filter, sim);
+    LaunchYamlChild(launch, context.process_filter, context.sim);
   }
 }
 

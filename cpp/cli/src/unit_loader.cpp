@@ -9,7 +9,7 @@ struct DlClose {
 
 using ManagedSharedObject = std::unique_ptr<void, DlClose>;
 
-using CreateUnitCallback = decltype(CreateUnit)*;
+using CreateUnitCallback = decltype(CreateUnit) *;
 
 struct UnitLoader {
   ManagedSharedObject handle;
@@ -18,7 +18,8 @@ struct UnitLoader {
 
 std::unordered_map<std::string, UnitLoader> unit_loaders;
 
-std::unique_ptr<basis::Unit> CreateUnitWithLoader(const std::filesystem::path &path, std::string_view unit_name, const basis::unit::CommandLineTypes& command_line) {
+std::unique_ptr<basis::Unit> CreateUnitWithLoader(const std::filesystem::path &path, std::string_view unit_name,
+                                                  const basis::arguments::CommandLineTypes &command_line) {
   std::string string_path = path.string();
 
   auto maybe_unit_loader = unit_loaders.find(string_path);
@@ -44,7 +45,6 @@ std::unique_ptr<basis::Unit> CreateUnitWithLoader(const std::filesystem::path &p
     maybe_unit_loader = unit_loaders.emplace(path.string(), UnitLoader{std::move(managed_handle), load_unit}).first;
   }
 
-  return std::unique_ptr<basis::Unit>(maybe_unit_loader->second.create_unit(std::string(unit_name), command_line, [](const char* msg){
-    std::cerr << msg << std::endl;
-  }));
+  return std::unique_ptr<basis::Unit>(maybe_unit_loader->second.create_unit(
+      std::string(unit_name), command_line, [](const char *msg) { std::cerr << msg << std::endl; }));
 }

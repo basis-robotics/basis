@@ -209,14 +209,8 @@ void RateTopic(const std::string &topic, basis::core::transport::CoordinatorConn
   // This looks dangerous to take as a reference but is actually safe -
   // the subscriber destructor will wait until the callback exits before the atomic goes out of scope
   std::atomic<size_t> num_messages = 0;
-  auto time_test_sub = transport_manager.SubscribeRaw(
-      topic,
-      [&]([[maybe_unused]] auto msg) {
-        num_messages++;
-
-        
-      },
-      &work_thread_pool, nullptr, {});
+  auto time_test_sub = transport_manager.SubscribeRaw(topic, [&]([[maybe_unused]] auto msg) { num_messages++; },
+                                                      &work_thread_pool, nullptr, {});
 
   while (true) {
     // todo: move this out into "unit"
@@ -309,12 +303,23 @@ int main(int argc, char *argv[]) {
   launch_command.add_description("launch a yaml");
   launch_command.add_argument("--process").help("The process to launch inside the yaml").default_value("");
   // todo: when kv store is implemented, query the store instead
-  launch_command.add_argument("--sim").help("Wait for simulated time message").default_value(false).implicit_value(true);
-  launch_command.add_argument("launch_yaml");
+  launch_command.add_argument("--sim")
+      .help("Wait for simulated time message")
+      .default_value(false)
+      .implicit_value(true);
+  launch_command.add_argument("launch_yaml").help("The launch file to launch.");
+  // TODO: hack on argparse to allow trailing args to work nicely
+  // launch_command.add_argument("launch_args").nargs(argparse::nargs_pattern::any);
   parser.add_subparser(launch_command);
 
+  std::vector<std::string> leftover_args;
+
   try {
-    parser.parse_args(argc, argv);
+    leftover_args = parser.parse_known_args(argc, argv);
+    if (!parser.is_subcommand_used("launch")) {
+      parser.parse_args(argc, argv);
+    }
+
   } catch (const std::exception &err) {
     std::cerr << err.what() << std::endl;
     std::cerr << parser;
@@ -382,7 +387,18 @@ int main(int argc, char *argv[]) {
   } else if (parser.is_subcommand_used("launch")) {
     auto launch_yaml = launch_command.get("launch_yaml");
     std::vector<std::string> args(argv, argv + argc);
-    basis::launch::LaunchYamlPath(launch_yaml, args, launch_command.get("--process"), launch_command.get<bool>("--sim"));
+    basis::launch::LaunchContext context;
+    context.process_filter = launch_command.get("--process");
+    context.sim = launch_command.get<bool>("--sim");
+    context.all_args = {argv, argv + argc};
+    context.launch_args = leftover_args;
+
+    /// todo: now launch it!
+    auto def = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, context);
+    if (!def) {
+      return 1;
+    }
+    basis::launch::LaunchYamlDefinition(*def, context);
   }
 
   serialization_plugins.clear();
