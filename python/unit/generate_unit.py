@@ -6,6 +6,7 @@ import jsonschema
 import jinja2
 import itertools
 import os
+import re
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 basis_root = dir_path + "/../../"
@@ -63,7 +64,11 @@ def generate_unit(unit_path, output_dir, source_dir):
             output.setdefault('optional', False)
 
         def handle_io(topic_name, io, input_or_output):
-            cpp_topic_name = topic_name.lstrip('/').replace('/', '_')
+            # Replace non alpha-numeric characters with underscores
+            cpp_topic_name = re.sub(r'[^a-zA-Z0-9]', "_", topic_name)
+            # Squash repeated underscores
+            cpp_topic_name = re.sub('_+', '_', cpp_topic_name)
+            cpp_topic_name = cpp_topic_name.lstrip('_')
             io['cpp_topic_name'] = cpp_topic_name
             type_serializer, cpp_type = io['type'].split(':', 1)
 

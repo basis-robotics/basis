@@ -1,16 +1,16 @@
 #pragma once
 
-
-#include <basis/core/time.h>
-#include <basis/core/transport/convertable_inproc.h>
-#include <basis/synchronizers/synchronizer_base.h>
 #include <basis/core/containers/subscriber_callback_queue.h>
 #include <basis/core/coordinator_connector.h>
 #include <basis/core/logging.h>
 #include <basis/core/threading/thread_pool.h>
+#include <basis/core/time.h>
+#include <basis/core/transport/convertable_inproc.h>
 #include <basis/core/transport/transport_manager.h>
+#include <basis/synchronizers/synchronizer_base.h>
 
 #include "unit/args_command_line.h"
+#include "unit/args_template.h"
 
 #include <memory>
 #include <tuple>
@@ -31,7 +31,7 @@ struct UnitInitializeOptions {
   bool create_subscribers = true;
 };
 
-struct HandlerPubSub {  
+struct HandlerPubSub {
   using TopicMap = std::map<std::string, std::shared_ptr<const void>>;
   using HandlerExecutingCallback = std::function<TopicMap()>;
   using TypeErasedCallback =
@@ -39,9 +39,9 @@ struct HandlerPubSub {
 
   virtual void OnRateSubscriberTypeErased(basis::core::MonotonicTime now, HandlerExecutingCallback *callback) = 0;
 
-  HandlerPubSub(spdlog::logger * const logger) : AUTO_LOGGER(logger) {}
+  HandlerPubSub(spdlog::logger *const logger) : AUTO_LOGGER(logger) {}
 
-  spdlog::logger * const AUTO_LOGGER;
+  spdlog::logger *const AUTO_LOGGER;
   std::map<std::string, TypeErasedCallback> type_erased_callbacks;
   std::vector<std::string> outputs;
   std::optional<basis::core::Duration> rate_duration;
@@ -151,9 +151,11 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
       // Type mismatch, do nothing
       // This likely is okay, but let's error anyhow
       // This code is really only executed in deterministic replay
-      BASIS_LOG_ERROR("Type mismatch between {} and {}{}, will not run type erased callback", type_name, T_DERIVED::subscription_message_type_names[INDEX], 
-       std::is_same_v<typename Helper::inproc_type, core::transport::NoAdditionalInproc> ? "" : std::string("/") + T_DERIVED::subscription_inproc_message_type_names[INDEX]
-      );
+      BASIS_LOG_ERROR("Type mismatch between {} and {}{}, will not run type erased callback", type_name,
+                      T_DERIVED::subscription_message_type_names[INDEX],
+                      std::is_same_v<typename Helper::inproc_type, core::transport::NoAdditionalInproc>
+                          ? ""
+                          : std::string("/") + T_DERIVED::subscription_inproc_message_type_names[INDEX]);
     };
   }
 
@@ -183,8 +185,11 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
   void SetupInput(const basis::UnitInitializeOptions &options,
                   basis::core::transport::TransportManager *transport_manager,
                   basis::core::containers::SubscriberQueueSharedPtr &subscriber_queue,
-                  basis::core::threading::ThreadPool *thread_pool) {
+                  basis::core::threading::ThreadPool *thread_pool,
+                  const std::unordered_map<std::string, std::string> &templated_topic_to_runtime_topic) {
     T_DERIVED *derived = ((T_DERIVED *)this);
+    // Handle templating inside subscriptions
+    const std::string &runtime_topic_name = templated_topic_to_runtime_topic.at(derived->subscription_topics[INDEX]);
 
     if (options.create_subscribers) {
       // First extract from the tuple of all input types
@@ -199,21 +204,24 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
       constexpr bool is_raw = std::string_view(T_DERIVED::subscription_serializers[INDEX]) == "raw";
       using T_SERIALIZER = typename RawSerializationHelper<MessageType, is_raw>::type;
 
-      derived->*subscriber_member_ptr = transport_manager->SubscribeCallable<MessageType, T_SERIALIZER, MessageInprocType>(
-          derived->subscription_topics[INDEX], CreateOnMessageCallback<INDEX, false>(), thread_pool, subscriber_queue,
-          T_SERIALIZER::template DeduceMessageTypeInfo<MessageType>(), CreateOnMessageCallback<INDEX, true>());
+      derived->*subscriber_member_ptr =
+          transport_manager->SubscribeCallable<MessageType, T_SERIALIZER, MessageInprocType>(
+              runtime_topic_name, CreateOnMessageCallback<INDEX, false>(), thread_pool, subscriber_queue,
+              T_SERIALIZER::template DeduceMessageTypeInfo<MessageType>(), CreateOnMessageCallback<INDEX, true>());
     }
 
-    type_erased_callbacks[derived->subscription_topics[INDEX]] = CreateTypeErasedOnMessageCallback<INDEX>();
+    type_erased_callbacks[runtime_topic_name] = CreateTypeErasedOnMessageCallback<INDEX>();
   }
 
   void SetupInputs(const basis::UnitInitializeOptions &options,
                    basis::core::transport::TransportManager *transport_manager,
                    std::array<basis::core::containers::SubscriberQueueSharedPtr, INPUT_COUNT> &subscriber_queues,
-                   basis::core::threading::ThreadPool *thread_pool) {
+                   basis::core::threading::ThreadPool *thread_pool,
+                   const std::unordered_map<std::string, std::string> &templated_topic_to_runtime_topic) {
     // Magic to iterate from 0...INPUT_COUNT, c++ really needs constexpr for
     [&]<std::size_t... I>(std::index_sequence<I...>) {
-      (SetupInput<I>(options, transport_manager, subscriber_queues[I], thread_pool), ...);
+      (SetupInput<I>(options, transport_manager, subscriber_queues[I], thread_pool, templated_topic_to_runtime_topic),
+       ...);
     }(std::make_index_sequence<INPUT_COUNT>());
   }
 };
@@ -284,13 +292,20 @@ protected:
   std::unique_ptr<basis::core::transport::TransportManager> transport_manager;
   std::unique_ptr<basis::core::transport::CoordinatorConnector> coordinator_connector;
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////
   // Used when autogenerated only
+
   friend class basis::DeterministicReplayer;
   friend class basis::UnitManager;
   std::map<std::string, HandlerPubSub *> handlers;
 
   // Helpers to convert a byte buffer to a type erased message pointer
   std::unordered_map<std::string, DeserializationHelper> deserialization_helpers;
+
+  // Mapping from from topics like {{args.camera_name}}/rgb -> /webcam/rgb
+  std::unordered_map<std::string, std::string> templated_topic_to_runtime_topic;
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////
 };
 
 /**

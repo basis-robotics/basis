@@ -25,7 +25,6 @@ EOF
 
 # Install Foxglove bridge dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  nlohmann-json3-dev \
   libasio-dev \
   libssl-dev \
   libwebsocketpp-dev

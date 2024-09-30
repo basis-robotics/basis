@@ -2,19 +2,12 @@
 
 #include <{{unit_name}}.h>
 
-#include <basis/unit/create_unit.h>
+#include <basis/unit/create_unit_impl.h>
 
 extern "C" {
 
 basis::Unit* CreateUnit(const std::optional<std::string_view>& unit_name_override, const basis::unit::CommandLineTypes& command_line, basis::CreateUnitLoggerInterface error_logger) {
-    auto args = unit::{{unit_name}}::Args::ParseArgumentsVariant(command_line);
-
-    if(!args.has_value()) {
-        error_logger(fmt::format("Failed to launch {} ({{unit_name}}), bad arguments:\n{}", unit_name_override.value_or("{{unit_name}}"), args.error()).c_str());
-        return nullptr;
-    }
-
-    return new {{unit_name}}(*args, unit_name_override);
+    return basis::unit::CreateUnit<{{unit_name}}>(unit_name_override, command_line, error_logger, "{{unit_name}}");
 }
 
 }

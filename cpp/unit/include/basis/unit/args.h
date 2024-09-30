@@ -5,9 +5,12 @@
  * Contains helpers to both work with generic argument declarations, as well as do argument parsing for units.
  */
 
-#include <argparse/argparse.hpp>
-
 #include <string>
+#include <unordered_map>
+
+#include <argparse/argparse.hpp>
+#include <nonstd/expected.hpp>
+#include <spdlog/fmt/fmt.h>
 
 #include "args_command_line.h"
 
@@ -91,12 +94,20 @@ template <typename T_ARGUMENT_TYPE> struct ArgumentMetadata : public ArgumentMet
   std::optional<T_ARGUMENT_TYPE> default_value;
 };
 
+struct UnitArgumentsBase {
+  virtual ~UnitArgumentsBase() = default;
+  const std::unordered_map<std::string, std::string> &GetArgumentMapping() const { return args_map; }
+
+protected:
+  std::unordered_map<std::string, std::string> args_map;
+};
+
 /**
  * A base container for all arguments for a unit
  *
  * @tparam T_DERIVED the derived type, used for CRTP. Will have a typed member for each argument.
  */
-template <typename T_DERIVED> struct UnitArguments {
+template <typename T_DERIVED> struct UnitArguments : public UnitArgumentsBase {
   /**
    * Create an Argument Parser for use with the associated unit
    *
