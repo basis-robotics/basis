@@ -5,7 +5,10 @@ namespace basis::arguments::types {
 using namespace std;
 template <typename T_ARGUMENT_TYPE>
 void ArgumentToJson(const argparse::ArgumentParser &arg_parser, std::string_view name, nlohmann::json &out) {
-  out = arg_parser.get<T_ARGUMENT_TYPE>("--" + std::string(name));
+  std::string key = "--" + std::string(name);
+  if (arg_parser.present(key)) {
+    out = arg_parser.get<T_ARGUMENT_TYPE>(key);
+  }
 }
 
 template <typename T_ARGUMENT_TYPE> void ArgumentTypeValidator(argparse::Argument &arg, std::string_view name) {

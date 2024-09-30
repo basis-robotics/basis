@@ -180,18 +180,30 @@ ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yam
 std::optional<LaunchDefinition>
 ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const nlohmann::json &template_data,
                                            [[maybe_unused]] const LaunchContext &command_line) {
-  std::string rendered_contents = inja::render(yaml_contents, template_data);
+  inja::Environment inja_env;
+  inja_env.set_throw_at_missing_includes(true);
 
-  // TODO: try/catch
-  // TODO: will need to show the parsed jinja on error
-  // TODO: c++23 once again, copying yaml_contents
-  auto node = YAML::Load(rendered_contents);
-  if (node["args"]) {
-    // This is always an error - we want clear separation between templated and non-templated data
-    BASIS_LOG_FATAL("args detected inline with launch content, required to be separated by document marker '---'");
+  std::string rendered_contents;
+  try {
+    rendered_contents = inja_env.render(yaml_contents, template_data);
+  } catch (const std::exception &e) {
+    BASIS_LOG_FATAL("Failed to render templated launch file: {}", e.what());
     return {};
   }
-  return ParseLaunchDefinitionYAML(node);
+  try {
+    // TODO: will need to show the parsed jinja on error
+    auto node = YAML::Load(rendered_contents);
+    if (node["args"]) {
+      // This is always an error - we want clear separation between templated and non-templated data
+      BASIS_LOG_FATAL("args detected inline with launch content, required to be separated by document marker '---'");
+      return {};
+    }
+    return ParseLaunchDefinitionYAML(node);
+
+  } catch (const std::exception &e) {
+    BASIS_LOG_FATAL("Failed to parse launch file: {}", e.what());
+    return {};
+  }
 }
 
 LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node &yaml) {
