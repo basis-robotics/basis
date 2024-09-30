@@ -85,7 +85,7 @@ public:
    * @todo this should be moved out to a static to handle select on multiple sockets
    * @todo deprecate this in favor of poll based options
    */
-  std::optional<Error> Select(int timeout_s, int timeout_ns);
+  std::optional<Error> Select(bool send, int timeout_s, int timeout_ns);
 
   /**
    * Receives data into the requested buffer,

@@ -34,7 +34,7 @@ int Socket::RecvInto(char *buffer, size_t buffer_len, bool peek) {
   return recv(fd, buffer, buffer_len, peek ? MSG_PEEK : 0);
 }
 
-std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
+std::optional<Socket::Error> Socket::Select(bool send, int timeout_s, int timeout_ns) {
   struct timeval tv;
   fd_set fds;
   FD_ZERO(&fds);
@@ -43,7 +43,9 @@ std::optional<Socket::Error> Socket::Select(int timeout_s, int timeout_ns) {
   tv.tv_sec = timeout_s;
   tv.tv_usec = timeout_ns;
 
-  int select_results = select(fd + 1, /*read*/ &fds, /*write*/ (fd_set *)0, /*exceptional*/ (fd_set *)0, &tv);
+  int select_results =  send 
+    ? select(fd + 1, /*read*/ NULL, /*write*/ &fds, /*except*/ NULL, &tv)
+    : select(fd + 1, /*read*/ &fds, /*write*/ NULL, /*except*/ NULL, &tv);
   if (select_results == 0) {
     // TODO: double check errno values in timeout
     return Error{ErrorSource::TIMEOUT, 0};
@@ -144,7 +146,7 @@ nonstd::expected<TcpSocket, Socket::Error> TcpListenSocket::Accept(int timeout_s
   socklen_t addr_size = sizeof(addr);
 
   if (timeout_s >= 0) {
-    auto error = Select(timeout_s, 0);
+    auto error = Select(false, timeout_s, 0);
     if (error) {
       return nonstd::make_unexpected(*error);
     }
