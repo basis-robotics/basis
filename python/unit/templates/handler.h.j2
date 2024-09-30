@@ -119,7 +119,7 @@ namespace unit::{{unit_name}}::{{handler_name}} {
 {% for output in outputs.values() %}
         {% if not output.optional %}
             if (output.{{output.cpp_topic_name}} == nullptr) {
-                BASIS_LOG_ERROR("{{unit_name}}::{{handler_name}} didn't output {}", outputs[{{loop.index - 1}}]);
+                BASIS_LOG_ERROR("{{unit_name}}::{{handler_name}} didn't output {}", outputs.empty() ? "{{output.cpp_topic_name}}" : outputs[{{loop.index - 1}}]);
             }
         {% endif %}
 {% endfor %}
