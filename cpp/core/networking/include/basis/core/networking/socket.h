@@ -79,13 +79,14 @@ public:
    */
   int Send(const std::byte *data, size_t len);
 
+  enum class SelectType { READ, WRITE };
   /**
    * select()
    *
    * @todo this should be moved out to a static to handle select on multiple sockets
    * @todo deprecate this in favor of poll based options
    */
-  std::optional<Error> Select(int timeout_s, int timeout_ns);
+  std::optional<Error> Select(SelectType type, int timeout_s, int timeout_us);
 
   /**
    * Receives data into the requested buffer,

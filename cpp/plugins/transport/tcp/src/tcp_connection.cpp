@@ -66,7 +66,7 @@ bool TcpConnection::Receive(std::byte *buffer, size_t buffer_len, int timeout_s)
   while (buffer_len) {
     if (timeout_s >= 0) {
       // todo: error handling
-      if (socket.Select(timeout_s, 0)) {
+      if (socket.Select(core::networking::Socket::SelectType::READ, timeout_s, 0)) {
         return false;
       }
     }
@@ -95,7 +95,7 @@ bool TcpConnection::Send(const std::byte *data, size_t len) {
     if (sent_size < 0) {
       // Very large sends can cause EAGAIN if we fill the send buffer
       if(errno == EAGAIN || errno == EWOULDBLOCK) {
-        // We should consider a very small sleep here
+        socket.Select(core::networking::Socket::SelectType::WRITE, 0, 1e4);
         continue;
       }
 
