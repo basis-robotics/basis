@@ -1,3 +1,4 @@
+#include <basis/arguments/command_line.h>
 #include <basis/unit.h>
 #include <filesystem>
 #include <memory>
@@ -9,4 +10,5 @@
  * @param path the path to the shared object
  * @return std::unique_ptr<basis::Unit>
  */
-std::unique_ptr<basis::Unit> CreateUnitWithLoader(const std::filesystem::path &path, std::string_view unit_name, const basis::unit::CommandLineTypes& command_line);
+std::unique_ptr<basis::Unit> CreateUnitWithLoader(const std::filesystem::path &path, std::string_view unit_name,
+                                                  const basis::arguments::CommandLineTypes &command_line);

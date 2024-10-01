@@ -37,7 +37,8 @@ std::vector<std::regex> parseRegexPatterns(const std::vector<std::string> &patte
   return result;
 }
 
-FoxgloveBridge::FoxgloveBridge(const std::optional<std::string_view>& unit_name) : SingleThreadedUnit(unit_name.value_or("FoxgloveBridge")) {}
+FoxgloveBridge::FoxgloveBridge(const std::optional<std::string_view> &unit_name)
+    : SingleThreadedUnit(unit_name.value_or("FoxgloveBridge")) {}
 
 FoxgloveBridge::~FoxgloveBridge() {
   if (server) {
@@ -363,8 +364,9 @@ void FoxgloveBridge::updateAdvertisedTopics() {
   // Add new channels for new topics
   std::vector<::foxglove::ChannelWithoutId> channelsToAdd;
   for (const auto &topicAndDatatype : latestTopics) {
-    if(topicAndDatatype.schema_serializer == "raw") {
-       // For now - skip any raw channels, later it would be good to work with Foxglove to show them as existing but unsubscribable
+    if (topicAndDatatype.schema_serializer == "raw") {
+      // For now - skip any raw channels, later it would be good to work with Foxglove to show them as existing but
+      // unsubscribable
       continue;
     }
     if (std::find_if(advertisedTopics.begin(), advertisedTopics.end(),
@@ -399,11 +401,11 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     }
 
     std::string schema =
-          msgDescription->schema_efficient().empty() ? msgDescription->schema() : msgDescription->schema_efficient();
+        msgDescription->schema_efficient().empty() ? msgDescription->schema() : msgDescription->schema_efficient();
     newChannel.schema = ::foxglove::base64Encode(schema);
     channelsToAdd.push_back(newChannel);
     BASIS_LOG_DEBUG("newChannel -- topic: {} schemaName: {} encoding: {} schema: {}", newChannel.topic,
-                  newChannel.schemaName, newChannel.encoding, newChannel.schema);
+                    newChannel.schemaName, newChannel.encoding, newChannel.schema);
   }
 
   const auto channelIds = server->addChannels(channelsToAdd);
@@ -420,7 +422,8 @@ void FoxgloveBridge::updateAdvertisedTopics() {
 
 extern "C" {
 
-basis::Unit *CreateUnit(const std::optional<std::string_view>& unit_name_override, [[maybe_unused]] const basis::unit::CommandLineTypes& command_line) {
+basis::Unit *CreateUnit(const std::optional<std::string_view> &unit_name_override,
+                        [[maybe_unused]] const basis::arguments::CommandLineTypes &command_line) {
   // TODO: create args for Foxglove
 
   return new basis::plugins::bridges::foxglove::FoxgloveBridge(unit_name_override);

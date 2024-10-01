@@ -5,34 +5,47 @@
  * Contains helpers to both work with generic argument declarations, as well as do argument parsing for units.
  */
 
+#include <span>
 #include <string>
 #include <unordered_map>
 
-#include <argparse/argparse.hpp>
 #include <nonstd/expected.hpp>
 #include <spdlog/fmt/fmt.h>
 
-#include "args_command_line.h"
+#include "arguments/argument_types.h"
+#include "arguments/command_line.h"
 
-namespace basis::unit {
-
+namespace basis::arguments {
 /**
  * Base, allowing argument definitions to be stored in array<unique_ptr>, to avoid having to reach for tuple
  */
 struct ArgumentMetadataBase {
-  ArgumentMetadataBase(const std::string &name, const std::string &help_text, const std::string &type_name,
+  ArgumentMetadataBase(const std::string &name, const std::string &help_text, const types::TypeMetadata &type_metadata,
                        bool optional)
-      : name(name), help_text(help_text), type_name(type_name), optional(optional) {}
+      : name(name), help_text(help_text), type_metadata(type_metadata), optional(optional) {}
   virtual ~ArgumentMetadataBase() = default;
 
   /**
    * Adds a single argument to an argparse::ArgumentParser
    */
-  virtual void CreateArgparseArgument(argparse::ArgumentParser &parser_out) = 0;
+  void CreateArgparseArgument(argparse::ArgumentParser &parser) {
+    auto &arg = parser.add_argument("--" + name).help(help_text);
+
+    // If we aren't optional, we're required
+    if (!optional) {
+      arg.required();
+    }
+
+    type_metadata.validator(arg, name);
+
+    SetDefaultValue(arg);
+  }
+
+  virtual void SetDefaultValue(argparse::Argument &argument) = 0;
 
   std::string name;
   std::string help_text;
-  std::string type_name;
+  const types::TypeMetadata &type_metadata;
   bool optional = false;
 };
 
@@ -52,41 +65,15 @@ template <typename T> struct ArgumentOptionalHelper<T, true> {
  *
  * @tparam T_ARGUMENT_TYPE the type we will cast this argument to
  */
-template <typename T_ARGUMENT_TYPE> struct ArgumentMetadata : public ArgumentMetadataBase {
-  ArgumentMetadata(const std::string &name, const std::string &help_text, const std::string &type_name, bool optional,
-                   std::optional<T_ARGUMENT_TYPE> default_value = {})
-      : ArgumentMetadataBase(name, help_text, type_name, optional), default_value(default_value) {}
+template <typename T_ARGUMENT_TYPE> struct TypedArgumentMetadata : public ArgumentMetadataBase {
+  TypedArgumentMetadata(const std::string &name, const std::string &help_text, bool optional,
+                        std::optional<T_ARGUMENT_TYPE> default_value = {})
+      : ArgumentMetadataBase(name, help_text, types::TypeToTypeMetadata<T_ARGUMENT_TYPE>::metadata, optional),
+        default_value(default_value) {}
 
-  virtual void CreateArgparseArgument(argparse::ArgumentParser &parser) override {
-    auto &arg = parser.add_argument("--" + ArgumentMetadataBase::name).help(ArgumentMetadataBase::help_text);
-
-    // If we aren't optional, we're required
-    if (!ArgumentMetadataBase::optional) {
-      arg.required();
-    }
-
-    if constexpr (std::is_same_v<T_ARGUMENT_TYPE, bool>) {
-      arg.action([&](const std::string &value) {
-        std::string lowered = value;
-        std::transform(lowered.begin(), lowered.end(), lowered.begin(),
-                       [](unsigned char c) { return std::tolower(c); });
-        if (lowered == "true" or lowered == "1") {
-          return true;
-        }
-        if (lowered == "false" or lowered == "0") {
-          return false;
-        }
-        throw std::runtime_error(
-            fmt::format("[--{} {}] can't be converted to bool, must be '0', '1', 'true', or 'false' (case insensitive)",
-                        ArgumentMetadataBase::name, value));
-      });
-    } else if constexpr (std::is_floating_point_v<T_ARGUMENT_TYPE>) {
-      arg.template scan<'g', T_ARGUMENT_TYPE>();
-    } else if constexpr (std::is_arithmetic_v<T_ARGUMENT_TYPE>) {
-      arg.template scan<'i', T_ARGUMENT_TYPE>();
-    }
+  virtual void SetDefaultValue(argparse::Argument &argument) override {
     if (default_value) {
-      arg.default_value(*default_value);
+      argument.default_value(*default_value);
     }
   }
 
@@ -94,9 +81,49 @@ template <typename T_ARGUMENT_TYPE> struct ArgumentMetadata : public ArgumentMet
   std::optional<T_ARGUMENT_TYPE> default_value;
 };
 
-struct UnitArgumentsBase {
-  virtual ~UnitArgumentsBase() = default;
+struct StringArgumentMetadata : public ArgumentMetadataBase {
+protected:
+  StringArgumentMetadata(const std::string &name, const std::string &help_text,
+                         const types::TypeMetadata &type_metadata, bool optional,
+                         std::optional<std::string> default_value = {})
+      : ArgumentMetadataBase(name, help_text, type_metadata, optional), default_value(default_value) {}
+
+public:
+  static std::unique_ptr<StringArgumentMetadata> Create(const std::string &name, const std::string &help_text,
+                                                        const std::string &type_name, bool optional,
+                                                        std::optional<std::string> default_value = {}) {
+    auto it = types::allowed_argument_types.find(type_name);
+    if (it == types::allowed_argument_types.end()) {
+      return nullptr;
+    }
+    return std::unique_ptr<StringArgumentMetadata>(
+        new StringArgumentMetadata(name, help_text, it->second, optional, default_value));
+  }
+
+  virtual void SetDefaultValue(argparse::Argument &argument) override {
+    if (default_value) {
+      type_metadata.set_default_value(argument, name, *default_value);
+    }
+  }
+
+  // The default value to use, if any
+  std::optional<std::string> default_value;
+};
+
+struct ArgumentsBase {
+  virtual ~ArgumentsBase() = default;
   const std::unordered_map<std::string, std::string> &GetArgumentMapping() const { return args_map; }
+
+  static std::unique_ptr<argparse::ArgumentParser>
+  CreateArgumentParser(const std::span<std::unique_ptr<ArgumentMetadataBase>> argument_metadatas) {
+    auto parser = std::make_unique<argparse::ArgumentParser>();
+
+    for (auto &arg : argument_metadatas) {
+      arg->CreateArgparseArgument(*parser);
+    }
+
+    return parser;
+  }
 
 protected:
   std::unordered_map<std::string, std::string> args_map;
@@ -107,7 +134,7 @@ protected:
  *
  * @tparam T_DERIVED the derived type, used for CRTP. Will have a typed member for each argument.
  */
-template <typename T_DERIVED> struct UnitArguments : public UnitArgumentsBase {
+template <typename T_DERIVED> struct UnitArguments : public ArgumentsBase {
   /**
    * Create an Argument Parser for use with the associated unit
    *
@@ -115,13 +142,7 @@ template <typename T_DERIVED> struct UnitArguments : public UnitArgumentsBase {
    * ArgumentParser)
    */
   static std::unique_ptr<argparse::ArgumentParser> CreateArgumentParser() {
-    auto parser = std::make_unique<argparse::ArgumentParser>();
-
-    for (auto &arg : T_DERIVED::argument_metadatas) {
-      arg->CreateArgparseArgument(*parser);
-    }
-
-    return parser;
+    return ArgumentsBase::CreateArgumentParser(T_DERIVED::argument_metadatas);
   }
 
   /**
@@ -213,4 +234,4 @@ private:
   }
 };
 
-} // namespace basis::unit
+} // namespace basis::arguments

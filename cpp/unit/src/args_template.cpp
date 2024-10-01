@@ -6,14 +6,16 @@
 namespace basis::unit {
 
 nonstd::expected<std::unordered_map<std::string, std::string>, std::string>
-RenderTemplatedTopics(const UnitArgumentsBase &args, const std::vector<std::string> &topics) {
+RenderTemplatedTopics(const basis::arguments::ArgumentsBase &args, const std::vector<std::string> &topics) {
+  inja::Environment inja_env;
+  inja_env.set_throw_at_missing_includes(true);
   nlohmann::json template_data;
   template_data["args"] = args.GetArgumentMapping();
   std::unordered_map<std::string, std::string> out;
   for (const std::string &topic : topics) {
     if (!out.contains(topic)) {
       try {
-        auto rendered = inja::render(topic, template_data);
+        auto rendered = inja_env.render(topic, template_data);
         out.emplace(topic, rendered);
 
         // Do some basic validation to protect against common issues

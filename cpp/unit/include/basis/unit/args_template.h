@@ -3,7 +3,7 @@
  * @file args_template.h
  *
  */
-#include "basis/unit/args.h"
+#include <basis/arguments.h>
 #include <nonstd/expected.hpp>
 #include <unordered_map>
 #include <vector>
@@ -16,6 +16,6 @@ namespace basis::unit {
  * @return nonstd::expected<std::unordered_map<std::string, std::string>, std::string> the rendered topics
  */
 nonstd::expected<std::unordered_map<std::string, std::string>, std::string>
-RenderTemplatedTopics(const UnitArgumentsBase &args, const std::vector<std::string> &topics);
+RenderTemplatedTopics(const basis::arguments::ArgumentsBase &args, const std::vector<std::string> &topics);
 
 } // namespace basis::unit
