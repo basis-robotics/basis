@@ -5,6 +5,7 @@
 #include <nlohmann/json_fwd.hpp>
 
 #include <spdlog/fmt/fmt.h>
+#include <string_view>
 
 namespace basis::arguments::types {
 using namespace std;
@@ -13,13 +14,18 @@ using namespace std;
 struct TypeMetadata {
   std::string type_name;
   std::function<void(argparse::Argument &, std::string_view)> validator;
-  std::function<void(const argparse::ArgumentParser &, std::string_view, nlohmann::json &)> to_json;
+  std::function<void(const argparse::ArgumentParser &, std::string_view, bool, nlohmann::json &)> to_json;
+  std::function<void(argparse::Argument &, std::string_view, const std::string &)> set_default_value;
 };
 
 template <typename T_ARGUMENT_TYPE>
-void ArgumentToJson(const argparse::ArgumentParser &arg_parser, std::string_view name, nlohmann::json &out);
+void ArgumentToJson(const argparse::ArgumentParser &arg_parser, std::string_view name, bool is_optional,
+                    nlohmann::json &out);
 
 template <typename T_ARGUMENT_TYPE> void ArgumentTypeValidator(argparse::Argument &arg, std::string_view name);
+
+template <typename T_ARGUMENT_TYPE>
+void ArgumentSetDefaultValue(argparse::Argument &arg, std::string_view name, const std::string &default_value);
 
 // X Macros are great - they allow declaring a list once, and reusing it with the preprocessor multiple times
 // https://en.wikipedia.org/wiki/X_macro
@@ -42,7 +48,10 @@ template <typename T_ARGUMENT_TYPE> void ArgumentTypeValidator(argparse::Argumen
 // Helper to construct a TypeMetadata from a type
 // This has the side effect of implicitly instantiating ArgumentToJson and ArgumentTypeValidator which is great
 #define DECLARE_ARGUMENT_TYPE(type)                                                                                    \
-  {.type_name = #type, .validator = &ArgumentTypeValidator<type>, .to_json = &ArgumentToJson<type>}
+  {.type_name = #type,                                                                                                 \
+   .validator = &ArgumentTypeValidator<type>,                                                                          \
+   .to_json = &ArgumentToJson<type>,                                                                                   \
+   .set_default_value = &ArgumentSetDefaultValue<type>}
 
 // Turn the undefined x macro into a defined x macro, mapping name to TypeMetadata
 #define X_TYPE(type) {#type, DECLARE_ARGUMENT_TYPE(type)},

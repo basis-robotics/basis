@@ -86,7 +86,6 @@ std::optional<LaunchDefinition> ParseTemplatedLaunchDefinitionYAMLContents(std::
 std::optional<LaunchDefinition>
 ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yaml_contents,
                                            const LaunchContext &context) {
-  nlohmann::json template_data;
 
   // Now separate out arguments from templated content
   // TODO cpp 23 https://en.cppreference.com/w/cpp/io/basic_ispanstream to avoid copy
@@ -170,10 +169,13 @@ ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yam
     BASIS_LOG_FATAL("{}", argparser->help().str());
     return {};
   }
+  nlohmann::json template_data;
 
   for (const auto &metadata : argument_metadata) {
-    metadata->type_metadata.to_json(*argparser, metadata->name, template_data[metadata->name]);
+    metadata->type_metadata.to_json(*argparser, metadata->name, metadata->optional,
+                                    template_data["args"][metadata->name]);
   }
+
   return ParseTemplatedLaunchDefinitionYAMLContents(yaml_contents, template_data, context);
 }
 
@@ -226,7 +228,6 @@ LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node &yaml) {
 
       if (unit_yaml["args"]) {
         for (const auto &kv : unit_yaml["args"]) {
-          std::cout << kv.first.as<std::string>() << std::endl;
           unit.args.emplace_back(std::pair{kv.first.as<std::string>(), kv.second.as<std::string>()});
         }
       }

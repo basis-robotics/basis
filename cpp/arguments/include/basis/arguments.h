@@ -14,6 +14,7 @@
 
 #include "arguments/argument_types.h"
 #include "arguments/command_line.h"
+
 namespace basis::arguments {
 /**
  * Base, allowing argument definitions to be stored in array<unique_ptr>, to avoid having to reach for tuple
@@ -101,7 +102,7 @@ public:
 
   virtual void SetDefaultValue(argparse::Argument &argument) override {
     if (default_value) {
-      argument.default_value(*default_value);
+      type_metadata.set_default_value(argument, name, *default_value);
     }
   }
 
