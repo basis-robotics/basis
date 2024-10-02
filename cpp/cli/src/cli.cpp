@@ -307,6 +307,7 @@ int main(int argc, char *argv[]) {
       .help("Wait for simulated time message")
       .default_value(false)
       .implicit_value(true);
+  launch_command.add_argument("--dry_run").help("Only parse the launch file, don't start").flag();
   launch_command.add_argument("launch_yaml").help("The launch file to launch.");
   // TODO: hack on argparse to allow trailing args to work nicely
   // launch_command.add_argument("launch_args").nargs(argparse::nargs_pattern::any);
@@ -393,12 +394,19 @@ int main(int argc, char *argv[]) {
     context.all_args = {argv, argv + argc};
     context.launch_args = leftover_args;
 
+    std::vector<std::string> launch_args;
+    launch_args.reserve(leftover_args.size() + 1);
+    launch_args.push_back("");
+    launch_args.insert(launch_args.end(), leftover_args.begin(), leftover_args.end());
+
     /// todo: now launch it!
-    auto def = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, context);
+    auto def = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, launch_args);
     if (!def) {
       return 1;
     }
-    basis::launch::LaunchYamlDefinition(*def, context);
+    if (!launch_command.get<bool>("--dry_run")) {
+      basis::launch::LaunchYamlDefinition(*def, context);
+    }
   }
 
   serialization_plugins.clear();

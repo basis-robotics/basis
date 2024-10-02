@@ -7,6 +7,7 @@
 #include <sys/prctl.h>
 
 #include <basis/recorder.h>
+#include <basis/recorder/glob.h>
 #include <basis/recorder/protobuf_log.h>
 #include <basis/unit.h>
 
@@ -214,8 +215,12 @@ void InstallSignalHandler(int sig) {
  */
 void LaunchWithProcessForks(const LaunchDefinition &launch, const std::vector<std::string> &args) {
   std::vector<cli::Process> managed_processes;
-  for (const auto &[process_name, _] : launch.processes) {
-    managed_processes.push_back(CreateSublauncherProcess(process_name, args));
+  for (const auto &[process_name, process_definition] : launch.processes) {
+    if (process_definition.units.empty()) {
+      BASIS_LOG_DEBUG("Skipping empty process {}", process_name);
+    } else {
+      managed_processes.push_back(CreateSublauncherProcess(process_name, args));
+    }
   }
 
   InstallSignalHandler(SIGINT);
@@ -261,7 +266,14 @@ void LaunchProcessDefinition(const ProcessDefinition &process_definition,
       }
 
       std::string record_name =
-          fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now(true).ToSeconds());
+          fmt::format("{}{}{}{}", recording_settings->name, process_name_filter, process_name_filter == "/" ? "" : "_",
+                      basis::core::MonotonicTime::Now(true).ToSeconds());
+      for (char &c : record_name) {
+        if (c == '/') {
+          c = '_';
+        }
+      }
+
       if (sim) {
         // TODO: it would be great to get the actual simulation start time, but then we won't be able to start logging
         // until coordinator connection this might be okay in practice

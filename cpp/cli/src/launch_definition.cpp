@@ -7,15 +7,20 @@
 
 #include <basis/launch.h>
 
+#include <filesystem>
 #include <fstream>
 
 #include <inja/inja.hpp>
 
 #include <basis/arguments.h>
+#include <string_view>
+#include <unordered_map>
 
 namespace basis::launch {
 
-RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml) {
+constexpr int MAX_LAUNCH_INCLUDE_DEPTH = 32;
+
+[[nodiscard]] RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml) {
   RecordingSettings settings;
 
   if (yaml["directory"]) {
@@ -30,17 +35,21 @@ RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml) {
     settings.async = yaml["async"].as<bool>();
   }
 
+  if (yaml["name"]) {
+    settings.name = yaml["name"].as<std::string>();
+  }
+
   return settings;
 }
 
-std::optional<LaunchDefinition> ParseTemplatedLaunchDefinitionYAMLPath(std::filesystem::path yaml_path,
-                                                                       const LaunchContext &context) {
-  // Thanks stack overflow
+[[nodiscard]] std::optional<LaunchDefinition>
+ParseTemplatedLaunchDefinitionYAMLPath(const std::filesystem::path &yaml_path,
+                                       const std::vector<std::string> &launch_args, size_t recursion_depth) {
 
   std::ifstream file(yaml_path.string(), std::ios::binary | std::ios::ate);
   if (file.fail()) {
     // TODO: maybe use ifstream::exceptions
-    BASIS_LOG_ERROR("Launch file {} isn't openable.", yaml_path.string());
+    BASIS_LOG_FATAL("Launch file {} isn't openable.", yaml_path.string());
     return {};
   }
   std::streamsize size = file.tellg();
@@ -48,9 +57,11 @@ std::optional<LaunchDefinition> ParseTemplatedLaunchDefinitionYAMLPath(std::file
 
   std::vector<char> buffer(size);
   if (file.read(buffer.data(), size)) {
-    return ParseTemplatedLaunchDefinitionYAMLContents({buffer.data(), (size_t)size}, context);
+    return ParseTemplatedLaunchDefinitionYAMLContents(
+        {buffer.data(), (size_t)size}, launch_args,
+        CurrentLaunchParseState(std::filesystem::canonical(yaml_path), recursion_depth));
   }
-  BASIS_LOG_ERROR("Failed to load file {}", yaml_path.string());
+  BASIS_LOG_FATAL("Failed to load file {}", yaml_path.string());
   return {};
 }
 
@@ -80,12 +91,13 @@ public:
   size_t document_start = 0;
 };
 } // namespace
-std::optional<LaunchDefinition> ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents,
-                                                                           const nlohmann::json &template_data,
-                                                                           const LaunchContext &context);
-std::optional<LaunchDefinition>
+[[nodiscard]] std::optional<LaunchDefinition>
+ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const nlohmann::json &template_data,
+                                           const CurrentLaunchParseState &current_parse_state);
+[[nodiscard]] std::optional<LaunchDefinition>
 ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yaml_contents,
-                                           const LaunchContext &context) {
+                                           const std::vector<std::string> &launch_args,
+                                           const CurrentLaunchParseState &current_parse_state) {
 
   // Now separate out arguments from templated content
   // TODO cpp 23 https://en.cppreference.com/w/cpp/io/basic_ispanstream to avoid copy
@@ -98,11 +110,6 @@ ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yam
   yaml_parser.HandleNextDocument(document_finder);
 
   std::unique_ptr<argparse::ArgumentParser> argparser;
-  // Parse args, convert
-  std::vector<std::string> launch_args;
-  launch_args.reserve(context.launch_args.size() + 1);
-  launch_args.push_back("");
-  launch_args.insert(launch_args.end(), context.launch_args.begin(), context.launch_args.end());
 
   std::vector<std::unique_ptr<arguments::ArgumentMetadataBase>> argument_metadata;
 
@@ -176,12 +183,12 @@ ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yam
                                     template_data["args"][metadata->name]);
   }
 
-  return ParseTemplatedLaunchDefinitionYAMLContents(yaml_contents, template_data, context);
+  return ParseTemplatedLaunchDefinitionYAMLContents(yaml_contents, template_data, current_parse_state);
 }
 
-std::optional<LaunchDefinition>
+[[nodiscard]] std::optional<LaunchDefinition>
 ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const nlohmann::json &template_data,
-                                           [[maybe_unused]] const LaunchContext &command_line) {
+                                           const CurrentLaunchParseState &current_parse_state) {
   inja::Environment inja_env;
   inja_env.set_throw_at_missing_includes(true);
 
@@ -200,7 +207,7 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
       BASIS_LOG_FATAL("args detected inline with launch content, required to be separated by document marker '---'");
       return {};
     }
-    return ParseLaunchDefinitionYAML(node);
+    return ParseLaunchDefinitionYAML(node, current_parse_state);
 
   } catch (const std::exception &e) {
     BASIS_LOG_FATAL("Failed to parse launch file: {}", e.what());
@@ -208,34 +215,206 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
   }
 }
 
-LaunchDefinition ParseLaunchDefinitionYAML(const YAML::Node &yaml) {
-  LaunchDefinition launch;
+[[nodiscard]] UnitDefinition ParseUnitDefinitionYAML(std::string_view unit_name, const YAML::Node &unit_yaml) {
+  UnitDefinition unit;
 
-  for (const auto &process_yaml : yaml["processes"]) {
-    ProcessDefinition process;
-    for (const auto &unit_name_yaml : process_yaml.second["units"]) {
-      const auto &unit_name = unit_name_yaml.first.as<std::string>();
-      const auto &unit_yaml = unit_name_yaml.second;
-      UnitDefinition unit;
+  if (unit_yaml["unit"]) {
+    // If we specify a unit type, use that
+    unit.unit_type = unit_yaml["unit"].as<std::string>();
+  } else {
+    // By default, the unit name is the unit type
+    unit.unit_type = unit_name;
+  }
 
-      if (unit_yaml["unit"]) {
-        // If we specify a unit type, use that
-        unit.unit_type = unit_yaml["unit"].as<std::string>();
-      } else {
-        // By default, the unit name is the unit type
-        unit.unit_type = unit_name;
+  if (unit_yaml["args"]) {
+    for (const auto &kv : unit_yaml["args"]) {
+      unit.args.emplace_back(std::pair{kv.first.as<std::string>(), kv.second.as<std::string>()});
+    }
+  }
+
+  return unit;
+}
+
+[[nodiscard]] std::optional<LaunchDefinition> Include(const CurrentLaunchParseState &current_parse_state,
+                                                      [[maybe_unused]] std::string_view definition_name,
+                                                      [[maybe_unused]] const YAML::Node &args) {
+  if (current_parse_state.launch_file_recursion_depth >= MAX_LAUNCH_INCLUDE_DEPTH) {
+    BASIS_LOG_FATAL("Hit maximum recursion depth {} including {}", MAX_LAUNCH_INCLUDE_DEPTH, definition_name);
+    return {};
+  }
+
+  // First, find the definition
+  std::filesystem::path definition_path =
+      std::filesystem::canonical(current_parse_state.include_search_directory / definition_name);
+
+  std::vector<std::string> launch_args;
+  launch_args.reserve(args.size() + 1);
+  launch_args.push_back("");
+  for (const auto &p : args) {
+    const auto k = "--" + p.first.as<std::string>();
+    const auto &v = p.second.as<std::string>();
+    launch_args.push_back(k);
+    launch_args.push_back(v);
+  }
+
+  std::optional<LaunchDefinition> launch_definition = ParseTemplatedLaunchDefinitionYAMLPath(
+      definition_path, launch_args, current_parse_state.launch_file_recursion_depth + 1);
+  return launch_definition;
+}
+
+[[nodiscard]] bool MoveUnitToProcess(ProcessDefinition *process, const std::string &unit_name,
+                                     std::string_view process_name, UnitDefinition &&unit) {
+  // Create the new unit name
+  auto it = process->units.find(unit_name);
+
+  if (it != process->units.end()) {
+    BASIS_LOG_FATAL("{}: Process {} contains unit named {} from {}, unit names must be "
+                    "unique within a process",
+                    unit.source_file, process_name, unit_name, it->second.source_file);
+    return false;
+  }
+  process->units.emplace(unit_name, std::move(unit));
+  return true;
+}
+
+[[nodiscard]] bool ParseIncludeTag(const YAML::Node &parent_include_yaml, LaunchDefinition &launch,
+                                   ProcessDefinition *parent_process,
+                                   const CurrentLaunchParseState &current_parse_state, const char *parent_process_name,
+                                   const std::string &parent_group_name) {
+  if (parent_include_yaml) {
+    for (const auto &include_item : parent_include_yaml) {
+      std::string include_name;
+      const YAML::Node *include_yaml = nullptr;
+
+      if (parent_include_yaml.IsMap()) {
+        /*
+  # The default syntax that most will reach for
+  include:
+    foxglove.launch.yaml: {}
+    perception.launch.yaml: {}
+         */
+        include_name = include_item.first.as<std::string>();
+        include_yaml = &include_item.second;
+      } else if (parent_include_yaml.IsSequence()) {
+        /*
+        # Allowing including the same launch file twice
+  include:
+  - camera.launch.yaml:
+      camera: front
+  - camera.launch.yaml:
+      camera: back
+  */
+        for (const auto &p : include_item) {
+          if (include_yaml) {
+            BASIS_LOG_FATAL("{}: A yaml has mixed map and sequence items for includes.",
+                            current_parse_state.current_file_path.string());
+            return false;
+          }
+          include_name = p.first.as<std::string>();
+          include_yaml = &p.second;
+        }
+        if (!include_yaml || !*include_yaml) {
+          BASIS_LOG_FATAL("{}: include sequence item was empty", current_parse_state.current_file_path.string());
+          return false;
+        }
+      } else if (parent_include_yaml.IsScalar()) {
+      }
+      if (!include_yaml) {
+        BASIS_LOG_FATAL("{}: include tag was neither map nor list", current_parse_state.current_file_path.string());
+
+        return false;
       }
 
-      if (unit_yaml["args"]) {
-        for (const auto &kv : unit_yaml["args"]) {
-          unit.args.emplace_back(std::pair{kv.first.as<std::string>(), kv.second.as<std::string>()});
+      auto maybe_included = Include(current_parse_state, include_name, *include_yaml);
+      if (!maybe_included) {
+        // Failed to include, this is an error
+        return false;
+      }
+
+      // merge launch files
+      for (auto &[included_process_name, included_process] : maybe_included->processes) {
+        // root process, merge with current process
+        if (included_process_name == "/") {
+          for (auto &[unit_name, unit] : included_process.units) {
+            // Create the new unit name
+            std::string full_unit_name = std::filesystem::path(parent_group_name) / unit_name;
+            if (!MoveUnitToProcess(parent_process, full_unit_name, parent_process_name, std::move(unit))) {
+              return false;
+            }
+          }
+        } else {
+          std::string full_process_name = std::filesystem::path(parent_group_name) / included_process_name;
+          auto it = launch.processes.find(full_process_name);
+          if (it != launch.processes.end()) {
+            BASIS_LOG_FATAL(
+                "{}: Launch definition already contains a process named {} from {}, process group names must be "
+                "unique within a launch",
+                current_parse_state.current_file_path.string(), full_process_name, it->second.source_file);
+            return false;
+          }
         }
       }
-
-      process.units.emplace("/" + unit_name, std::move(unit));
     }
-    launch.processes.emplace(process_yaml.first.as<std::string>(), std::move(process));
   }
+  return true;
+}
+
+[[nodiscard]] bool ParseGroupDefinitionYAML(const YAML::Node &group_yaml, LaunchDefinition &launch,
+                                            const CurrentLaunchParseState &current_parse_state,
+                                            const char *parent_process_name = nullptr,
+                                            ProcessDefinition *process = nullptr, const std::string &group_name = "/") {
+  // todo: validate group names
+  if (!process || (group_yaml["process"] && group_yaml["process"].as<bool>())) {
+    auto it = launch.processes.find(group_name);
+    if (it != launch.processes.end()) {
+      BASIS_LOG_FATAL("{}: Launch definition already contains a process named {} from {}, process group names must be "
+                      "unique within a launch",
+                      current_parse_state.current_file_path.string(), group_name, it->second.source_file);
+      return false;
+    }
+    process = &launch.processes[group_name];
+    parent_process_name = group_name.c_str();
+  }
+
+  for (const auto &unit_name_yaml : group_yaml["units"]) {
+    const auto &unit_name = unit_name_yaml.first.as<std::string>();
+    // TODO: validate unit names
+    const auto &unit_yaml = unit_name_yaml.second;
+    UnitDefinition unit = ParseUnitDefinitionYAML(unit_name, unit_yaml);
+    unit.source_file = current_parse_state.current_file_path;
+    std::string full_unit_name = std::filesystem::path(group_name) / unit_name;
+
+    if (!MoveUnitToProcess(process, full_unit_name, parent_process_name, std::move(unit))) {
+      return false;
+    }
+  }
+
+  for (const auto &p : group_yaml["groups"]) {
+    const auto &inner_group_name = p.first.as<std::string>();
+
+    if (!ParseGroupDefinitionYAML(p.second, launch, current_parse_state, parent_process_name, process,
+                                  std::filesystem::path(group_name) / inner_group_name)) {
+      return false;
+    }
+  }
+
+  if (!ParseIncludeTag(group_yaml["include"], launch, process, current_parse_state, parent_process_name, group_name)) {
+    return false;
+  }
+
+  return true;
+}
+
+[[nodiscard]] std::optional<LaunchDefinition>
+ParseLaunchDefinitionYAML(const YAML::Node &yaml, const CurrentLaunchParseState &current_parse_state) {
+  LaunchDefinition launch;
+
+  if (!ParseGroupDefinitionYAML(yaml, launch, current_parse_state)) {
+    return {};
+  }
+
+  // TODO: check for empty definition (no units!)
+
   if (yaml["recording"]) {
     launch.recording_settings = ParseRecordingSettingsYAML(yaml["recording"]);
   }
