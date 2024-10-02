@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON PARENT_SCOPE)
 
+option(CODE_COVERAGE "Enable code coverage" ON)
+
 # Enforce c++20 even for FetchContent dependencies
 # This is only needed under l4t cuda image, which changes headers around in a weird manner
 add_compile_options("--std=c++20")
@@ -17,6 +19,19 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   )
   # For now, work around issue with protobuf on ubuntu 20 using std::is_pod
   add_compile_options(-Wno-deprecated-declarations)
+endif()
+
+if(CODE_COVERAGE)
+    message(STATUS "Code coverage enabled")
+
+    # Add coverage flags for Clang
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+
+    # Optionally, set the LLVM_PROFILE_FILE environment variable to include the process ID
+    set(ENV{LLVM_PROFILE_FILE} "${CMAKE_BINARY_DIR}/coverage_data_%p.profraw")
+    set_property(GLOBAL PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/coverage_data_%p.profraw")
 endif()
 
 include(FetchContent)
