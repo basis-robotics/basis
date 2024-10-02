@@ -61,9 +61,11 @@ struct CurrentLaunchParseState {
 // TODO: use common command line type, dummy
 [[nodiscard]] std::optional<LaunchDefinition>
 ParseTemplatedLaunchDefinitionYAMLPath(const std::filesystem::path &yaml_path,
-                                       const std::vector<std::string> &launch_args, size_t recursion_depth = 0);
+                                       const basis::arguments::CommandLineTypes &command_line,
+                                       size_t recursion_depth = 0);
 [[nodiscard]] std::optional<LaunchDefinition>
-ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const std::vector<std::string> &launch_args,
+ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents,
+                                           const basis::arguments::CommandLineTypes &command_line,
                                            const CurrentLaunchParseState &current_parse_state);
 
 [[nodiscard]] std::optional<LaunchDefinition>

@@ -132,6 +132,60 @@ protected:
 };
 
 /**
+ * Specialized version handling key value pairs
+ * @note: will add a fake program name - it's required to be supplied.
+ */
+inline std::vector<std::string>
+CommandLineToArgparseArgsForType(std::string &&program_name,
+                                 const std::vector<std::pair<std::string, std::string>> &argument_pairs) {
+  std::vector<std::string> command_line;
+  command_line.reserve(argument_pairs.size() * 2 + 1);
+
+  // Add fake program name
+  command_line.emplace_back(program_name);
+  for (auto &[k, v] : argument_pairs) {
+    // Add --k v
+    command_line.emplace_back("--" + k);
+    command_line.emplace_back(v);
+  }
+
+  return command_line;
+}
+
+/**
+ * Specialized version handling argc+argv
+ * @note: will not add a fake program name.
+ */
+inline std::vector<std::string> CommandLineToArgparseArgsForType([[maybe_unused]] std::string &&program_name,
+                                                                 std::pair<int, const char *const *> argc_argv) {
+  // In this case, it's assumed you have a raw command line from main() - no need to add a fake program name
+  return std::vector<std::string>{argc_argv.second, argc_argv.second + argc_argv.first};
+}
+
+/**
+ * Specialized version of ParseArgumentsVariant handling a vector of strings
+ * @note: will add a fake program name - it's required to be supplied.
+ */
+inline std::vector<std::string> CommandLineToArgparseArgsForType(std::string &&program_name,
+                                                                 const std::vector<std::string> &command_line) {
+  std::vector<std::string> command_line_with_program;
+  command_line_with_program.reserve(command_line.size() + 1);
+  // Handle "program name" argument
+  command_line_with_program.emplace_back(program_name);
+  command_line_with_program.insert(command_line_with_program.end(), command_line.begin(), command_line.end());
+  return command_line_with_program;
+}
+
+inline std::vector<std::string> CommandLineToArgparseArgs(std::string &&program_name,
+                                                          const CommandLineTypes &command_line) {
+  return std::visit(
+      [&program_name](auto &&command_line) {
+        return CommandLineToArgparseArgsForType(std::move(program_name), command_line);
+      },
+      command_line);
+}
+
+/**
  * A base container for all arguments for a unit
  *
  * @tparam T_DERIVED the derived type, used for CRTP. Will have a typed member for each argument.
@@ -154,59 +208,7 @@ template <typename T_DERIVED> struct UnitArguments : public ArgumentsBase {
    * @return nonstd::expected<T_DERIVED, std::string> either a filled in T_DERIVED or an error string
    */
   static nonstd::expected<T_DERIVED, std::string> ParseArgumentsVariant(const CommandLineTypes &command_line) {
-    return std::visit([](auto &&command_line) { return ParseArguments(command_line); }, command_line);
-  }
-
-  /**
-   * Specialized version of ParseArgumentsVariant handling key value pairs
-   * @note: will add a fake program name
-   */
-  static nonstd::expected<T_DERIVED, std::string>
-  ParseArguments(const std::vector<std::pair<std::string, std::string>> &argument_pairs) {
-    std::vector<std::string> command_line;
-    command_line.reserve(argument_pairs.size() * 2 + 1);
-
-    // Add fake program name
-    command_line.push_back("");
-    for (auto &[k, v] : argument_pairs) {
-      // Add --k v
-      command_line.push_back("--" + k);
-      command_line.push_back(v);
-    }
-
-    return ParseArgumentsInternal(command_line);
-  }
-
-  /**
-   * Specialized version of ParseArgumentsVariant handling argc+argv
-   * @note: will not add a fake program name - it's required to be supplied.
-   */
-  static nonstd::expected<T_DERIVED, std::string> ParseArguments(std::pair<int, const char *const *> argc_argv) {
-    // In this case, it's assumed you have a raw command line from main() - no need to add a fake program name
-    return ParseArguments(argc_argv.first, argc_argv.second);
-  }
-
-  /**
-   * Specialized version of ParseArgumentsVariant handling argc+argv
-   * @note: will not add a fake program name - it's required to be supplied.
-   */
-  static nonstd::expected<T_DERIVED, std::string> ParseArguments(int argc, const char *const *argv) {
-    // In this case, it's assumed you have a raw command line from main() - no need to add a
-    // https://github.com/p-ranav/argparse/blob/v3.1/include/argparse/argparse.hpp#L1868
-    return ParseArgumentsInternal(std::vector<std::string>{argv, argv + argc});
-  }
-
-  /**
-   * Specialized version of ParseArgumentsVariant handling a vector of strings
-   * @note: will add a fake program name
-   */
-  static nonstd::expected<T_DERIVED, std::string> ParseArguments(const std::vector<std::string> &command_line) {
-    std::vector<std::string> command_line_with_program;
-    command_line_with_program.reserve(command_line.size() + 1);
-    // Handle "program name" argument
-    command_line_with_program.push_back("");
-    command_line_with_program.insert(command_line_with_program.end(), command_line.begin(), command_line.end());
-    return ParseArgumentsInternal(command_line_with_program);
+    return ParseArgumentsInternal(CommandLineToArgparseArgs("", command_line));
   }
 
 private:

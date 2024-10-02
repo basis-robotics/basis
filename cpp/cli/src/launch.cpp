@@ -72,8 +72,16 @@ public:
    * @param recorder
    * @return bool
    */
-  bool RunProcess(const ProcessDefinition &process, basis::RecorderInterface *recorder) {
-    BASIS_LOG_INFO("Running process with {} units", process.units.size());
+  bool RunProcess(const ProcessDefinition &process, basis::RecorderInterface *recorder, std::string_view process_name) {
+    BASIS_LOG_INFO("Running process \"{}\" with {} units", process_name, process.units.size());
+    for (const auto &[unit_name, unit] : process.units) {
+      std::vector<std::string> args;
+      args.reserve(unit.args.size());
+      for (auto &p : unit.args) {
+        args.emplace_back(fmt::format("--{} {}", p.first, p.second));
+      }
+      BASIS_LOG_INFO("\t{}: {} {}", unit_name, unit.unit_type, fmt::join(args, " "));
+    }
 
     for (const auto &[unit_name, unit] : process.units) {
       std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
@@ -319,7 +327,7 @@ void LaunchProcessDefinition(const ProcessDefinition &process_definition,
       }
 
       UnitExecutor runner;
-      if (!runner.RunProcess(process_definition, recorder.get())) {
+      if (!runner.RunProcess(process_definition, recorder.get(), process_name_filter)) {
         BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
         global_stop = true;
       }

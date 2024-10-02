@@ -44,7 +44,7 @@ constexpr int MAX_LAUNCH_INCLUDE_DEPTH = 32;
 
 [[nodiscard]] std::optional<LaunchDefinition>
 ParseTemplatedLaunchDefinitionYAMLPath(const std::filesystem::path &yaml_path,
-                                       const std::vector<std::string> &launch_args, size_t recursion_depth) {
+                                       const basis::arguments::CommandLineTypes &command_line, size_t recursion_depth) {
 
   std::ifstream file(yaml_path.string(), std::ios::binary | std::ios::ate);
   if (file.fail()) {
@@ -58,7 +58,7 @@ ParseTemplatedLaunchDefinitionYAMLPath(const std::filesystem::path &yaml_path,
   std::vector<char> buffer(size);
   if (file.read(buffer.data(), size)) {
     return ParseTemplatedLaunchDefinitionYAMLContents(
-        {buffer.data(), (size_t)size}, launch_args,
+        {buffer.data(), (size_t)size}, command_line,
         CurrentLaunchParseState(std::filesystem::canonical(yaml_path), recursion_depth));
   }
   BASIS_LOG_FATAL("Failed to load file {}", yaml_path.string());
@@ -96,7 +96,7 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
                                            const CurrentLaunchParseState &current_parse_state);
 [[nodiscard]] std::optional<LaunchDefinition>
 ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yaml_contents,
-                                           const std::vector<std::string> &launch_args,
+                                           const basis::arguments::CommandLineTypes &command_line,
                                            const CurrentLaunchParseState &current_parse_state) {
 
   // Now separate out arguments from templated content
@@ -168,7 +168,9 @@ ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yam
   }
 
   try {
-    argparser->parse_args(launch_args);
+    std::vector<std::string> argparse_args = basis::arguments::CommandLineToArgparseArgs(
+        "basis launch " + current_parse_state.current_file_path.string(), command_line);
+    argparser->parse_args(argparse_args);
   } catch (const std::exception &err) {
     // argparse uses exceptions for error handling - handle it and convert to an error
     BASIS_LOG_FATAL("{}", err.what());
@@ -247,14 +249,11 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
   std::filesystem::path definition_path =
       std::filesystem::canonical(current_parse_state.include_search_directory / definition_name);
 
-  std::vector<std::string> launch_args;
-  launch_args.reserve(args.size() + 1);
-  launch_args.push_back("basis launch " + current_parse_state.current_file_path.string());
+  std::vector<std::pair<std::string, std::string>> launch_args;
+  launch_args.reserve(args.size());
+
   for (const auto &p : args) {
-    const auto k = "--" + p.first.as<std::string>();
-    const auto &v = p.second.as<std::string>();
-    launch_args.push_back(k);
-    launch_args.push_back(v);
+    launch_args.emplace_back(p.first.as<std::string>(), p.second.as<std::string>());
   }
 
   std::optional<LaunchDefinition> launch_definition = ParseTemplatedLaunchDefinitionYAMLPath(

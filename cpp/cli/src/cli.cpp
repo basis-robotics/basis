@@ -394,13 +394,7 @@ int main(int argc, char *argv[]) {
     context.all_args = {argv, argv + argc};
     context.launch_args = leftover_args;
 
-    std::vector<std::string> launch_args;
-    launch_args.reserve(leftover_args.size() + 1);
-    launch_args.push_back("");
-    launch_args.insert(launch_args.end(), leftover_args.begin(), leftover_args.end());
-
-    /// todo: now launch it!
-    auto def = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, launch_args);
+    auto def = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, leftover_args);
     if (!def) {
       return 1;
     }
