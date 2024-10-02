@@ -115,8 +115,10 @@ struct ArgumentsBase {
   const std::unordered_map<std::string, std::string> &GetArgumentMapping() const { return args_map; }
 
   static std::unique_ptr<argparse::ArgumentParser>
-  CreateArgumentParser(const std::span<std::unique_ptr<ArgumentMetadataBase>> argument_metadatas) {
-    auto parser = std::make_unique<argparse::ArgumentParser>();
+  CreateArgumentParser(const std::span<std::unique_ptr<ArgumentMetadataBase>> argument_metadatas,
+                       bool include_help_arg = false) {
+    auto parser = std::make_unique<argparse::ArgumentParser>(
+        "", "", include_help_arg ? argparse::default_arguments::help : argparse::default_arguments::none);
 
     for (auto &arg : argument_metadatas) {
       arg->CreateArgparseArgument(*parser);

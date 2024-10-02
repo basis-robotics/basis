@@ -156,7 +156,7 @@ ParseTemplatedLaunchDefinitionYAMLContents([[maybe_unused]] std::string_view yam
         }
         argument_metadata.push_back(std::move(argument));
       }
-      argparser = arguments::ArgumentsBase::CreateArgumentParser(argument_metadata);
+      argparser = arguments::ArgumentsBase::CreateArgumentParser(argument_metadata, false);
     }
     // Adjust the pointer to the start of templated content
     yaml_contents = yaml_contents.substr(template_content_start);
@@ -249,7 +249,7 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
 
   std::vector<std::string> launch_args;
   launch_args.reserve(args.size() + 1);
-  launch_args.push_back("");
+  launch_args.push_back("basis launch " + current_parse_state.current_file_path.string());
   for (const auto &p : args) {
     const auto k = "--" + p.first.as<std::string>();
     const auto &v = p.second.as<std::string>();
