@@ -17,7 +17,19 @@
 #include <unordered_map>
 
 namespace basis::launch {
-
+std::string ProcessDefinitionToDebugString(std::string_view process_name, const ProcessDefinition &process) {
+  std::vector<std::string> unit_cmds;
+  for (const auto &[unit_name, unit] : process.units) {
+    std::vector<std::string> args;
+    args.reserve(unit.args.size());
+    for (auto &p : unit.args) {
+      args.emplace_back(fmt::format("--{} {}", p.first, p.second));
+    }
+    unit_cmds.emplace_back(fmt::format("  {}: {} {}", unit_name, unit.unit_type, fmt::join(args, " ")));
+  }
+  return fmt::format("process \"{}\" with {} units\n{}", process_name, process.units.size(),
+                     fmt::join(unit_cmds, "\n"));
+}
 constexpr int MAX_LAUNCH_INCLUDE_DEPTH = 32;
 
 [[nodiscard]] RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml) {
@@ -351,6 +363,7 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
                 current_parse_state.current_file_path.string(), full_process_name, it->second.source_file);
             return false;
           }
+          launch.processes.emplace(std::move(full_process_name), std::move(included_process));
         }
       }
     }
@@ -411,8 +424,6 @@ ParseLaunchDefinitionYAML(const YAML::Node &yaml, const CurrentLaunchParseState 
   if (!ParseGroupDefinitionYAML(yaml, launch, current_parse_state)) {
     return {};
   }
-
-  // TODO: check for empty definition (no units!)
 
   if (yaml["recording"]) {
     launch.recording_settings = ParseRecordingSettingsYAML(yaml["recording"]);

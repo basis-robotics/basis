@@ -4,6 +4,7 @@
  * The main command line utility for basis. Used for querying the robot. See `basis --help` for more information.
  *
  */
+#include "basis/launch/launch_definition.h"
 #include <argparse/argparse.hpp>
 #include <spdlog/spdlog.h>
 
@@ -307,7 +308,7 @@ int main(int argc, char *argv[]) {
       .help("Wait for simulated time message")
       .default_value(false)
       .implicit_value(true);
-  launch_command.add_argument("--dry_run").help("Only parse the launch file, don't start").flag();
+  launch_command.add_argument("--dry-run").help("Only parse the launch file, don't start").flag();
   launch_command.add_argument("launch_yaml").help("The launch file to launch.");
   // TODO: hack on argparse to allow trailing args to work nicely
   // launch_command.add_argument("launch_args").nargs(argparse::nargs_pattern::any);
@@ -394,12 +395,29 @@ int main(int argc, char *argv[]) {
     context.all_args = {argv, argv + argc};
     context.launch_args = leftover_args;
 
-    auto def = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, leftover_args);
-    if (!def) {
+    auto launch = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, leftover_args);
+    if (!launch) {
       return 1;
     }
-    if (!launch_command.get<bool>("--dry_run")) {
-      basis::launch::LaunchYamlDefinition(*def, context);
+    if (launch_command.get<bool>("--dry-run")) {
+      for (auto &[process_name, process] : launch->processes) {
+        std::cout << basis::launch::ProcessDefinitionToDebugString(process_name, process) << std::endl;
+      }
+    } else {
+      bool has_units = false;
+      for (auto &[_, process] : launch->processes) {
+        if (process.units.size()) {
+          has_units = true;
+          break;
+        }
+      }
+      if (!has_units) {
+        BASIS_LOG_FATAL("No units found in launch file");
+        return 1;
+      }
+
+      // TODO: check for empty definition (no units!)
+      basis::launch::LaunchYamlDefinition(*launch, context);
     }
   }
 

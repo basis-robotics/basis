@@ -40,6 +40,8 @@ struct LaunchDefinition {
   std::unordered_map<std::string, ProcessDefinition> processes;
 };
 
+std::string ProcessDefinitionToDebugString(std::string_view process_name, const ProcessDefinition &process);
+
 RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml);
 
 struct LaunchContext {

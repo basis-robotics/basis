@@ -68,20 +68,13 @@ public:
 
   /**
    * Run a process given a definition - will iterate over each unit in the definition, load, and run.
-   * @param process
-   * @param recorder
+   * @param process the definition to run
+   * @param recorder optional recorder to write data with
+   * @param process_name the process's name
    * @return bool
    */
   bool RunProcess(const ProcessDefinition &process, basis::RecorderInterface *recorder, std::string_view process_name) {
-    BASIS_LOG_INFO("Running process \"{}\" with {} units", process_name, process.units.size());
-    for (const auto &[unit_name, unit] : process.units) {
-      std::vector<std::string> args;
-      args.reserve(unit.args.size());
-      for (auto &p : unit.args) {
-        args.emplace_back(fmt::format("--{} {}", p.first, p.second));
-      }
-      BASIS_LOG_INFO("\t{}: {} {}", unit_name, unit.unit_type, fmt::join(args, " "));
-    }
+    BASIS_LOG_INFO("Running {}", ProcessDefinitionToDebugString(process_name, process));
 
     for (const auto &[unit_name, unit] : process.units) {
       std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
@@ -225,7 +218,7 @@ void LaunchWithProcessForks(const LaunchDefinition &launch, const std::vector<st
   std::vector<cli::Process> managed_processes;
   for (const auto &[process_name, process_definition] : launch.processes) {
     if (process_definition.units.empty()) {
-      BASIS_LOG_DEBUG("Skipping empty process {}", process_name);
+      BASIS_LOG_WARN("Skipping empty process {}", process_name);
     } else {
       managed_processes.push_back(CreateSublauncherProcess(process_name, args));
     }
