@@ -400,9 +400,7 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     if (launch_command.get<bool>("--dry-run")) {
-      for (auto &[process_name, process] : launch->processes) {
-        std::cout << basis::launch::ProcessDefinitionToDebugString(process_name, process) << std::endl;
-      }
+      std::cout << basis::launch::LaunchDefinitionToDebugString(*launch) << std::endl;
     } else {
       bool has_units = false;
       for (auto &[_, process] : launch->processes) {

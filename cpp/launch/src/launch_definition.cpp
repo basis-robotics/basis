@@ -1,5 +1,6 @@
 #include "argparse/argparse.hpp"
 #include "basis/core/logging/macros.h"
+#include "spdlog/fmt/bundled/format.h"
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/node/parse.h"
 #include "yaml-cpp/parser.h"
@@ -14,9 +15,15 @@
 
 #include <basis/arguments.h>
 #include <string_view>
-#include <unordered_map>
 
 namespace basis::launch {
+std::string LaunchDefinitionToDebugString(const LaunchDefinition &launch) {
+  std::vector<std::string> process_strs;
+  for (auto &[process_name, process] : launch.processes) {
+    process_strs.emplace_back(basis::launch::ProcessDefinitionToDebugString(process_name, process));
+  }
+  return fmt::format("{}", fmt::join(process_strs, "\n"));
+}
 std::string ProcessDefinitionToDebugString(std::string_view process_name, const ProcessDefinition &process) {
   std::vector<std::string> unit_cmds;
   for (const auto &[unit_name, unit] : process.units) {
@@ -348,13 +355,16 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
         if (included_process_name == "/") {
           for (auto &[unit_name, unit] : included_process.units) {
             // Create the new unit name
-            std::string full_unit_name = std::filesystem::path(parent_group_name) / unit_name;
+            std::string full_unit_name =
+                (std::filesystem::path(parent_group_name) / ("./" + unit_name)).lexically_normal();
+            std::cout << parent_group_name << "+" << unit_name << "=" << full_unit_name << std::endl;
             if (!MoveUnitToProcess(parent_process, full_unit_name, parent_process_name, std::move(unit))) {
               return false;
             }
           }
         } else {
-          std::string full_process_name = std::filesystem::path(parent_group_name) / included_process_name;
+          std::string full_process_name =
+              (std::filesystem::path(parent_group_name) / ("./" + included_process_name)).lexically_normal();
           auto it = launch.processes.find(full_process_name);
           if (it != launch.processes.end()) {
             BASIS_LOG_FATAL(
@@ -386,6 +396,7 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
     }
     process = &launch.processes[group_name];
     parent_process_name = group_name.c_str();
+    process->source_file = current_parse_state.current_file_path;
   }
 
   for (const auto &unit_name_yaml : group_yaml["units"]) {

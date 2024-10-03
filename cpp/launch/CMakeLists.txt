@@ -15,3 +15,7 @@ target_link_libraries(basis_launch
   )
 
 add_library(basis::launch ALIAS basis_launch)
+
+if(${BASIS_ENABLE_TESTING})
+  add_subdirectory(test)
+endif()

@@ -1,0 +1,10 @@
+args:
+  split_process:
+    type: bool
+    default: False
+---
+groups:
+  foxglove_inner:
+    process: {{args.split_process}}
+    units:
+      foxglove: {}

@@ -21,25 +21,42 @@ struct UnitDefinition {
   std::string unit_type;
   std::vector<std::pair<std::string, std::string>> args;
   std::string source_file;
+  bool operator==(const UnitDefinition &) const = default;
 };
 
 struct ProcessDefinition {
   std::unordered_map<std::string, UnitDefinition> units;
   std::string source_file;
+  bool operator==(const ProcessDefinition &) const = default;
 };
 
 struct RecordingSettings {
   bool async = true;
   std::string name = "basis";
-  std::vector<std::regex> patterns;
+  // <regex_str, regex>
+  std::vector<std::pair<std::string, std::regex>> patterns;
   std::filesystem::path directory;
+  bool operator==(const RecordingSettings &other) const {
+
+    if (patterns.size() != other.patterns.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < patterns.size(); i++) {
+      if (patterns[i].first != other.patterns[i].first) {
+        return false;
+      }
+    }
+    return other.async == async && other.name == name && other.directory == directory;
+  }
 };
 
 struct LaunchDefinition {
   std::optional<RecordingSettings> recording_settings;
   std::unordered_map<std::string, ProcessDefinition> processes;
+  bool operator==(const LaunchDefinition &) const = default;
 };
 
+std::string LaunchDefinitionToDebugString(const LaunchDefinition &launch);
 std::string ProcessDefinitionToDebugString(std::string_view process_name, const ProcessDefinition &process);
 
 RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml);

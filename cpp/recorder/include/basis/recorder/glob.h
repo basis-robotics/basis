@@ -37,7 +37,7 @@ static inline bool StringSingleReplace(std::string &str, const std::string &from
   return true;
 }
 
-static inline std::regex GlobToRegex(const std::string &pattern) {
+static inline std::pair<std::string, std::regex> GlobToRegex(const std::string &pattern) {
   std::size_t i = 0, n = pattern.size();
   std::string result_string;
 
@@ -136,6 +136,7 @@ static inline std::regex GlobToRegex(const std::string &pattern) {
       }
     }
   }
-  return std::regex(std::string{"(("} + result_string + std::string{R"()|[\r\n])$)"}, std::regex::ECMAScript);
+  std::string regex_str = std::string{"(("} + result_string + std::string{R"()|[\r\n])$)"};
+  return {regex_str, std::regex(pattern, std::regex::ECMAScript)};
 }
 } // namespace glob
