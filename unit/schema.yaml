@@ -72,6 +72,7 @@ properties:
         A function run when the set of Inputs are satisfied, producing a set of Outputs
       properties:
         sync:
+          additionalProperties: False
           properties:
             type:
               oneOf:
@@ -80,8 +81,7 @@ properties:
                 - type: string
                   const: equal
             rate:
-              #$ref: "#/$defs/duration"
-              type: number              
+              $ref: "#/$defs/duration"
               title: Rate
               description: Calls the hander at the specified rate, with optional Inputs that also must be satisfied.    
             approximate:
@@ -149,8 +149,9 @@ properties:
 $defs:
   duration:
     title: Duration
-    type: string
-    pattern: "[0-9]+(ms|s|hz)"
+    type: number
+    #type: string
+    #pattern: "[0-9]+(ms|s|hz)"
   message_type:
     type: string
     pattern: "^[^:]+:[^:].*"
