@@ -118,10 +118,12 @@ properties:
                     - Unannotated fields are transformed into lambdas.
                     - "complex.access.to_string()": "[](T_MSG* msg)[]{ return msg->complex.access.to_string(); }"
                 type: string
-              accumulate:
-                type: integer
-              cached:
-                type: boolean
+              # Unimplemented
+              # accumulate:
+              #   type: integer
+              # cached:
+              #   type: boolean
+              
               # https://github.com/redhat-developer/yaml-language-server/issues/478
               type: True
               inproc_type: True
@@ -149,6 +151,8 @@ properties:
 $defs:
   duration:
     title: Duration
+    # For now, we don't have any way to parse these, so only allow bare number
+
     type: number
     #type: string
     #pattern: "[0-9]+(ms|s|hz)"
