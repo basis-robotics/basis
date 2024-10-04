@@ -312,17 +312,19 @@ void LaunchProcessDefinition(const ProcessDefinition &process_definition,
 
     {
       uint64_t token = basis::core::MonotonicTime::GetRunToken();
-      while (sim && !token) {
+      while (!global_stop && sim && !token) {
         BASIS_LOG_INFO("In simulation mode, waiting on /time");
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
         token = basis::core::MonotonicTime::GetRunToken();
       }
 
-      UnitExecutor runner;
-      if (!runner.RunProcess(process_definition, recorder.get(), process_name_filter)) {
-        BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
-        global_stop = true;
+      if (!global_stop) {
+        UnitExecutor runner;
+        if (!runner.RunProcess(process_definition, recorder.get(), process_name_filter)) {
+          BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
+          global_stop = true;
+        }
       }
 
       // Sleep until signal
@@ -331,6 +333,7 @@ void LaunchProcessDefinition(const ProcessDefinition &process_definition,
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
       }
+
       if (global_stop) {
         BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);
       } else {
