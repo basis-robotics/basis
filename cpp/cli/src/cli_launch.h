@@ -14,22 +14,26 @@ public:
     // todo: when kv store is implemented, query the store instead
     parser.add_argument("--sim").help("Wait for simulated time message").default_value(false).implicit_value(true);
     parser.add_argument("--dry-run").help("Only parse the launch file, don't start").flag();
-    parser.add_argument("launch_yaml").help("The launch file to launch.");
-    // TODO: hack on argparse to allow trailing args to work nicely
-    // parser.add_argument("launch_args").nargs(argparse::nargs_pattern::any);
+    parser.add_argument("launch_yaml_and_args")
+        .help("The launch file to launch plus arguments.")
+        .remaining()
+        .nargs(argparse::nargs_pattern::at_least_one);
+
     Commit();
   }
 
-  bool HandleArgs(int argc, char *argv[], const std::vector<std::string> &leftover_args) {
-    auto launch_yaml = parser.get("launch_yaml");
-    std::vector<std::string> args(argv, argv + argc);
+  bool HandleArgs(int argc, char *argv[]) {
+    const std::vector<std::string> launch_yaml_args = parser.get<std::vector<std::string>>("launch_yaml_and_args");
+
+    const std::string &launch_yaml = launch_yaml_args[0];
     basis::launch::LaunchContext context;
+
     context.process_filter = parser.get("--process");
     context.sim = parser.get<bool>("--sim");
     context.all_args = {argv, argv + argc};
-    context.launch_args = leftover_args;
+    context.launch_args = {++launch_yaml_args.begin(), launch_yaml_args.end()};
 
-    auto launch = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, leftover_args);
+    auto launch = basis::launch::ParseTemplatedLaunchDefinitionYAMLPath(launch_yaml, context.launch_args);
     if (!launch) {
       return false;
     }

@@ -118,15 +118,8 @@ int main(int argc, char *argv[]) {
   // basis launch
   LaunchCommand launch_command(parser);
 
-  std::vector<std::string> leftover_args;
-
   try {
-    leftover_args = parser.parse_known_args(argc, argv);
-    if (leftover_args.size() && !launch_command.IsInUse()) {
-      std::cerr << parser << std::endl;
-      return 1;
-    }
-
+    parser.parse_args(argc, argv);
   } catch (const std::exception &err) {
     std::cerr << err.what() << std::endl;
     std::cerr << parser;
@@ -157,7 +150,7 @@ int main(int argc, char *argv[]) {
   } else if (schema_command.IsInUse()) {
     ok = schema_command.HandleArgs(connector.get());
   } else if (launch_command.IsInUse()) {
-    ok = launch_command.HandleArgs(argc, argv, leftover_args);
+    ok = launch_command.HandleArgs(argc, argv);
   }
 
   serialization_plugins.clear();
