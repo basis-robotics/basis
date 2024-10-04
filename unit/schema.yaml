@@ -57,10 +57,10 @@ properties:
     description: |
       The threading model to use for this unit.
         single - by default all handlers run mutually exclusive from eachother
-        multi - by default all handlers run in parallel
+#        multi - by default all handlers run in parallel
     enum:
       - single
-      - multi
+#      - multi
   handlers:
     title: Handlers
     type: object
@@ -123,7 +123,7 @@ properties:
               #   type: integer
               # cached:
               #   type: boolean
-              
+
               # https://github.com/redhat-developer/yaml-language-server/issues/478
               type: True
               inproc_type: True
