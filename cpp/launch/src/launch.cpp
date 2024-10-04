@@ -156,13 +156,18 @@ protected:
   readlink("/proc/self/exe", execv_target, sizeof(execv_target));
   args_copy.push_back(execv_target);
 
-  // launch
-  args_copy.push_back(args[1].data());
-  args_copy.push_back("--process");
-  args_copy.push_back(process_name.data());
+  bool pushed_process = false;
+
   // <the args>
-  for (size_t i = 2; i < args.size(); i++) {
+  for (size_t i = 1; i < args.size(); i++) {
     args_copy.push_back(args[i].data());
+
+    if (args[i] == "launch" && !pushed_process) {
+      // launch --process <process>
+      args_copy.push_back("--process");
+      args_copy.push_back(process_name.data());
+      pushed_process = true;
+    }
   }
   // null terminator for argv
   args_copy.push_back(nullptr);
