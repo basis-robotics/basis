@@ -330,15 +330,14 @@ void LaunchProcessDefinition(const ProcessDefinition &process_definition,
           BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
           global_stop = true;
         }
-      }
 
-      // Sleep until signal
-      // TODO: this can be a condition variable now
-      while (!global_stop && token == basis::core::MonotonicTime::GetRunToken()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
+        // Sleep until signal
+        // TODO: this can be a condition variable now
+        while (!global_stop && token == basis::core::MonotonicTime::GetRunToken()) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+          basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
+        }
       }
-
       if (global_stop) {
         BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);
       } else {
