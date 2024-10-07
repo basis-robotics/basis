@@ -8,6 +8,12 @@ namespace basis::plugins::transport {
 
 using namespace tcp;
 
+TcpSubscriber::~TcpSubscriber() {
+  for (const auto &[_, receiver] : receivers) {
+    epoll->RemoveFd(receiver.GetSocket().GetFd());
+  }
+}
+
 nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
 TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
                       core::threading::ThreadPool *worker_pool,
