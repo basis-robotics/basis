@@ -5,7 +5,7 @@
 Basis
 </h1>
 
-Basis is a robotics development framework developed by [Basis Robotics](https://basisrobotics.tech/), designed to accelerate your journey from concept to prototype, while maintaining a focus on both testing and production.
+Basis is a robotics development framework developed by [Basis Robotics](https://basisrobotics.tech/), designed to accelerate your journey from concept to prototype, and from prototype to production.
 
 <!--  TODO: confirm links -->
 [Quick start](https://docs.basisrobotics.tech/quistart)
@@ -29,6 +29,7 @@ Start a new project by following our [documentation](https://docs.basisrobotics.
 
 - **Rapid Experimentation and Iteration**: Easily experiment and iterate, speeding up your development process from concept to prototype, and from prototype to production.
 - **Code Generator for Boilerplate**: Ensure your applications meet the highest standards with Basis' code generator, which creates boilerplate code to help avoid mistakes, allowing you to focus on your core logic rather than plumbing the architecture.
+- **Efficient and Lightweight**: With a low CPU footprint and efficient message transport, Basis is suitable for both resource-constrained environments and high-demand applications. In-process messages can be passed as shared pointers rather than going through serialization and network transport, reducing latency and improving efficiency.
 - **Customizable Message Transport**: Serialization and message transport are handled through plugins, enabling customization to meet project needs. Current support includes ROS and Protocol Buffers, with more options coming soon.
 - **Minimal Dependencies**: Basis minimizes external dependencies, simplifying OS upgrades and package updates, and resulting in smaller symbol files and reduced link times.
 - **Testing Support**: Run sub-system testing and integration testing easily in your CI pipeline.
