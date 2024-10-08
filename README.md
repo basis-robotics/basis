@@ -1,59 +1,39 @@
-# Basis
+<p align="center">
+  <img src="docs/basis.png" width="90" /> 
+</p>
+<h1 align="center">
+Basis
+</h1>
 
-Basis is a new robotics framework focused on sane defaults and maintainability as a robotics codebase scales. It's highly recommended to go through the docs/ folder if you want more details.
+Basis is a robotics development framework developed by [Basis Robotics](https://basisrobotics.tech/), designed to accelerate your journey from concept to prototype, while maintaining a focus on both testing and production.
 
-## Planned Features
-- Deterministic replay and simulation
-    - This is key to enabling reliable testing, especially in CI where resources may be constrained.
-    - Additionally - simple integration tests shouldn't require external networking or coordination.
-- Compatibility with a wide variety of serialization formats 
-    - You pick the message format that fits your needs. This enables:
-        - converting your message serializer over time (rather than all at once)
-        - easier interop with other services (a ROS bridge node can send out messages in ROS native format, sensors can expose messages as native packets)
-- Modification and forking encouraged
-    - Plugins/Extensions will cover as many bases as we can
-    - There will always be some feature that we don't support - it should be easy to add some fix, upgrade, or feature without building and managing debians
-- Maintainability, even with large codebases
-    - Sane defaults
-    - Easy robot configuration
-    - See: replay determinism
+<!--  TODO: confirm links -->
+[Quick start](https://docs.basisrobotics.tech/quistart)
+<span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
+[Documentation](https://docs.basisrobotics.tech)
+<span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
+[Examples](https://docs.basisrobotics.tech/examples)
 
-## Planned platforms:
+[Discord](https://www.discord.com/TODO)
+<span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
+[Blog](https://basisrobotics.tech/blog/)
+<span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
+[LinkedIn](https://www.linkedin.com/company/basisrobotics/)
 
-For now, x86_64 and aarch64 (specifically NVIDIA Jetson).
 
-## Getting started:
 
-**Warning: this is work in progress software.** This repository is provided to gauge interest, get feedback, and provide examples of the proposed software. I don't currently provide a public license.
+Start a new project by following our [documentation](https://docs.basisrobotics.tech). We would love to hear from you! If you have any feedback or run into issues using our framework, please file an [issue](https://github.com/basis-robotics/basis/issues/new) on this repository.
 
-### Dependencies
-Currently: 
-- clang-18
-- ccache (optional)
-- cmake 
-- make (or your build system of choice)
-- libprotobuf-dev
-- googletest 
 
-Alternatively, go try out the docker container in `docker/`.
+## Why Basis?
 
-### Build
+- **Rapid Experimentation and Iteration**: Easily experiment and iterate, speeding up your development process from concept to prototype, and from prototype to production.
+- **Code Generator for Boilerplate**: Ensure your applications meet the highest standards with Basis' code generator, which creates boilerplate code to help avoid mistakes, allowing you to focus on your core logic rather than plumbing the architecture.
+- **Customizable Message Transport**: Serialization and message transport are handled through plugins, enabling customization to meet project needs. Current support includes ROS and Protocol Buffers, with more options coming soon.
+- **Minimal Dependencies**: Basis minimizes external dependencies, simplifying OS upgrades and package updates, and resulting in smaller symbol files and reduced link times.
+- **Testing Support**: Run sub-system testing and integration testing easily in your CI pipeline.
+- **Deterministic Replay**: Guarantee consistent execution with deterministic replay, ensuring reproducible tests that you can confidently trust.
 
-`basis` (for now) requires a C++20 compatible compiler and standard library (due to use of `expected`). It's expected that future support will go down to C++17 or lower.
+Whether you're in the prototyping stage or ready for production, Basis provides the tools and flexibility you need to build reliable robotics applications.
 
-```
-cd cpp/
-mkdir build/
-cmake ..
-make -j
-```
 
-### Test
-```
-cd cpp/build
-ctest .
-```
-
-### Installation
-
-Installation is currently not implemented.
