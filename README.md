@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="docs/basis.png" width="90" /> 
+  <a href="#">
+    <img src="docs/basis.png" width="90" />
+  </a>
 </p>
 <h1 align="center">
 Basis
@@ -21,7 +23,6 @@ Basis is a robotics development framework developed by [Basis Robotics](https://
 [LinkedIn](https://www.linkedin.com/company/basisrobotics/)
 
 
-
 Start a new project by following our [documentation](https://docs.basisrobotics.tech). We would love to hear from you! If you have any feedback or run into issues using our framework, please file an [issue](https://github.com/basis-robotics/basis/issues/new) on this repository.
 
 
@@ -33,8 +34,6 @@ Start a new project by following our [documentation](https://docs.basisrobotics.
 - **Customizable Message Transport**: Serialization and message transport are handled through plugins, enabling customization to meet project needs. Current support includes ROS and Protocol Buffers, with more options coming soon.
 - **Minimal Dependencies**: Basis minimizes external dependencies, simplifying OS upgrades and package updates, and resulting in smaller symbol files and reduced link times.
 - **Testing Support**: Run sub-system testing and integration testing easily in your CI pipeline.
-- **Deterministic Replay**: Guarantee consistent execution with deterministic replay, ensuring reproducible tests that you can confidently trust.
+- **Deterministic Replay**: Guarantee consistent execution with deterministic replay, ensuring reproducible tests that you can confidently trust. See our blog post: [(Fixing) Determinism in Robotics Testing](https://basisrobotics.tech/2024/09/02/determinism/)
 
 Whether you're in the prototyping stage or ready for production, Basis provides the tools and flexibility you need to build reliable robotics applications.
-
-
