@@ -87,11 +87,6 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
       }
       case TcpReceiver::ReceiveStatus::DISCONNECTED: {
         // TODO: this needs to be updated when we gracefully handle disconnection
-        auto it = receivers.find(key);
-        if (it != receivers.end()) {
-          epoll->RemoveFd(fd);
-          receivers.erase(it);
-        }
         BASIS_LOG_ERROR("Disconnecting from topic {}", topic_name);
         return;
       }
