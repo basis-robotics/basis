@@ -8,6 +8,12 @@ namespace basis::plugins::transport {
 
 using namespace tcp;
 
+TcpSubscriber::~TcpSubscriber() {
+  for (const auto &[_, receiver] : receivers) {
+    epoll->RemoveFd(receiver.GetSocket().GetFd());
+  }
+}
+
 nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
 TcpSubscriber::Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,
                       core::threading::ThreadPool *worker_pool,
@@ -58,11 +64,11 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
     receivers.emplace(key, std::move(receiver));
   }
 
-  auto on_epoll_callback = [this](int fd, std::unique_lock<std::mutex> lock, TcpReceiver *receiver_ptr,
+  auto on_epoll_callback = [this, key](int fd, std::unique_lock<std::mutex> lock, TcpReceiver *receiver_ptr,
                                   std::shared_ptr<core::transport::IncompleteMessagePacket> incomplete) {
     BASIS_LOG_DEBUG("Queuing work for socket {}", fd);
 
-    worker_pool->enqueue([this, fd, incomplete = std::move(incomplete), receiver_ptr, lock = std::move(lock)] {
+    worker_pool->enqueue([this, fd, incomplete = std::move(incomplete), receiver_ptr, lock = std::move(lock), key] {
       // It's an error to actually call this with multiple threads.
       // TODO: add debug only checks for this
       switch (receiver_ptr->ReceiveMessage(*incomplete)) {
@@ -80,8 +86,7 @@ bool TcpSubscriber::ConnectToPort(std::string_view address, uint16_t port) {
                         incomplete->GetCurrentProgress(), errno, strerror(errno));
       }
       case TcpReceiver::ReceiveStatus::DISCONNECTED: {
-
-        // TODO
+        // TODO: this needs to be updated when we gracefully handle disconnection
         BASIS_LOG_ERROR("Disconnecting from topic {}", topic_name);
         return;
       }
