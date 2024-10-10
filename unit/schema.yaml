@@ -90,8 +90,6 @@ properties:
               description: when used with 'equal' sync type, allows for approximate equality
             buffer_size:
               type: number
-            accumulate:
-              type: number
         buffer_size:
           type: integer
         inputs:
@@ -122,9 +120,8 @@ properties:
                     - Unannotated fields are transformed into lambdas.
                     - "complex.access.to_string()": "[](T_MSG* msg)[]{ return msg->complex.access.to_string(); }"
                 type: string
-              # Unimplemented
-              # accumulate:
-              #   type: integer
+              accumulate:
+                type: integer
               # cached:
               #   type: boolean
 
