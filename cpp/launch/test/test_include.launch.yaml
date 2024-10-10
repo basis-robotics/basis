@@ -1,0 +1,36 @@
+---
+args: 
+  include_foxglove_type:
+    type: int32_t
+    help: test to run
+    default: 0
+---
+recording:
+  directory: /tmp/
+  # TODO: we should allow multiple recorders with filtering
+  name: camera_pipeline
+  topics:
+    - /log
+
+
+{% if args.include_foxglove_type == 1 %}
+# The default syntax that most will reach for
+include:
+  foxglove.launch.yaml: {}
+{% else if args.include_foxglove_type == 2 %}
+include:
+  - foxglove.launch.yaml: {}
+{% endif %}
+groups:
+  foxglove:
+{% if args.include_foxglove_type in [3, 4] %}
+    include:
+      foxglove.launch.yaml:
+        split_process: {{ args.include_foxglove_type == 4 }}
+{% endif %}
+  webcam:
+    units:
+      v4l2_camera_driver:
+        args:
+          device: /dev/video0
+          topic_namespace: /camera

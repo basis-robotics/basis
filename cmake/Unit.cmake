@@ -64,6 +64,8 @@ function(generate_unit UNIT_NAME)
     add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})
 
     install(TARGETS ${TARGET_NAME} DESTINATION unit/)
-    install(FILES ${UNIT_FILE_NAME} DESTINATION unit/)   
+    install(FILES ${UNIT_FILE_NAME} DESTINATION unit/)
+    install(TARGETS ${TARGET_NAME}_bin DESTINATION bin/)
+
 
 endfunction()

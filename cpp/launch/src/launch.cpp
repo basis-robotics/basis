@@ -7,6 +7,7 @@
 #include <sys/prctl.h>
 
 #include <basis/recorder.h>
+#include <basis/recorder/glob.h>
 #include <basis/recorder/protobuf_log.h>
 #include <basis/unit.h>
 
@@ -67,12 +68,13 @@ public:
 
   /**
    * Run a process given a definition - will iterate over each unit in the definition, load, and run.
-   * @param process
-   * @param recorder
+   * @param process the definition to run
+   * @param recorder optional recorder to write data with
+   * @param process_name the process's name
    * @return bool
    */
-  bool RunProcess(const ProcessDefinition &process, basis::RecorderInterface *recorder) {
-    BASIS_LOG_INFO("Running process with {} units", process.units.size());
+  bool RunProcess(const ProcessDefinition &process, basis::RecorderInterface *recorder, std::string_view process_name) {
+    BASIS_LOG_INFO("Running {}", ProcessDefinitionToDebugString(process_name, process));
 
     for (const auto &[unit_name, unit] : process.units) {
       std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);
@@ -154,13 +156,18 @@ protected:
   readlink("/proc/self/exe", execv_target, sizeof(execv_target));
   args_copy.push_back(execv_target);
 
-  // launch
-  args_copy.push_back(args[1].data());
-  args_copy.push_back("--process");
-  args_copy.push_back(process_name.data());
+  bool pushed_process = false;
+
   // <the args>
-  for (size_t i = 2; i < args.size(); i++) {
+  for (size_t i = 1; i < args.size(); i++) {
     args_copy.push_back(args[i].data());
+
+    if (args[i] == "launch" && !pushed_process) {
+      // launch --process <process>
+      args_copy.push_back("--process");
+      args_copy.push_back(process_name.data());
+      pushed_process = true;
+    }
   }
   // null terminator for argv
   args_copy.push_back(nullptr);
@@ -214,8 +221,12 @@ void InstallSignalHandler(int sig) {
  */
 void LaunchWithProcessForks(const LaunchDefinition &launch, const std::vector<std::string> &args) {
   std::vector<cli::Process> managed_processes;
-  for (const auto &[process_name, _] : launch.processes) {
-    managed_processes.push_back(CreateSublauncherProcess(process_name, args));
+  for (const auto &[process_name, process_definition] : launch.processes) {
+    if (process_definition.units.empty()) {
+      BASIS_LOG_WARN("Skipping empty process {}", process_name);
+    } else {
+      managed_processes.push_back(CreateSublauncherProcess(process_name, args));
+    }
   }
 
   InstallSignalHandler(SIGINT);
@@ -261,7 +272,14 @@ void LaunchProcessDefinition(const ProcessDefinition &process_definition,
       }
 
       std::string record_name =
-          fmt::format("{}_{}", process_name_filter, basis::core::MonotonicTime::Now(true).ToSeconds());
+          fmt::format("{}{}{}{}", recording_settings->name, process_name_filter, process_name_filter == "/" ? "" : "_",
+                      basis::core::MonotonicTime::Now(true).ToSeconds());
+      for (char &c : record_name) {
+        if (c == '/') {
+          c = '_';
+        }
+      }
+
       if (sim) {
         // TODO: it would be great to get the actual simulation start time, but then we won't be able to start logging
         // until coordinator connection this might be okay in practice
@@ -299,24 +317,26 @@ void LaunchProcessDefinition(const ProcessDefinition &process_definition,
 
     {
       uint64_t token = basis::core::MonotonicTime::GetRunToken();
-      while (sim && !token) {
+      while (!global_stop && sim && !token) {
         BASIS_LOG_INFO("In simulation mode, waiting on /time");
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
         token = basis::core::MonotonicTime::GetRunToken();
       }
 
-      UnitExecutor runner;
-      if (!runner.RunProcess(process_definition, recorder.get())) {
-        BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
-        global_stop = true;
-      }
+      if (!global_stop) {
+        UnitExecutor runner;
+        if (!runner.RunProcess(process_definition, recorder.get(), process_name_filter)) {
+          BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
+          global_stop = true;
+        }
 
-      // Sleep until signal
-      // TODO: this can be a condition variable now
-      while (!global_stop && token == basis::core::MonotonicTime::GetRunToken()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
+        // Sleep until signal
+        // TODO: this can be a condition variable now
+        while (!global_stop && token == basis::core::MonotonicTime::GetRunToken()) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+          basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
+        }
       }
       if (global_stop) {
         BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);
