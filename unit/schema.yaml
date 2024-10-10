@@ -88,6 +88,8 @@ properties:
               type: number
               title: approximate
               description: when used with 'equal' sync type, allows for approximate equality
+            buffer_size:
+              type: number
         buffer_size:
           type: integer
         inputs:
