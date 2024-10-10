@@ -156,13 +156,18 @@ protected:
   readlink("/proc/self/exe", execv_target, sizeof(execv_target));
   args_copy.push_back(execv_target);
 
-  // launch
-  args_copy.push_back(args[1].data());
-  args_copy.push_back("--process");
-  args_copy.push_back(process_name.data());
+  bool pushed_process = false;
+
   // <the args>
-  for (size_t i = 2; i < args.size(); i++) {
+  for (size_t i = 1; i < args.size(); i++) {
     args_copy.push_back(args[i].data());
+
+    if (args[i] == "launch" && !pushed_process) {
+      // launch --process <process>
+      args_copy.push_back("--process");
+      args_copy.push_back(process_name.data());
+      pushed_process = true;
+    }
   }
   // null terminator for argv
   args_copy.push_back(nullptr);
@@ -312,24 +317,26 @@ void LaunchProcessDefinition(const ProcessDefinition &process_definition,
 
     {
       uint64_t token = basis::core::MonotonicTime::GetRunToken();
-      while (sim && !token) {
+      while (!global_stop && sim && !token) {
         BASIS_LOG_INFO("In simulation mode, waiting on /time");
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
         token = basis::core::MonotonicTime::GetRunToken();
       }
 
-      UnitExecutor runner;
-      if (!runner.RunProcess(process_definition, recorder.get(), process_name_filter)) {
-        BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
-        global_stop = true;
-      }
+      if (!global_stop) {
+        UnitExecutor runner;
+        if (!runner.RunProcess(process_definition, recorder.get(), process_name_filter)) {
+          BASIS_LOG_FATAL("Failed to launch process {}, will exit.", process_name_filter);
+          global_stop = true;
+        }
 
-      // Sleep until signal
-      // TODO: this can be a condition variable now
-      while (!global_stop && token == basis::core::MonotonicTime::GetRunToken()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
+        // Sleep until signal
+        // TODO: this can be a condition variable now
+        while (!global_stop && token == basis::core::MonotonicTime::GetRunToken()) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+          basis::StandardUpdate(system_transport_manager.get(), system_coordinator_connector.get());
+        }
       }
       if (global_stop) {
         BASIS_LOG_INFO("{} got kill signal, exiting...", process_name_filter);

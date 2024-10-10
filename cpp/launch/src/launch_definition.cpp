@@ -355,9 +355,8 @@ ParseTemplatedLaunchDefinitionYAMLContents(std::string_view yaml_contents, const
         if (included_process_name == "/") {
           for (auto &[unit_name, unit] : included_process.units) {
             // Create the new unit name
-            std::string full_unit_name =
+            const std::string full_unit_name =
                 (std::filesystem::path(parent_group_name) / ("./" + unit_name)).lexically_normal();
-            std::cout << parent_group_name << "+" << unit_name << "=" << full_unit_name << std::endl;
             if (!MoveUnitToProcess(parent_process, full_unit_name, parent_process_name, std::move(unit))) {
               return false;
             }
