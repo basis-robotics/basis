@@ -80,6 +80,7 @@ properties:
                   const: all
                 - type: string
                   const: equal
+                - approximate: type: number
             rate:
               $ref: "#/$defs/duration"
               title: Rate
