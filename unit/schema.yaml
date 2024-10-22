@@ -75,6 +75,7 @@ properties:
           additionalProperties: False
           properties:
             type:
+              optional: True
               oneOf:
                 - type: string
                   const: all
