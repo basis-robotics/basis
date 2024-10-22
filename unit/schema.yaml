@@ -81,14 +81,14 @@ properties:
                   const: all
                 - type: string
                   const: equal
+                - approximate:
+                    type: number
+                    title: approximate
+                    description: allows for approximate equality
             rate:
               $ref: "#/$defs/duration"
               title: Rate
-              description: Calls the hander at the specified rate, with optional Inputs that also must be satisfied.    
-            approximate:
-              type: number
-              title: approximate
-              description: when used with 'equal' sync type, allows for approximate equality
+              description: Calls the hander at the specified rate, with optional Inputs that also must be satisfied.
             buffer_size:
               type: number
         buffer_size:
