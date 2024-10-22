@@ -80,6 +80,7 @@ properties:
                   const: all
                 - type: string
                   const: equal
+                - approximate: type: number
             rate:
               $ref: "#/$defs/duration"
               title: Rate
@@ -120,9 +121,8 @@ properties:
                     - Unannotated fields are transformed into lambdas.
                     - "complex.access.to_string()": "[](T_MSG* msg)[]{ return msg->complex.access.to_string(); }"
                 type: string
-              # Unimplemented
-              # accumulate:
-              #   type: integer
+              accumulate:
+                type: integer
               # cached:
               #   type: boolean
 
