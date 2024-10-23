@@ -1,10 +1,9 @@
 #pragma once
 
-// TODO: this should probably be pulled out into plugins/?
-// TODO: is this header only??
 #include <basis/core/transport/message_event.h>
 #include <condition_variable>
 #include <functional>
+#include <list>
 #include <memory>
 #include <string_view>
 #include <typeinfo>
@@ -12,7 +11,19 @@
 
 namespace basis::core::transport {
 
-// This all needs rewritten
+namespace internal {
+  // https://en.cppreference.com/w/cpp/container/unordered_map/find
+  struct string_hash
+  {
+      using hash_type = std::hash<std::string_view>;
+      using is_transparent = void;
+  
+      std::size_t operator()(const char* str) const        { return hash_type{}(str); }
+      std::size_t operator()(std::string_view str) const   { return hash_type{}(str); }
+      std::size_t operator()(std::string const& str) const { return hash_type{}(str); }
+  };
+
+}
 
 // cast to void pointer, pass to function, uncast
 // there's no way to preserve type safety here as this will potentially cross shared libraries
@@ -30,7 +41,7 @@ struct InprocConnectorBase {
 };
 
 template <typename T_MSG> struct InprocConnectorInterface : public InprocConnectorBase {
-  virtual void Publish(const std::string &topic, std::shared_ptr<const T_MSG> msg, InprocConnectorBase *ignore_if_primary_connector) = 0;
+  virtual void Publish(const std::string_view topic, std::shared_ptr<const T_MSG> msg, InprocConnectorBase *ignore_if_primary_connector) = 0;
   virtual bool HasSubscribersFast(const std::string &topic) = 0;
 };
 
@@ -81,13 +92,21 @@ protected:
   InprocConnectorBase *const primary_inproc_connector;
 };
 
-// TODO: pass coordinator in, notify on destruction?
 template <typename T_MSG> class InprocConnector : public InprocConnectorInterface<T_MSG> {
+  struct SubscribersForTopic {
+    bool IsEmpty() {
+      std::unique_lock lock(mutex);
+      return subscribers.empty();
+    }
+
+    std::mutex mutex;
+    // This isn't the best data structure for the list, but 
+    std::list<std::weak_ptr<InprocSubscriber<T_MSG>>> subscribers;
+  };
+
 public:
-  // TODO: handle owning the last reference to a publisher/subscriber
-  // TODO: ensure if we have one publisher we don't have another of a different type but the same name
+  // TODO: ensure if we have one publisher we don't have another of a different type but the same name <- this is no longer an error, with separate inproc types
   // TODO: ensure type safety for pub/sub
-  // TODO: thread safety
 
   std::shared_ptr<InprocPublisher<T_MSG>> Advertise(std::string_view topic, InprocConnectorBase *ignore_if_primary_connector) {
     return std::make_shared<InprocPublisher<T_MSG>>(topic, this, ignore_if_primary_connector);
@@ -97,49 +116,78 @@ public:
                                                      std::function<void(MessageEvent<T_MSG> message)> callback,
                                                      InprocConnectorBase *primary_inproc_connector) {
     auto subscriber = std::make_shared<InprocSubscriber<T_MSG>>(topic, callback, this, primary_inproc_connector);
-    subscribers.insert({std::string{topic}, subscriber});
+    SubscribersForTopic* subscribers = nullptr;
+    {
+      
+      std::unique_lock lock(subscribers_by_topic_mutex);
+      auto it = subscribers_by_topic.find(topic);
+      if(it == subscribers_by_topic.end()) {
+        auto p = subscribers_by_topic.emplace(std::piecewise_construct,
+            std::forward_as_tuple(topic),
+            std::forward_as_tuple());
+        it = p.first;
+      }
+      subscribers = &it->second;
+    }
+    subscribers->subscribers.emplace_back(subscriber);
+
     return subscriber;
   }
 
   // Returns true if any subscribers exist. If subscribers are removed they will continue to show until the next
   // Publish() call.
-  virtual bool HasSubscribersFast(const std::string &topic) override { return subscribers.contains(topic); }
+  virtual bool HasSubscribersFast(const std::string &topic) override { 
+    std::unique_lock lock(subscribers_by_topic_mutex);
+    auto it = subscribers_by_topic.find(topic);
+    return it != subscribers_by_topic.end() && !it->second.IsEmpty();
+  }
 
 private:
-  virtual void Publish(const std::string &topic, std::shared_ptr<const T_MSG> msg,
+  virtual void Publish([[maybe_unused]] const std::string_view topic, std::shared_ptr<const T_MSG> msg,
                        InprocConnectorBase *ignore_if_primary_connector) override {
-    auto range = subscribers.equal_range(topic);
+    // First get the subscriber
+    SubscribersForTopic* subscribers = nullptr;
+    {
+      std::unique_lock lock(subscribers_by_topic_mutex);
+      auto it = subscribers_by_topic.find(topic);
+      if(it == subscribers_by_topic.end()) {
+        return;
+      }
+      subscribers = &it->second;
+    }
 
-    for (auto it = range.first; it != range.second;) {
-      if (auto subscriber = it->second.lock()) {
-        if (!ignore_if_primary_connector || subscriber->primary_inproc_connector != ignore_if_primary_connector) {
-          subscriber->OnMessage(msg);
+    {
+      std::vector<std::shared_ptr<InprocSubscriber<T_MSG>>> valid_subscribers;
+
+      std::unique_lock lock(subscribers->mutex);
+      valid_subscribers.reserve(subscribers->subscribers.size());
+      auto it = subscribers->subscribers.begin();
+      while(it != subscribers->subscribers.end()) {
+        if (auto subscriber = it->lock()) {
+          if (!ignore_if_primary_connector || subscriber->primary_inproc_connector != ignore_if_primary_connector) {
+            valid_subscribers.push_back(subscriber);
+          } 
+          ++it;
+        } else {
+          subscribers->subscribers.erase(it++);
         }
-        ++it;
-      } else {
-        subscribers.erase(it++);
+      }
+      for(auto& subscriber : valid_subscribers) {
+        subscriber->OnMessage(msg);
       }
     }
   }
 
-  // std::unordered_map<std::string, std::weak_ptr<InprocPublisher<T_MSG>>> publishers;
-  //  mutex please
 
-  std::unordered_multimap<std::string, std::weak_ptr<InprocSubscriber<T_MSG>>> subscribers;
+  std::mutex subscribers_by_topic_mutex;
 
-// WRONG - will lead to differences between compilers
+  std::unordered_map<std::string, SubscribersForTopic, internal::string_hash, std::equal_to<>> subscribers_by_topic;
+
+// This might be wrong if compiled with different compilers.
 // std::unordered_map<std::string, std::type_info> topic_types;
 // this needs to be handled by each class using the transport
 // basically - we need to ensure some serialization plugin can handle each thing to ensure no collisions
 // using this for raw types is dangerous and needs an ID passed in
-#if 0
-    // maybe
-
-    // in this case, serialzier would be set to "raw" and id would be set to the type name
-    std::shared_ptr<InprocPublisher<T_MSG>> AdvertiseRaw(std::string_view topic, MessageTypeInfo type_info) {
-
-    std::unordered_map<std::string, MessageTypeInfo> topic_types;
-#endif
 };
 
 class InprocTransport {
@@ -148,7 +196,6 @@ class InprocTransport {
 private:
   template <typename T> InprocConnector<T> *GetConnectorInternal() {
     // TODO: this static somewhat breaks the nice patterns around being explicit about how objects are initialized
-    // TODO: test with shared objects
     static InprocConnector<T> connector;
     return &connector;
   }
@@ -158,7 +205,7 @@ public:
     return GetConnectorInternal<T>()->Advertise(topic, ignore_if_primary_connector);
   }
   template <typename T>
-  std::shared_ptr<InprocSubscriber<T>> Subscribe(std::string_view topic,
+  std::shared_ptr<InprocSubscriber<T>> Subscribe(const std::string_view topic,
                                                  std::function<void(MessageEvent<T> message)> callback, InprocConnectorBase *primary_inproc_connector) {
     return GetConnectorInternal<T>()->Subscribe(topic, callback, primary_inproc_connector);
   }

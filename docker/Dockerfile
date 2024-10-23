@@ -148,7 +148,7 @@ USER root
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     add-apt-repository ppa:ubuntu-toolchain-r/test -y \
-    && apt install libstdc++-11-dev
+    && apt install libstdc++-11-dev -y
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
