@@ -103,11 +103,12 @@ ENV CXX=clang++
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    apt install --no-install-recommends -y \
+    add-apt-repository ppa:ubuntu-toolchain-r/test -y \
+    && apt install --no-install-recommends -y \
         # Required
         cmake \
         make \
-        libstdc++-10-dev \
+        libstdc++-11-dev \
         libprotobuf-dev \
         protobuf-compiler \
         uuid-dev \
@@ -143,12 +144,6 @@ WORKDIR /basis
 FROM basis-env AS basis-env-ros
 
 USER root
-
-# Upgrade libstd to something supporting C++20
-RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    add-apt-repository ppa:ubuntu-toolchain-r/test -y \
-    && apt install libstdc++-11-dev -y
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
