@@ -49,7 +49,8 @@ ARG LLVM_VERSION=18
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" "" ${LLVM_VERSION} && \
-    apt install clang-format-${LLVM_VERSION}
+    apt install clang-format-${LLVM_VERSION} 
+    
 
 RUN <<EOF
     set -e
@@ -142,6 +143,12 @@ WORKDIR /basis
 FROM basis-env AS basis-env-ros
 
 USER root
+
+# Upgrade libstd to something supporting C++20
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    add-apt-repository ppa:ubuntu-toolchain-r/test -y \
+    && apt install libstdc++-11-dev
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
