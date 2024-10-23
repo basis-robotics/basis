@@ -57,10 +57,10 @@ properties:
     description: |
       The threading model to use for this unit.
         single - by default all handlers run mutually exclusive from eachother
-        multi - by default all handlers run in parallel
+#        multi - by default all handlers run in parallel
     enum:
       - single
-      - multi
+#      - multi
   handlers:
     title: Handlers
     type: object
@@ -72,6 +72,7 @@ properties:
         A function run when the set of Inputs are satisfied, producing a set of Outputs
       properties:
         sync:
+          additionalProperties: False
           properties:
             type:
               oneOf:
@@ -80,18 +81,18 @@ properties:
                 - type: string
                   const: equal
                 - type: object
-                  title: Rate Handler
-                  description: Calls the hander at the specified rate, with optional Inputs that also must be satisfied.
-                  additionalProperties: False
-                  properties:
-                    rate:
-                      $ref: "#/$defs/duration"
-                - type: object
-                  additionalProperties: False
                   properties:
                     approximate:
-                      #$ref: "#/$defs/duration"
-                      True
+                      type: number
+                      title: approximate
+                      description: when used with 'equal' sync type, allows for approximate equality
+            rate:
+              $ref: "#/$defs/duration"
+              title: Rate
+              description: Calls the hander at the specified rate, with optional Inputs that also must be satisfied.    
+
+            buffer_size:
+              type: number
         buffer_size:
           type: integer
         inputs:
@@ -124,8 +125,9 @@ properties:
                 type: string
               accumulate:
                 type: integer
-              cached:
-                type: boolean
+              # cached:
+              #   type: boolean
+
               # https://github.com/redhat-developer/yaml-language-server/issues/478
               type: True
               inproc_type: True
@@ -153,8 +155,11 @@ properties:
 $defs:
   duration:
     title: Duration
-    type: string
-    pattern: "[0-9]+(ms|s|hz)"
+    # For now, we don't have any way to parse these, so only allow bare number
+
+    type: number
+    #type: string
+    #pattern: "[0-9]+(ms|s|hz)"
   message_type:
     type: string
     pattern: "^[^:]+:[^:].*"
