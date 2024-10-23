@@ -169,7 +169,7 @@ private:
           } 
           ++it;
         } else {
-          subscribers->subscribers.erase(it++);
+          it = subscribers->subscribers.erase(it);
         }
       }
       for(auto& subscriber : valid_subscribers) {
