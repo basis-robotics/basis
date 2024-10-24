@@ -2,12 +2,15 @@
 
 #include <basis/core/coordinator.h>
 
+DECLARE_AUTO_LOGGER_NS(basis::core::transport::coordinator)
+
 namespace basis::core::transport {
+
 std::optional<Coordinator> Coordinator::Create(uint16_t port) {
   // todo: maybe return the listen socket error type?
   auto maybe_listen_socket = networking::TcpListenSocket::Create(port);
   if (!maybe_listen_socket) {
-    spdlog::error("Coordinator: Unable to create listen socket on port {}", port);
+    BASIS_LOG_ERROR_NS(coordinator, "Coordinator: Unable to create listen socket on port {}", port);
     return {};
   }
 
@@ -43,7 +46,7 @@ void Coordinator::Update() {
       auto complete = client.in_progress_packet.GetCompletedMessage();
       auto msg = basis::DeserializeFromSpan<proto::ClientToCoordinatorMessage>(complete->GetPayload());
       if (!msg) {
-        spdlog::error("Coordinator: failed to deserialize a message");
+        BASIS_LOG_ERROR_NS(coordinator, "Coordinator: failed to deserialize a message");
       } else {
         // todo: break these out into handlers for better unit testing
         switch (msg->PossibleMessages_case()) {
@@ -60,11 +63,11 @@ void Coordinator::Update() {
           break;
 
         case proto::ClientToCoordinatorMessage::POSSIBLEMESSAGES_NOT_SET:
-          spdlog::error("Unknown message from client!");
+          BASIS_LOG_ERROR_NS(coordinator, "Unknown message from client!");
           break;
         }
       }
-      // spdlog::debug("Got completed message {}", client.info->DebugString());
+      // BASIS_LOG_DEBUG_NS(coordinator, "Got completed message {}", client.info->DebugString());
       [[fallthrough]];
     }
     case plugins::transport::TcpConnection::ReceiveStatus::DOWNLOADING: {
@@ -73,14 +76,14 @@ void Coordinator::Update() {
       break;
     }
     case plugins::transport::TcpConnection::ReceiveStatus::ERROR: {
-      spdlog::error("Client connection error after bytes {} - got error {} {}",
+      BASIS_LOG_ERROR_NS(coordinator, "Client connection error after bytes {} - got error {} {}",
                     client.in_progress_packet.GetCurrentProgress(), errno, strerror(errno));
       // TODO: we can do a fast delete here instead, swapping with .last()
       it = clients.erase(it);
       break;
     }
     case plugins::transport::TcpConnection::ReceiveStatus::DISCONNECTED: {
-      spdlog::error("Client connection disconnect after {} bytes", client.in_progress_packet.GetCurrentProgress());
+      BASIS_LOG_ERROR_NS(coordinator, "Client connection disconnect after {} bytes", client.in_progress_packet.GetCurrentProgress());
       // TODO: we can do a fast delete here instead, swapping with .last()
       it = clients.erase(it);
       break;
@@ -110,7 +113,7 @@ void Coordinator::HandleSchemasRequest(const proto::MessageSchemas &schemas) {
   for (auto &schema : schemas.schemas()) {
     std::string key = schema.serializer() + ":" + schema.name();
     if (!known_schemas.contains(key)) {
-      spdlog::info("Adding schema {}", key);
+      BASIS_LOG_INFO_NS(coordinator, "Adding schema {}", key);
       known_schemas.emplace(std::move(key), std::move(schema));
     }
   }

@@ -40,6 +40,8 @@
  * TODO: it might be simpler to just write this as a protobuf grpc server :)
  */
 
+DEFINE_AUTO_LOGGER_NS(basis::core::transport::coordinator)
+
 namespace basis::core::transport {
 /**
  * A utility class for communicating the topic network state between TransportManagers (typically one per process)
