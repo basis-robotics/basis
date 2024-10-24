@@ -69,6 +69,7 @@ https://github.com/jbeder/yaml-cpp - Copyright (c) 2008-2015 Jesse Beder. - MIT 
 https://github.com/nlohmann/json - Copyright (c) 2013-2022 Niels Lohmann - MIT License
 https://github.com/pantor/inja - Copyright (c) 2018-2021 Berscheid - MIT License
 https://github.com/foxglove/mcap - Copyright (c) Foxglove Technologies Inc - MIT License
+https://github.com/foxglove/schemas - Copyright (c) Foxglove Technologies Inc - MIT License
 https://github.com/p-ranav/argparse - Copyright (c) 2018 Pranav Srinivas Kumar - MIT License
 https://github.com/bombela/backward-cpp - Copyright 2013 Google Inc. All Rights Reserved. - MIT License
 https://github.com/eProsima/Fast-CDR - Apache License 2.0
