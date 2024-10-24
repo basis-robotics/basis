@@ -49,7 +49,8 @@ ARG LLVM_VERSION=18
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" "" ${LLVM_VERSION} && \
-    apt install clang-format-${LLVM_VERSION}
+    apt install clang-format-${LLVM_VERSION} 
+    
 
 RUN <<EOF
     set -e
@@ -102,11 +103,12 @@ ENV CXX=clang++
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    apt install --no-install-recommends -y \
+    add-apt-repository ppa:ubuntu-toolchain-r/test -y \
+    && apt install --no-install-recommends -y \
         # Required
         cmake \
         make \
-        libstdc++-10-dev \
+        libstdc++-11-dev \
         libprotobuf-dev \
         protobuf-compiler \
         uuid-dev \
