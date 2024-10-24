@@ -1,7 +1,0 @@
-processes:
-  demo_pub:
-    units:
-      simple_pub: {}
-  simple_sub:
-    units:
-      simple_sub: {}
