@@ -53,3 +53,24 @@ AN "AS IS" BASIS. LICENSOR HEREBY DISCLAIMS ALL WARRANTIES AND CONDITIONS,
 EXPRESS OR IMPLIED, INCLUDING (WITHOUT LIMITATION) WARRANTIES OF
 MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND
 TITLE.
+
+---
+
+Basis insources the following libraries, see their respective repositories for more details:
+cpp/core/threading/include/basis/core/threading/thread_pool.h - https://github.com/progschj/ThreadPool - Copyright (c) 2012 Jakob Progsch, Václav Zeman - zlib License
+cpp/third_party/spdlog - https://github.com/gabime/spdlog - Copyright (c) 2016 Gabi Melman. - MIT License
+cpp/third_party/spdlog/include/spdlog/fmt - https://github.com/fmtlib/fmt - Copyright (c) 2012 - present, Victor Zverovich and {fmt} contributors - MIT License w/ extensions
+cpp/recorder/include/basis/recorder/glob.h - https://github.com/p-ranav/glob - Copyright (c) 2019 Pranav - MIT License
+
+Basis compiles/links against the following libraries, see their respective repositories for more details:
+https://github.com/google/googletest - Copyright 2008, Google Inc. - BSD 3-Clause
+https://github.com/martinmoene/expected-lite - Boost Software License 1.0 
+https://github.com/jbeder/yaml-cpp - Copyright (c) 2008-2015 Jesse Beder. - MIT License
+https://github.com/nlohmann/json - Copyright (c) 2013-2022 Niels Lohmann - MIT License
+https://github.com/pantor/inja - Copyright (c) 2018-2021 Berscheid - MIT License
+https://github.com/foxglove/mcap - Copyright (c) Foxglove Technologies Inc - MIT License
+https://github.com/foxglove/schemas - Copyright (c) Foxglove Technologies Inc - MIT License
+https://github.com/p-ranav/argparse - Copyright (c) 2018 Pranav Srinivas Kumar - MIT License
+https://github.com/bombela/backward-cpp - Copyright 2013 Google Inc. All Rights Reserved. - MIT License
+https://github.com/eProsima/Fast-CDR - Apache License 2.0
+https://github.com/facontidavide/rosx_introspection - Mozilla Public License 2.0
