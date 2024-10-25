@@ -67,12 +67,15 @@ Basis has three main goals, in approximate order of priority:
     - python
     - rust
 - Unit/launch file namespacing
-    - we don't want to go as far as a package system, but we want to make it easy to compose together Units from different projects.
+    - We don't want to go as far as a package system, but we want to make it easy to compose together Units from different projects.
+- Multi-compute/agent/swarm
+    - We want to be able to natively support communications between both multiple computers in the same robot as well as communicate between robots. It's not an immediate goal but could be accomplished quickly for an interested customer.
+    - Additionally, we want to make it easy to externally interface with basis via telemetry, developer machines, fleet management, web tooling, etc.
 
 Known areas for improvement:
 - Disconnects: currently there is little to no code handling disconnections for the network transport, just stubs.
 - Transport type safety: there's no protection against subscribing to the wrong type of topic
-- TCP transport plugin: the current epoll implementation isn't great. We also create a thread per connection, which isn't the best use of memory on many systems.
+- TCP transport plugin: the current epoll implementation isn't great (it's overly complex, doesn't have support for write polling, and doesn't have easy mechanisms for unsubscription). We also create a thread per connection, which isn't the best use of memory on many systems.
 - Dynamic topic creation: creating a new publisher or subscriber can currently only be done by one thread at a time (per process), with no guardrails. This isn't really a problem (most Units shouldn't need to do this), but should still be fixed.
 - Shutdown: our handling of signals at shutdown isn't perfect - the intent is for child processes of a launch to be hard killed via SIGHUP if graceful shutdown doesn't occur, but this doesn't always happen.
 - Drivers: we know drivers are important, but for now you will have to port or write your own. [We have one example here](https://github.com/basis-robotics/basis_test_robot/tree/main/unit/v4l2_camera_driver) but recognize that we will need both more features and a deeper catalog of drivers to really drive adoption.
