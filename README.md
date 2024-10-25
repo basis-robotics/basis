@@ -54,7 +54,7 @@ Basis has three main goals, in approximate order of priority:
     - inproc (shared pointer)
     - tcp
     - More coming soon (UDP, shared memory (iceoryx?), ZeroMQ or another pubsub backend?).
-- [Powerful template-based launch files](https://docs.basisrobotics.tech/guide-tools/launch-files)
+- **[Powerful template-based launch files](https://docs.basisrobotics.tech/guide-tools/launch-files)**
 
 ### Future planned items
 - Easy testing
@@ -75,6 +75,8 @@ Known areas for improvement:
 - TCP transport plugin: the current epoll implementation isn't great. We also create a thread per connection, which isn't the best use of memory on many systems.
 - Dynamic topic creation: creating a new publisher or subscriber can currently only be done by one thread at a time (per process), with no guardrails. This isn't really a problem (most Units shouldn't need to do this), but should still be fixed.
 - Shutdown: our handling of signals at shutdown isn't perfect - the intent is for child processes of a launch to be hard killed via SIGHUP if graceful shutdown doesn't occur, but this doesn't always happen.
+- Drivers: we know drivers are important, but for now you will have to port or write your own. [We have one example here](https://github.com/basis-robotics/basis_test_robot/tree/main/unit/v4l2_camera_driver) but recognize that we will need both more features and a deeper catalog of drivers to really drive adoption.
+- Testing: some of the libraries have pretty good tests, some of them are pretty bare. We want to achieve excellent test coverage across the whole codebase.
 
 ### License
 
