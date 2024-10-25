@@ -40,7 +40,7 @@ bool TcpSubscriber::Connect(std::string_view host, std::string_view endpoint,
     return false;
   }
 
-  /// @todo BASIS-13: this should take in a publisher ID and send it as part of the intial connection, protecting
+  /// @todo BASIS-13: this should take in a publisher ID and send it as part of the initial connection, protecting
   /// against subscribing to a port that's stale
   return ConnectToPort(host, port);
 }

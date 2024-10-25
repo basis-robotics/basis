@@ -48,9 +48,9 @@ public:
     DOWNLOADING,
     /// This message is done - please extract it
     DONE,
-    /// An error occured
+    /// An error occurred
     ERROR,
-    /// A disconnection occured
+    /// A disconnection occurred
     DISCONNECTED
   };
 

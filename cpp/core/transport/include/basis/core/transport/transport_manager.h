@@ -102,7 +102,7 @@ public:
     return publisher;
   }
 
-  // todo: deducing a raw type should be an error unless requested
+  // todo: deducting a raw type should be an error unless requested
   template <typename T_MSG, typename T_Serializer = SerializationHandler<T_MSG>::type,
             typename T_CONVERTABLE_INPROC = NoAdditionalInproc>
   [[nodiscard]] std::shared_ptr<Publisher<T_MSG, T_CONVERTABLE_INPROC>> Advertise(
