@@ -1,3 +1,5 @@
+#pragma once
+
 #include <basis/core/logging.h>
 #include <basis/plugins/serialization/protobuf.h>
 #include <basis/core/transport/transport_manager.h>
@@ -5,18 +7,21 @@
 
 // Helper to initialize the basis log with protobuf
 // This can/will later be split into protobuf and ros1, with a compile time switch to configure the message type
+// TODO: move this out to a new library: basis::logging::protobuf, or add logging knowledge to the serialization plugin system
 
 namespace basis {
 
 class ProtobufLogHandler : public core::logging::LogHandler {
 public:
   ProtobufLogHandler(core::transport::TransportManager &transport_manager) {
+    std::cout << "ProtobufLogHandler::ProtobufLogHandler" << std::endl;
     log_publisher = transport_manager.Advertise<foxglove::Log>("/log");
   }
   virtual ~ProtobufLogHandler() = default;
 
   virtual void HandleLog(const core::MonotonicTime &time, const spdlog::details::log_msg &log_msg,
                          std::string &&msg_formatted) override {
+                          std::cout << "HandleLog" << std::endl;
     auto proto_msg = std::make_shared<foxglove::Log>();
 
     const timespec ts = time.ToTimespec();
@@ -59,12 +64,12 @@ public:
   std::shared_ptr<core::transport::Publisher<foxglove::Log>> log_publisher;
 };
 
-void CreateLogHandler(core::transport::TransportManager &transport_manager) {
+inline void CreateLogHandler(core::transport::TransportManager &transport_manager) {
   auto log_handler = std::make_shared<ProtobufLogHandler>(transport_manager);
 
   core::logging::SetLogHandler(std::move(log_handler));
 }
 
-void DestroyLogHandler() { core::logging::SetLogHandler(nullptr); }
+inline void DestroyLogHandler() { core::logging::SetLogHandler(nullptr); }
 
 } // namespace basis

@@ -66,7 +66,11 @@ protected:
  */
 class TransportManager {
 public:
-  TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {}
+  TransportManager(std::unique_ptr<InprocTransport> inproc = nullptr) : inproc(std::move(inproc)) {
+    std::cout << "TransportManager::TransportManager" << this << std::endl;
+
+
+  }
 
 protected:
   std::vector<std::shared_ptr<TransportPublisher>>
@@ -133,6 +137,8 @@ public:
         topic, message_type, std::move(tps), inproc_publisher, std::move(get_size_cb), std::move(write_span_cb),
         recorder_for_publisher, additional_inproc_publisher);
     publishers.emplace(std::string(topic), publisher);
+
+    std::cout << "Advertise " << this << std::endl;
     return publisher;
   }
 
@@ -226,8 +232,11 @@ public:
     // Generate updated topic info and clean up old publishers
     std::vector<PublisherInfo> new_publisher_info;
 
+    std::cout << "Publishers count " << publishers.size() << " " << this << std::endl;
+
     for (auto it = publishers.cbegin(); it != publishers.cend();) {
       if (auto publisher = it->second.lock()) {
+        std::cout << "added new publishers" << std::endl;
         new_publisher_info.emplace_back(publisher->GetPublisherInfo());
         ++it;
       } else {
