@@ -12,6 +12,8 @@ namespace basis::core::containers {
  * Simple thread safe Multi-producer Single Consumer Queue
  * Used as a placeholder for now.
  * In theory, safe for MPMC as well - needs testing.
+ *
+ * TODO: consider using spdlog::details::mpmc_blocking_q
  */
 template <typename T> class SimpleMPSCQueue {
 public:

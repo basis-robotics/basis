@@ -49,6 +49,8 @@ private:
 
 class TcpSubscriber : public core::transport::TransportSubscriber {
 public:
+  ~TcpSubscriber() override;
+
   // todo: error condition
   static nonstd::expected<std::shared_ptr<TcpSubscriber>, core::networking::Socket::Error>
   Create(std::string_view topic_name, core::transport::TypeErasedSubscriberCallback callback, Epoll *epoll,

@@ -54,16 +54,16 @@ public:
   virtual bool Start(std::string_view output_name) = 0;
   virtual void Stop() = 0;
   virtual bool RegisterTopic(const std::string &topic, const core::serialization::MessageTypeInfo &message_type_info,
-                             const core::serialization::MessageSchema& basis_schema) = 0;
+                             const core::serialization::MessageSchema &basis_schema) = 0;
   virtual bool WriteMessage(const std::string &topic, OwningSpan payload, const basis::core::MonotonicTime &now) = 0;
 };
 
 class Recorder : public RecorderInterface {
 public:
-  static const std::vector<std::regex> RECORD_ALL_TOPICS;
+  static const std::vector<std::pair<std::string, std::regex>> RECORD_ALL_TOPICS;
 
   Recorder(const std::filesystem::path &recording_dir = {},
-           const std::vector<std::regex> &topic_patterns = RECORD_ALL_TOPICS)
+           const std::vector<std::pair<std::string, std::regex>> &topic_patterns = RECORD_ALL_TOPICS)
       : recording_dir(recording_dir), topic_patterns(topic_patterns) {}
   ~Recorder() { Stop(); }
 
@@ -83,7 +83,7 @@ public:
   bool Split(std::string_view new_name);
 
   virtual bool RegisterTopic(const std::string &topic, const core::serialization::MessageTypeInfo &message_type_info,
-                             const core::serialization::MessageSchema& basis_schema) override;
+                             const core::serialization::MessageSchema &basis_schema) override;
 
   virtual bool WriteMessage(const std::string &topic, OwningSpan payload,
                             const basis::core::MonotonicTime &now) override {
@@ -99,14 +99,14 @@ private:
   std::unordered_map<std::string, mcap::Schema> schema_id_to_mcap_schema;
   std::unordered_map<std::string, std::optional<mcap::Channel>> topic_to_channel;
   std::filesystem::path recording_dir;
-  std::vector<std::regex> topic_patterns;
+  std::vector<std::pair<std::string, std::regex>> topic_patterns;
 };
 
 class AsyncRecorder : public RecorderInterface {
 public:
   // TODO: max record queue size
   AsyncRecorder(const std::filesystem::path &recording_dir = {},
-                const std::vector<std::regex> &topic_patterns = Recorder::RECORD_ALL_TOPICS,
+                const std::vector<std::pair<std::string, std::regex>> &topic_patterns = Recorder::RECORD_ALL_TOPICS,
                 bool drain_queue_on_stop = true)
       : drain_queue_on_stop(drain_queue_on_stop), recorder(recording_dir, topic_patterns) {}
   ~AsyncRecorder() { Stop(); }
@@ -130,7 +130,7 @@ public:
   }
 
   virtual bool RegisterTopic(const std::string &topic, const core::serialization::MessageTypeInfo &message_type_info,
-                             const core::serialization::MessageSchema& basis_schema) {
+                             const core::serialization::MessageSchema &basis_schema) {
     std::lock_guard lock(mutex);
     return recorder.RegisterTopic(topic, message_type_info, basis_schema);
   }

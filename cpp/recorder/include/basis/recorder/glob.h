@@ -29,7 +29,7 @@ SOFTWARE.
 #include <string_view>
 
 namespace glob {
-static inline bool StringReplace(std::string &str, const std::string &from, const std::string &to) {
+static inline bool StringSingleReplace(std::string &str, const std::string &from, const std::string &to) {
   std::size_t start_pos = str.find(from);
   if (start_pos == std::string::npos)
     return false;
@@ -37,7 +37,7 @@ static inline bool StringReplace(std::string &str, const std::string &from, cons
   return true;
 }
 
-static inline std::regex GlobToRegex(const std::string &pattern) {
+static inline std::pair<std::string, std::regex> GlobToRegex(const std::string &pattern) {
   std::size_t i = 0, n = pattern.size();
   std::string result_string;
 
@@ -64,7 +64,7 @@ static inline std::regex GlobToRegex(const std::string &pattern) {
       } else {
         auto stuff = std::string(pattern.begin() + i, pattern.begin() + j);
         if (stuff.find("--") == std::string::npos) {
-          StringReplace(stuff, std::string{"\\"}, std::string{R"(\\)"});
+          StringSingleReplace(stuff, std::string{"\\"}, std::string{R"(\\)"});
         } else {
           std::vector<std::string> chunks;
           std::size_t k = 0;
@@ -89,8 +89,8 @@ static inline std::regex GlobToRegex(const std::string &pattern) {
           // Hyphens that create ranges shouldn't be escaped.
           bool first = false;
           for (auto &s : chunks) {
-            StringReplace(s, std::string{"\\"}, std::string{R"(\\)"});
-            StringReplace(s, std::string{"-"}, std::string{R"(\-)"});
+            StringSingleReplace(s, std::string{"\\"}, std::string{R"(\\)"});
+            StringSingleReplace(s, std::string{"-"}, std::string{R"(\-)"});
             if (first) {
               stuff += s;
               first = false;
@@ -136,6 +136,7 @@ static inline std::regex GlobToRegex(const std::string &pattern) {
       }
     }
   }
-  return std::regex(std::string{"(("} + result_string + std::string{R"()|[\r\n])$)"}, std::regex::ECMAScript);
+  std::string regex_str = std::string{"(("} + result_string + std::string{R"()|[\r\n])$)"};
+  return {regex_str, std::regex(pattern, std::regex::ECMAScript)};
 }
 } // namespace glob

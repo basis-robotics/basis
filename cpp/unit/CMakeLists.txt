@@ -5,6 +5,7 @@ target_include_directories(basis_unit PUBLIC include)
 target_link_libraries(basis_unit
     argparse
     inja
+    basis::arguments
     basis::core::coordinator
     basis::core::logging
     basis::core::threading

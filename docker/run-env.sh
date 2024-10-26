@@ -1,7 +1,7 @@
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 BASIS_ROOT=$SCRIPT_DIR/..
 
-if [ "$(docker ps -a -q -f name=basis)" ]; then
+if [ "$(docker ps -a -q -f name=^/basis$)" ]; then
     docker exec -it basis /bin/bash $@
 else
     # Note: this relies on macos specific user mapping magic to mount with the proper permissions
