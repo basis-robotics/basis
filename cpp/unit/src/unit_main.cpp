@@ -3,6 +3,8 @@
 #include <basis/unit.h>
 #include <basis/unit/create_unit.h>
 
+#include <basis/recorder/protobuf_log.h>
+
 int main(int argc, char *argv[]) {
   basis::core::logging::InitializeLoggingSystem();
 
@@ -15,7 +17,9 @@ int main(int argc, char *argv[]) {
   }
 
   unit->WaitForCoordinatorConnection();
-  unit->CreateTransportManager();
+  auto* transport_manager = unit->CreateTransportManager();
+  basis::CreateLogHandler(*transport_manager);
+  
   unit->Initialize();
 
   while (true) {

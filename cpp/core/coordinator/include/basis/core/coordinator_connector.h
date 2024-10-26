@@ -77,6 +77,7 @@ public:
   }
 
   void Update() {
+    BASIS_LOG_INFO("CC::Update()");
     // todo: just put this on tcpconnection??
 
     bool finished = false;
