@@ -9,7 +9,7 @@ Basis
 
 Basis is a robotics development framework developed by [Basis Robotics](https://basisrobotics.tech/)
 
-[Quick start](https://docs.basisrobotics.tech/category/getting-started)
+[Getting Started](https://docs.basisrobotics.tech/guide-getting-started/environment)
 <span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
 [Documentation](https://docs.basisrobotics.tech)
 <span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
