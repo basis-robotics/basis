@@ -14,14 +14,12 @@ namespace basis {
 class ProtobufLogHandler : public core::logging::LogHandler {
 public:
   ProtobufLogHandler(core::transport::TransportManager &transport_manager) {
-    std::cout << "ProtobufLogHandler::ProtobufLogHandler" << std::endl;
     log_publisher = transport_manager.Advertise<foxglove::Log>("/log");
   }
   virtual ~ProtobufLogHandler() = default;
 
   virtual void HandleLog(const core::MonotonicTime &time, const spdlog::details::log_msg &log_msg,
                          std::string &&msg_formatted) override {
-                          std::cout << "HandleLog" << std::endl;
     auto proto_msg = std::make_shared<foxglove::Log>();
 
     const timespec ts = time.ToTimespec();
