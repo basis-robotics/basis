@@ -40,3 +40,7 @@ set_target_properties(basis_plugins_bridges_foxglove PROPERTIES PREFIX "")
 install(TARGETS basis_plugins_bridges_foxglove DESTINATION unit/)
 
 add_library(basis::plugins::bridges::foxglove ALIAS basis_plugins_bridges_foxglove)
+
+add_executable(foxglove_bridge src/foxglove_dummy_main.cpp)
+target_link_libraries(foxglove_bridge basis_plugins_bridges_foxglove basis::unit::main)
+install(TARGETS foxglove_bridge DESTINATION bin/)

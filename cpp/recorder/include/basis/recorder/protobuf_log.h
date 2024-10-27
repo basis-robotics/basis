@@ -1,3 +1,5 @@
+#pragma once
+
 #include <basis/core/logging.h>
 #include <basis/plugins/serialization/protobuf.h>
 #include <basis/core/transport/transport_manager.h>
@@ -5,6 +7,7 @@
 
 // Helper to initialize the basis log with protobuf
 // This can/will later be split into protobuf and ros1, with a compile time switch to configure the message type
+// TODO: move this out to a new library: basis::logging::protobuf, or add logging knowledge to the serialization plugin system
 
 namespace basis {
 
@@ -59,12 +62,12 @@ public:
   std::shared_ptr<core::transport::Publisher<foxglove::Log>> log_publisher;
 };
 
-void CreateLogHandler(core::transport::TransportManager &transport_manager) {
+inline void CreateLogHandler(core::transport::TransportManager &transport_manager) {
   auto log_handler = std::make_shared<ProtobufLogHandler>(transport_manager);
 
   core::logging::SetLogHandler(std::move(log_handler));
 }
 
-void DestroyLogHandler() { core::logging::SetLogHandler(nullptr); }
+inline void DestroyLogHandler() { core::logging::SetLogHandler(nullptr); }
 
 } // namespace basis

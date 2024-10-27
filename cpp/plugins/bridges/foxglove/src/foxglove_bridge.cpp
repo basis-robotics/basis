@@ -58,10 +58,6 @@ void FoxgloveBridge::init(const std::string &address, int port) {
   using namespace basis::core::transport;
   using namespace basis::plugins::transport;
 
-  transport_manager = std::make_unique<TransportManager>(std::make_unique<InprocTransport>());
-
-  transport_manager->RegisterTransport(basis::plugins::transport::TCP_TRANSPORT_NAME, std::make_unique<TcpTransport>());
-
   try {
     ::foxglove::ServerOptions serverOptions;
 
