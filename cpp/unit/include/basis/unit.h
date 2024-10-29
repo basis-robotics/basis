@@ -204,10 +204,18 @@ struct HandlerPubSubWithOptions : public HandlerPubSub {
       constexpr bool is_raw = std::string_view(T_DERIVED::subscription_serializers[INDEX]) == "raw";
       using T_SERIALIZER = typename RawSerializationHelper<MessageType, is_raw>::type;
 
+      basis::core::serialization::MessageTypeInfo mti;
+      if constexpr (is_raw) {
+        mti = {"raw", derived->subscription_message_type_names[INDEX], "", ""};
+      }
+      else {
+        mti = T_SERIALIZER::template DeduceMessageTypeInfo<MessageType>();
+      }
+
       derived->*subscriber_member_ptr =
           transport_manager->SubscribeCallable<MessageType, T_SERIALIZER, MessageInprocType>(
               runtime_topic_name, CreateOnMessageCallback<INDEX, false>(), thread_pool, subscriber_queue,
-              T_SERIALIZER::template DeduceMessageTypeInfo<MessageType>(), CreateOnMessageCallback<INDEX, true>());
+              mti, CreateOnMessageCallback<INDEX, true>());
     }
 
     type_erased_callbacks[runtime_topic_name] = CreateTypeErasedOnMessageCallback<INDEX>();
