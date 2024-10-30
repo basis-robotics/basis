@@ -9,7 +9,7 @@ Basis
 
 Basis is a robotics development framework developed by [Basis Robotics](https://basisrobotics.tech/)
 
-[Quick start](https://docs.basisrobotics.tech/category/getting-started)
+[Getting Started](https://docs.basisrobotics.tech/guide-getting-started/environment)
 <span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
 [Documentation](https://docs.basisrobotics.tech)
 <span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
@@ -21,10 +21,9 @@ Basis is a robotics development framework developed by [Basis Robotics](https://
 <span>&nbsp;&nbsp;·&nbsp;&nbsp;</span>
 [LinkedIn](https://www.linkedin.com/company/basisrobotics/)
 
-
 ## Basis Framework
 
-Basis is a robotics development framework developed by [Basis Robotics](https://basisrobotics.tech/), designed to accelerate your journey from concept to prototype, and from prototype to production. A lot of the concepts will be very familiar to ROS users (pub/sub based, with launch files, a central coordinator, etc), but there are some things we do very differently.
+Basis is a production-focused robotics development framework by [Basis Robotics](https://basisrobotics.tech/), built on a pub-sub architecture designed for deterministic testing. Unlike ROS and similar frameworks, Basis abstracts publishers and subscribers from the developer, using a model of `Inputs + Conditions (synchronizer) -> Handler (your code) -> Outputs`. You declare the messages and conditions that your code responds to, allowing the framework to automatically manage all underlying publishers, subscribers, and message routing as inputs and conditions trigger your code to process data and produce outputs.
 
 ⚠️ Basis is alpha software. While we're proud of what we've written so far, it might not be ready for production.⚠️
 

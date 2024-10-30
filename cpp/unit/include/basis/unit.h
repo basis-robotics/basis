@@ -233,7 +233,7 @@ public:
 
   virtual ~Unit() { spdlog::drop(std::string(unit_name)); }
 
-  void WaitForCoordinatorConnection() {
+  basis::core::transport::CoordinatorConnector* WaitForCoordinatorConnection() {
     while (!coordinator_connector) {
       coordinator_connector = basis::core::transport::CoordinatorConnector::Create();
       if (!coordinator_connector) {
@@ -241,13 +241,15 @@ public:
         std::this_thread::sleep_for(std::chrono::seconds(1));
       }
     }
+    return coordinator_connector.get();
   }
 
-  void CreateTransportManager(basis::RecorderInterface *recorder = nullptr) {
+  basis::core::transport::TransportManager* CreateTransportManager(basis::RecorderInterface *recorder = nullptr) {
     // todo: it may be better to pass these in - do we want one transport manager per unit ?
     // probably yes, so that they each get an ID
 
     transport_manager = CreateStandardTransportManager(recorder);
+    return transport_manager.get();
   }
 
   const std::string &Name() const { return unit_name; }
