@@ -28,10 +28,6 @@ if(CODE_COVERAGE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
-
-    # Optionally, set the LLVM_PROFILE_FILE environment variable to include the process ID
-    set(ENV{LLVM_PROFILE_FILE} "${CMAKE_BINARY_DIR}/coverage_data_%p.profraw")
-    set_property(GLOBAL PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/coverage_data_%p.profraw")
 endif()
 
 include(FetchContent)

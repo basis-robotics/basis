@@ -13,7 +13,4 @@ target_link_libraries(
 )
 
 include(GoogleTest REQUIRED)
-gtest_discover_tests(
-  test_containers
-  PROPERTIES ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/coverage_data_%p.profraw"
-)
+gtest_discover_tests(test_containers)
