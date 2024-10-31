@@ -27,6 +27,7 @@ if [ "$skip_tests" = false ]; then
     find . -type f -name "*.profraw" -delete
 
     echo "Running tests..."
+    export LLVM_PROFILE_FILE="test_%p.profraw" 
     ctest
 else
     echo "Skipping tests."
@@ -39,7 +40,7 @@ if [ "$aggregate_report" = true ]; then
   echo "Generating aggregate coverage report"
 
   TEST_PROFDATA="coverage.profdata"
-  TEST_PROF_RAWS=$(find . -name "*.profraw" ! -path "*/_deps/*")
+  TEST_PROF_RAWS=$(find . -name "test_*.profraw" ! -path "*/_deps/*")
   llvm-profdata-18 merge -sparse $TEST_PROF_RAWS -o $TEST_PROFDATA
 
   FILE_ARRAY=($TEST_EXECUTABLES)
@@ -80,10 +81,11 @@ else
     TEST_COVERAGE_DIR="$COVERAGE_DIR/$TEST_NAME"
     mkdir -p "$TEST_COVERAGE_DIR"
     
-    EXECUTABLE_PROFRAW=$(realpath "$(dirname "$TEST_EXECUTABLE")/default.profraw")
+    EXECUTABLE_DIR=$(realpath "$(dirname "$TEST_EXECUTABLE")/")
+    EXECUTABLE_PROFRAW=$(find "$EXECUTABLE_DIR" -name "test_*.profraw" ! -path "*/_deps/*")
     EXECUTABLE_PROFDATA=$(realpath "$(dirname "$TEST_EXECUTABLE")/default.profdata")
 
-    EXECUTABLE-profdata-18 merge -sparse $TEST_PROFRAW -o $EXECUTABLE_PROFDATA
+    llvm-profdata-18 merge -sparse $EXECUTABLE_PROFRAW -o $EXECUTABLE_PROFDATA
 
     echo "Generating coverage report for $TEST_NAME ($TEST_EXECUTABLE)"
     llvm-cov-18 show \
