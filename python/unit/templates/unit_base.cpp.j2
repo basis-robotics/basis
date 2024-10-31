@@ -83,7 +83,12 @@ namespace {{handler_name}} {
         {% endif %}
             >
     {% endif %}
-        (templated_topic_to_runtime_topic.at("{{topic_name}}"));
+        (templated_topic_to_runtime_topic.at("{{topic_name}}")
+        {% if output.serializer == "raw" %}
+        {# cpp makes it hard to convert a templated type to a string, so we just supply it here #}
+        , {"raw", "{{output.cpp_message_type}}", "", ""}
+        {% endif %}
+        );
         {{output.cpp_topic_name}}_publisher->SetMaxQueueSize({{output['qos']['depth']}});
     {% endfor %}
     {% if 'rate' in handler.sync %}
