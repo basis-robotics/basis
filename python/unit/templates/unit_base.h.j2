@@ -62,10 +62,9 @@ namespace unit::{{unit_name}} {
 
         void HandleParsedArgs(const argparse::ArgumentParser& parser) {
         {% for argument_name, argument in args.items() %}
-            
             {% if argument.get('optional', False) and not argument.type.startswith('vector') %}
-                {{argument_name}} = parser.present("--{{argument_name}}");
-                if({{argument_name}}) {
+                if (parser.present("--{{argument_name}}")) {
+                    {{argument_name}} = parser.get<{{argument.type}}>("--{{argument_name}}");
                     args_map["{{argument_name}}"] = fmt::format("{}", *{{argument_name}});
                 }
             {% else %}
