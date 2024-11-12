@@ -101,7 +101,9 @@ EOF
 ENV CC=clang
 ENV CXX=clang++
 
-RUN if [  -n "$(uname -a | grep Ubuntu)" ]; then add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi  
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    if [  -n "$(uname -a | grep Ubuntu)" ]; then add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi  
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
