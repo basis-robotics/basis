@@ -101,10 +101,11 @@ EOF
 ENV CC=clang
 ENV CXX=clang++
 
+RUN if [  -n "$(uname -a | grep Ubuntu)" ]; then add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi  
+
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    add-apt-repository ppa:ubuntu-toolchain-r/test -y \
-    && apt install --no-install-recommends -y \
+    apt install --no-install-recommends -y \
         # Required
         cmake \
         make \
@@ -130,9 +131,11 @@ RUN usermod -a -G video basis
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt install -y --no-install-recommends python3-distutils
-RUN curl -s https://bootstrap.pypa.io/get-pip.py |  python3
-RUN pip -q install jsonschema pyyaml jinja2
 
+RUN if [  -n "$(uname -a | grep Ubuntu)" ]; then \
+        curl -s https://bootstrap.pypa.io/get-pip.py | python3 \
+        && pip -q install jsonschema pyyaml jinja2; \
+    fi  
 
 USER basis
 

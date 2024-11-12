@@ -6,10 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON PARENT_SCOPE)
 
-# Enforce c++20 even for FetchContent dependencies
-# This is only needed under l4t cuda image, which changes headers around in a weird manner
-add_compile_options("--std=c++20")
-
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Workaround for std::expected not available in clang
   add_compile_options(
@@ -85,9 +81,9 @@ FetchContent_MakeAvailable(argparse)
 
 # Also requires one of: libbfd (gnu binutils), libdwarf, libdw (elfutils)
 FetchContent_Declare(backward
-    GIT_REPOSITORY https://github.com/bombela/backward-cpp
-    GIT_TAG master  # or a version tag, such as v1.6
-    SYSTEM          # optional, the Backward include directory will be treated as system directory
+  SYSTEM    
+  GIT_REPOSITORY https://github.com/bombela/backward-cpp
+  GIT_TAG master
 )
 FetchContent_MakeAvailable(backward)
 
@@ -146,3 +142,7 @@ add_subdirectory(plugins/transport/tcp)
 add_subdirectory(plugins/bridges/foxglove)
 
 add_subdirectory(third_party)
+
+# Enforce c++20 even for FetchContent dependencies
+# This is only needed under l4t cuda image, which changes headers around in a weird manner
+add_compile_options("--std=c++20")
