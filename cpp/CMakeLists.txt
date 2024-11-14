@@ -85,9 +85,10 @@ FetchContent_MakeAvailable(argparse)
 
 # Also requires one of: libbfd (gnu binutils), libdwarf, libdw (elfutils)
 FetchContent_Declare(backward
-    GIT_REPOSITORY https://github.com/bombela/backward-cpp
-    GIT_TAG master  # or a version tag, such as v1.6
-    SYSTEM          # optional, the Backward include directory will be treated as system directory
+  SYSTEM    
+  GIT_REPOSITORY https://github.com/bombela/backward-cpp
+  GIT_TAG master  # or a version tag, such as v1.6
+  PATCH_COMMAND sed -i -e "s/set(CMAKE_CXX_STANDARD 11)/#set(CMAKE_CXX_STANDARD 11)/g" CMakeLists.txt
 )
 FetchContent_MakeAvailable(backward)
 

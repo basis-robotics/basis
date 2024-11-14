@@ -14,6 +14,7 @@ add_subdirectory(
   ${foxglove_websocket_SOURCE_DIR}/cpp/foxglove-websocket
   ${CMAKE_BINARY_DIR}/foxglove-websocket
 )
+set_target_properties(foxglove_websocket PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
 
 find_package(OpenSSL)
 
