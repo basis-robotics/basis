@@ -101,7 +101,6 @@ def generate_unit(unit_path, output_dir, source_dir):
             
         template = jinja_env.get_template("handler.h.j2")
         template_output = template.render(unit_name=unit_name, handler_name=handler_name, serializers=serializers, **handler)
-        
         with open(f'{handler_output_dir}/{handler_name}.h', 'w') as f:
             f.write(template_output)
     
