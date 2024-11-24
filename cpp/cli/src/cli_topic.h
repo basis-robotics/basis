@@ -211,16 +211,32 @@ public:
     Commit();
   }
 
-  bool HandleArgs(const basis::core::transport::proto::NetworkInfo *network_info,
-                  basis::core::transport::CoordinatorConnector *connector) {
+  bool HandleArgs(uint16_t port) {
+    auto connector = CreateCoordinatorConnector(port);
+
+    if(!connector) {
+      return false;
+    }
+
+    auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!connector->GetLastNetworkInfo() && std::chrono::steady_clock::now() < end) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      connector->Update();
+    }
+    basis::core::transport::proto::NetworkInfo *network_info = connector->GetLastNetworkInfo();
+    if (!network_info) {
+      BASIS_LOG_ERROR("Timed out waiting for network info from coordinator");
+      return 1;
+    }
+
     if (topic_ls_command.IsInUse()) {
       return topic_ls_command.HandleArgs(network_info);
     } else if (topic_info_command.IsInUse()) {
       return topic_info_command.HandleArgs(network_info);
     } else if (topic_print_command.IsInUse()) {
-      return topic_print_command.HandleArgs(connector);
+      return topic_print_command.HandleArgs(connector.get());
     } else if (topic_hz_command.IsInUse()) {
-      return topic_hz_command.HandleArgs(connector);
+      return topic_hz_command.HandleArgs(connector.get());
     }
     return false;
   }

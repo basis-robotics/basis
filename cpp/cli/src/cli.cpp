@@ -85,6 +85,14 @@ template <typename T> void LoadPlugins() {
   serialization_plugins = std::move(out);
 }
 
+std::unique_ptr<basis::core::transport::CoordinatorConnector> CLISubcommand::CreateCoordinatorConnector(uint16_t port) {
+  auto connector = basis::core::transport::CoordinatorConnector::Create(port);
+  if (!connector) {
+    BASIS_LOG_ERROR("Unable to connect to the basis coordinator at port {}", port);
+  }
+  return connector;
+}
+
 } // namespace basis::cli
 
 int main(int argc, char *argv[]) {
@@ -128,27 +136,11 @@ int main(int argc, char *argv[]) {
 
   const uint16_t port = parser.get<uint16_t>("--port");
 
-  auto connector = basis::core::transport::CoordinatorConnector::Create(port);
-  if (!connector) {
-    BASIS_LOG_ERROR("Unable to connect to the basis coordinator at port {}", port);
-    return 1;
-  }
-
-  auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-  while (!connector->GetLastNetworkInfo() && std::chrono::steady_clock::now() < end) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    connector->Update();
-  }
-  basis::core::transport::proto::NetworkInfo *info = connector->GetLastNetworkInfo();
-  if (!info) {
-    BASIS_LOG_ERROR("Timed out waiting for network info from coordinator");
-    return 1;
-  }
   bool ok = false;
   if (topic_command.IsInUse()) {
-    ok = topic_command.HandleArgs(info, connector.get());
+    ok = topic_command.HandleArgs(port);
   } else if (schema_command.IsInUse()) {
-    ok = schema_command.HandleArgs(connector.get());
+    ok = schema_command.HandleArgs(port);
   } else if (launch_command.IsInUse()) {
     ok = launch_command.HandleArgs(argc, argv);
   }

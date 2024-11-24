@@ -34,9 +34,13 @@ public:
     Commit();
   };
 
-  bool HandleArgs(basis::core::transport::CoordinatorConnector *connector) {
+  bool HandleArgs(uint16_t port) {
+    auto connector = CreateCoordinatorConnector(port);
+    if(!connector) {
+      return false;
+    }
     if (schema_print_command.IsInUse()) {
-      return schema_print_command.HandleArgs(connector);
+      return schema_print_command.HandleArgs(connector.get());
     }
     return false;
   }

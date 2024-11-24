@@ -17,25 +17,44 @@
 #include <string_view>
 
 namespace basis::launch {
-std::string LaunchDefinitionToDebugString(const LaunchDefinition &launch) {
-  std::vector<std::string> process_strs;
-  for (auto &[process_name, process] : launch.processes) {
-    process_strs.emplace_back(basis::launch::ProcessDefinitionToDebugString(process_name, process));
-  }
-  return fmt::format("{}", fmt::join(process_strs, "\n"));
-}
-std::string ProcessDefinitionToDebugString(std::string_view process_name, const ProcessDefinition &process) {
-  std::vector<std::string> unit_cmds;
-  for (const auto &[unit_name, unit] : process.units) {
+
+
+std::string LaunchDefinitionDebugFormatter::FormatUnit(std::string_view unit_name, const UnitDefinition& unit) {
     std::vector<std::string> args;
     args.reserve(unit.args.size());
     for (auto &p : unit.args) {
       args.emplace_back(fmt::format("--{} {}", p.first, p.second));
     }
-    unit_cmds.emplace_back(fmt::format("  {}: {} {}", unit_name, unit.unit_type, fmt::join(args, " ")));
-  }
-  return fmt::format("process \"{}\" with {} units\n{}", process_name, process.units.size(),
+    return fmt::format("  {}: {} {}", unit_name, unit.unit_type, fmt::join(args, " "));
+}
+
+std::string LaunchDefinitionDebugFormatter::FormatProcess(std::string_view process_name, std::vector<std::string> unit_cmds) {
+  return fmt::format("process \"{}\" with {} units\n{}", process_name, unit_cmds.size(),
                      fmt::join(unit_cmds, "\n"));
+}
+
+std::string LaunchDefinitionDebugFormatter::HandleProcessDefinition(std::string_view process_name, const ProcessDefinition &process) {
+  std::vector<std::string> unit_cmds;
+  for (const auto &[unit_name, unit] : process.units) {
+    unit_cmds.emplace_back(FormatUnit(unit_name, unit));
+  }
+  return FormatProcess(process_name, unit_cmds);
+}
+
+std::string LaunchDefinitionToDebugString(const LaunchDefinition &launch, LaunchDefinitionDebugFormatter& formatter) {
+  std::string start = formatter.HandleStart();
+
+  std::vector<std::string> process_strs;
+  for (auto &[process_name, process] : launch.processes) {
+    process_strs.emplace_back(basis::launch::ProcessDefinitionToDebugString(process_name, process, formatter));
+  }
+
+  std::string end = formatter.HandleEnd();
+  return fmt::format("{}{}{}", start, fmt::join(process_strs, "\n"), end);
+}
+
+std::string ProcessDefinitionToDebugString(std::string_view process_name, const ProcessDefinition &process, LaunchDefinitionDebugFormatter& formatter) {
+  return formatter.HandleProcessDefinition(process_name, process);
 }
 constexpr int MAX_LAUNCH_INCLUDE_DEPTH = 32;
 
