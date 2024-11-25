@@ -54,7 +54,7 @@ std::string LaunchDefinitionMermaidFormatter::FormatProcess(std::string_view, st
         if(output_it == handlers_with_output.end()) {
           // Create broken connection
           // Note: mermaid doesn't support X on the start of the arrow...
-          connections.emplace_back(fmt::format("{}::dummy:::hidden x--{}--> {}", input, topic, input));
+          connections.emplace_back(fmt::format("{}::{}:::hidden x--{}--> {}", input, topic, topic, input));
         }
         else {
           for (const auto& output : output_it->second) {
@@ -68,7 +68,7 @@ std::string LaunchDefinitionMermaidFormatter::FormatProcess(std::string_view, st
       for (const auto& output : outputs) {
         if(!handlers_with_input.contains(topic)) {
           // Create broken connection
-          connections.emplace_back(fmt::format("{} --{}--x {}::dummy:::hidden", output, topic, output));
+          connections.emplace_back(fmt::format("{} --{}--x {}::{}:::hidden", output, topic, topic, output));
           }
       }
     }
