@@ -1,7 +1,7 @@
 #pragma once
 #include <argparse/argparse.hpp>
 #include <string_view>
-
+#include <memory>
 
 namespace basis::core::transport {
   class CoordinatorConnector;
