@@ -61,7 +61,7 @@ groups:
 
   auto parsed = ParseTemplatedLaunchDefinitionYAMLContents(launch_file, {}, default_parse_state);
   ASSERT_TRUE(parsed);
-  launch::LaunchDefinitionDebugFormatter outputter;
+  basis::launch::LaunchDefinitionDebugFormatter outputter;
   ASSERT_EQ(LaunchDefinitionToDebugString(*parsed, outputter), LaunchDefinitionToDebugString(basic_definition, outputter));
   ASSERT_EQ(parsed->processes.at("/").source_file, basic_definition.processes.at("/").source_file);
   ASSERT_EQ(*parsed, basic_definition);
