@@ -1,5 +1,6 @@
 
 #include <basis/launch.h>
+#include <basis/launch/launch_definition.h>
 #include <gtest/gtest.h>
 #include <string>
 #include <unordered_map>
