@@ -1,6 +1,5 @@
 
 #include <basis/launch.h>
-#include <basis/launch/launch_definition.h>
 #include <gtest/gtest.h>
 #include <string>
 #include <unordered_map>
@@ -62,7 +61,8 @@ groups:
 
   auto parsed = ParseTemplatedLaunchDefinitionYAMLContents(launch_file, {}, default_parse_state);
   ASSERT_TRUE(parsed);
-  ASSERT_EQ(LaunchDefinitionToDebugString(*parsed), LaunchDefinitionToDebugString(basic_definition));
+  launch::LaunchDefinitionDebugFormatter outputter;
+  ASSERT_EQ(LaunchDefinitionToDebugString(*parsed, outputter), LaunchDefinitionToDebugString(basic_definition, outputter));
   ASSERT_EQ(parsed->processes.at("/").source_file, basic_definition.processes.at("/").source_file);
   ASSERT_EQ(*parsed, basic_definition);
 }
