@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.25.1)
 project(basis)
 
+if(BASIS_INCLUDED)
+  return()
+endif()
+set(BASIS_INCLUDED CACHE INTERNAL ${CMAKE_CURRENT_LIST_DIR})
+
 # Allow include() on our cmake directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
