@@ -4,6 +4,7 @@
 #include <basis/cli_logger.h>
 #include <basis/launch.h>
 #include <basis/launch/launch_definition.h>
+#include <basis/launch/mermaid_formatter.h>
 
 namespace basis::cli {
 class LaunchCommand : public CLISubcommand {
@@ -14,6 +15,7 @@ public:
     // todo: when kv store is implemented, query the store instead
     parser.add_argument("--sim").help("Wait for simulated time message").default_value(false).implicit_value(true);
     parser.add_argument("--dry-run").help("Only parse the launch file, don't start").flag();
+    parser.add_argument("--mermaid").help("Output a mermaid description of the graph").flag();
     parser.add_argument("launch_yaml_and_args")
         .help("The launch file to launch plus arguments.")
         .remaining()
@@ -37,8 +39,20 @@ public:
     if (!launch) {
       return false;
     }
-    if (parser.get<bool>("--dry-run")) {
-      std::cout << basis::launch::LaunchDefinitionToDebugString(*launch) << std::endl;
+
+    const bool dry_run = parser.get<bool>("--dry-run") || parser.get<bool>("--mermaid");
+
+    if (dry_run) {
+      
+      if(parser.get<bool>("--mermaid")) {
+        launch::LaunchDefinitionMermaidFormatter outputter;
+        std::cout << basis::launch::LaunchDefinitionToDebugString(*launch, outputter) << std::endl;
+      }
+      else {
+        launch::LaunchDefinitionDebugFormatter outputter;
+        std::cout << basis::launch::LaunchDefinitionToDebugString(*launch, outputter) << std::endl;
+      }
+
     } else {
       bool has_units = false;
       for (auto &[_, process] : launch->processes) {

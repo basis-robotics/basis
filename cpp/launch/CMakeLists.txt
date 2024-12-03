@@ -1,6 +1,7 @@
 add_library(basis_launch
   src/launch.cpp 
   src/launch_definition.cpp
+  src/mermaid_formatter.cpp
   src/unit_loader.cpp
   src/process_manager.cpp)
 

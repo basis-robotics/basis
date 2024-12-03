@@ -74,7 +74,8 @@ public:
    * @return bool
    */
   bool RunProcess(const ProcessDefinition &process, basis::RecorderInterface *recorder, std::string_view process_name) {
-    BASIS_LOG_INFO("Running {}", ProcessDefinitionToDebugString(process_name, process));
+    launch::LaunchDefinitionDebugFormatter outputter;
+    BASIS_LOG_INFO("Running {}", ProcessDefinitionToDebugString(process_name, process, outputter));
 
     for (const auto &[unit_name, unit] : process.units) {
       std::optional<std::filesystem::path> unit_so_path = FindUnit(unit.unit_type);

@@ -1,6 +1,11 @@
 #pragma once
 #include <argparse/argparse.hpp>
 #include <string_view>
+#include <memory>
+
+namespace basis::core::transport {
+  class CoordinatorConnector;
+}
 
 namespace basis::cli {
 class CLISubcommand {
@@ -15,6 +20,8 @@ public:
 
 protected:
   const std::string name;
+
+  std::unique_ptr<basis::core::transport::CoordinatorConnector> CreateCoordinatorConnector(uint16_t port);
 
 private:
   argparse::ArgumentParser &parent_parser;

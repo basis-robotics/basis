@@ -56,8 +56,18 @@ struct LaunchDefinition {
   bool operator==(const LaunchDefinition &) const = default;
 };
 
-std::string LaunchDefinitionToDebugString(const LaunchDefinition &launch);
-std::string ProcessDefinitionToDebugString(std::string_view process_name, const ProcessDefinition &process);
+
+struct LaunchDefinitionDebugFormatter {
+  virtual ~LaunchDefinitionDebugFormatter() = default;
+  virtual std::string HandleStart() {return "";}
+  std::string HandleProcessDefinition(std::string_view process_name, const ProcessDefinition &process);
+  virtual std::string FormatUnit(std::string_view unit_name, const UnitDefinition& unit);
+  virtual std::string FormatProcess(std::string_view process_name, std::vector<std::string> unit_cmds);
+  virtual std::string HandleEnd() {return "";}
+};
+
+std::string LaunchDefinitionToDebugString(const LaunchDefinition &launch, LaunchDefinitionDebugFormatter& formatter);
+std::string ProcessDefinitionToDebugString(std::string_view process_name, const ProcessDefinition &process, LaunchDefinitionDebugFormatter& formatter);
 
 RecordingSettings ParseRecordingSettingsYAML(const YAML::Node &yaml);
 

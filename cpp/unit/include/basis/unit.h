@@ -295,6 +295,9 @@ public:
     return deserialization_helpers.at(type);
   }
 
+  const std::map<std::string, HandlerPubSub *>& GetHandlers() {
+    return handlers;
+  }
 protected:
   std::string unit_name;
   std::shared_ptr<spdlog::logger> logger;

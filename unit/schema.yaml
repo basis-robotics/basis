@@ -125,8 +125,8 @@ properties:
                 type: string
               accumulate:
                 type: integer
-              # cached:
-              #   type: boolean
+              cached:
+                type: boolean
 
               # https://github.com/redhat-developer/yaml-language-server/issues/478
               type: True
