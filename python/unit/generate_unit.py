@@ -7,6 +7,7 @@ import jinja2
 import itertools
 import os
 import re
+import subprocess
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 basis_root = dir_path + "/../../"
@@ -101,42 +102,60 @@ def generate_unit(unit_path, output_dir, source_dir):
             
         template = jinja_env.get_template("handler.h.j2")
         template_output = template.render(unit_name=unit_name, handler_name=handler_name, serializers=serializers, **handler)
-        
-        with open(f'{handler_output_dir}/{handler_name}.h', 'w') as f:
-            f.write(template_output)
-    
+
+        render_template_to_file(template_output=template_output, destination_file=f'{handler_output_dir}/{handler_name}.h')
+
     # Write main unit files
     unit_files = ["unit_base.h", "unit_base.cpp", "create_unit.cpp"]
     
     for unit_file in unit_files:
         template = jinja_env.get_template(f"{unit_file}.j2")
         template_output = template.render(unit_name=unit_name, **unit)
-        with open(f'{output_dir}/{unit_file}', 'w') as f:
-            f.write(template_output)
-        
+        render_template_to_file(template_output=template_output, destination_file=f'{output_dir}/{unit_file}')
+
     template = jinja_env.get_template("unit.h.j2")
     template_output = template.render(in_template_dir = True, unit_name=unit_name, **unit)
-    with open(f'{source_dir}/template/{unit_name}.example.h', 'w') as f:
-        f.write(template_output)
+    render_template_to_file(template_output=template_output, destination_file=f'{source_dir}/template/{unit_name}.example.h')
 
     unit_main_header = f'{source_dir}/include/{unit_name}.h'
     if not os.path.exists(unit_main_header):
         template = jinja_env.get_template("unit.h.j2")
         template_output = template.render(in_template_dir = False, unit_name=unit_name, **unit)
-        with open(unit_main_header, 'w') as f:
-            f.write(template_output)
-            
+        render_template_to_file(template_output=template_output, destination_file=unit_main_header)
+
     template = jinja_env.get_template("unit.cpp.j2")
     template_output = template.render(in_template_dir = True, unit_name=unit_name, **unit)
-    with open(f'{source_dir}/template/{unit_name}.example.cpp', 'w') as f:
-        f.write(template_output)
-        
+    render_template_to_file(template_output=template_output, destination_file=f'{source_dir}/template/{unit_name}.example.cpp')
+
     unit_main_source = f'{source_dir}/src/{unit_name}.cpp'
     if not os.path.exists(unit_main_source):
         template = jinja_env.get_template("unit.cpp.j2")
         template_output = template.render(in_template_dir = False, unit_name=unit_name, **unit)
-        with open(unit_main_source, 'w') as f:
-            f.write(template_output)
+        render_template_to_file(template_output=template_output, destination_file=unit_main_source)
+
+
+def format_code(file_path):
+    try:
+        subprocess.run(
+            [
+                "clang-format",
+                "-i",
+                "-style={KeepEmptyLinesAtTheStartOfBlocks: false, MaxEmptyLinesToKeep: 0}",
+                file_path,
+            ],
+            check=True,
+        )
+        print(f"Formatted {file_path} successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred while formatting {file_path}: {e}")
+
+
+def render_template_to_file(template_output, destination_file):
+    with open(destination_file, "w") as f:
+        f.write(template_output)
+
+    format_code(destination_file)
+
 
 parser = argparse.ArgumentParser(description='Generates basis units')
 
