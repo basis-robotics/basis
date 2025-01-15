@@ -10,7 +10,7 @@ target_include_directories(basis_launch PUBLIC include)
 target_link_libraries(basis_launch 
   basis::unit
   basis::cli_logger
-  Backward::Interface
+  Backward::Backward
   yaml-cpp
   dl
   )

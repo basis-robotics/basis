@@ -24,6 +24,7 @@ if(${BASIS_ENABLE_TESTING})
   FetchContent_Declare(
     googletest
     URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    FIND_PACKAGE_ARGS NAMES GTest
   )
   FetchContent_MakeAvailable(googletest)
 endif()
@@ -31,6 +32,7 @@ endif()
 FetchContent_Declare(
   expected-lite
   URL https://github.com/martinmoene/expected-lite/archive/refs/tags/v0.6.3.zip
+  FIND_PACKAGE_ARGS NAMES expected-lite
 )
 FetchContent_MakeAvailable(expected-lite)
 
@@ -38,14 +40,17 @@ FetchContent_Declare(
   yaml-cpp
   GIT_REPOSITORY https://github.com/jbeder/yaml-cpp/
   GIT_TAG 0.8.0
+  FIND_PACKAGE_ARGS NAMES yaml-cpp
 )
 FetchContent_MakeAvailable(yaml-cpp)
 
 FetchContent_Declare(
   nlohmann_json
-  OVERRIDE_FIND_PACKAGE
+  # is this needed to avoid system nlohmann??
+  # OVERRIDE_FIND_PACKAGE
   GIT_REPOSITORY https://github.com/nlohmann/json/
   GIT_TAG v3.10.5
+  FIND_PACKAGE_ARGS NAMES nlohmann_json
 )
 set(JSON_MultipleHeaders ON CACHE INTERNAL "force json to use multiple headers to allow for forward declarations")
 FetchContent_MakeAvailable(nlohmann_json)
@@ -54,43 +59,50 @@ FetchContent_Declare(
   inja
   GIT_REPOSITORY https://github.com/pantor/inja.git
   GIT_TAG v3.4.0
+  FIND_PACKAGE_ARGS NAMES inja
 )
 set(BUILD_BENCHMARK OFF CACHE INTERNAL "force inja benchmarks to off")
 set(INJA_BUILD_TESTS OFF CACHE INTERNAL "force inja benchmarks to off")
 set(INJA_USE_EMBEDDED_JSON OFF CACHE INTERNAL "we will supply json to inja")
 FetchContent_MakeAvailable(inja)
 
-FetchContent_Declare(mcap
-  # GIT_REPOSITORY https://github.com/foxglove/mcap
-  # GIT_TAG releases/cpp/v1.4.0
-  # Fork until https://github.com/foxglove/mcap/pull/1194 is merged
-  GIT_REPOSITORY https://github.com/kyle-basis/mcap
-  GIT_TAG a70352a60fdf655e68f552a3d472484d7d0201ce
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ""
-  )
-
-# mcap doesn't contain a CMakeLists.txt, so create an interface library ourselves
-FetchContent_MakeAvailable(mcap)
 add_library(mcap INTERFACE)
-target_include_directories(mcap INTERFACE ${mcap_SOURCE_DIR}/cpp/mcap/include)
 
+find_path(MCAP_INCLUDE_DIRECTORY mcap/mcap.hpp)
+if(MCAP_INCLUDE_DIRECTORY)
+  message("Found MCAP at " ${MCAP_INCLUDE_DIRECTORY})
+  target_include_directories(mcap INTERFACE ${MCAP_INCLUDE_DIRECTORY})
+else()
+  FetchContent_Declare(mcap
+    GIT_REPOSITORY https://github.com/foxglove/mcap
+    GIT_TAG releases/cpp/v1.4.1
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    )
+
+  # mcap doesn't contain a CMakeLists.txt, so create an interface library ourselves
+  FetchContent_MakeAvailable(mcap)
+  
+  target_include_directories(mcap INTERFACE ${mcap_SOURCE_DIR}/cpp/mcap/include)
+endif()
 set(ARGPARSE_BUILD_TESTS OFF CACHE INTERNAL "force argparse tests to off")
 FetchContent_Declare(
   argparse
   GIT_REPOSITORY https://github.com/p-ranav/argparse.git
   GIT_TAG v3.1
+  FIND_PACKAGE_ARGS NAMES argparse
 )
 FetchContent_MakeAvailable(argparse)
 
 # Also requires one of: libbfd (gnu binutils), libdwarf, libdw (elfutils)
-FetchContent_Declare(backward
+FetchContent_Declare(Backward
   SYSTEM    
   GIT_REPOSITORY https://github.com/bombela/backward-cpp
   GIT_TAG master  # or a version tag, such as v1.6
   PATCH_COMMAND sed -i -e "s/set(CMAKE_CXX_STANDARD 11)/#set(CMAKE_CXX_STANDARD 11)/g" CMakeLists.txt
+  FIND_PACKAGE_ARGS NAMES Backward
 )
-FetchContent_MakeAvailable(backward)
+FetchContent_MakeAvailable(Backward)
 
 if(BASIS_ENABLE_ROS)
   set(BUILD_TESTING OFF)

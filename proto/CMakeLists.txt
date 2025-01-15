@@ -21,23 +21,27 @@ protobuf_generate(
   PROTOC_OUT_DIR "${BASIS_GENERATED_DIR}"
   )
 
-# Import the foxglove protobuf files
-FetchContent_Declare(foxglove_schemas
-    GIT_REPOSITORY https://github.com/foxglove/schemas
-    GIT_TAG 446d4f0c7450c0b9fb1c5b3889c2ea640ee045e6
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    )
+# This appears to Just Work with Nix
+find_path (foxglove_schemas_dir schemas/proto/foxglove/Log.proto)
+if(NOT foxglove_schemas_dir)
+  # Import the foxglove protobuf files
+  FetchContent_Declare(foxglove_schemas
+      GIT_REPOSITORY https://github.com/foxglove/schemas
+      GIT_TAG 446d4f0c7450c0b9fb1c5b3889c2ea640ee045e6
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND ""
+      )
 
-FetchContent_MakeAvailable(foxglove_schemas)
+  FetchContent_MakeAvailable(foxglove_schemas)
+  set(foxglove_schemas_dir ${foxglove_schemas_SOURCE_DIR})
+endif()
 
 set(FOXGLOVE_GENERATED_DIR "${GENERATED_DIR}")
 make_directory(${FOXGLOVE_GENERATED_DIR})
 
-
 set(FOXGLOVE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 # Need to copy in the foxglove protobufs to get protoc to be happy about paths - everything breaks if the protos aren't in a directory relative to the current one
-file(COPY ${foxglove_schemas_SOURCE_DIR}/schemas/proto/foxglove DESTINATION ${FOXGLOVE_SOURCE_DIR})
+file(COPY ${foxglove_schemas_dir}/schemas/proto/foxglove DESTINATION ${FOXGLOVE_SOURCE_DIR})
 file(GLOB FOXGLOVE_PROTOS ${FOXGLOVE_SOURCE_DIR}/foxglove/*.proto)
 
 add_library(foxglove_schemas_protobuf SHARED ${FOXGLOVE_PROTOS})
