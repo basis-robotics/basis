@@ -16,7 +16,7 @@ option(BASIS_ENABLE_TESTING "Build tests" ${PROJECT_IS_TOP_LEVEL})
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
 # Set variables based on options
-set(CMAKE_INSTALL_PREFIX ${BASIS_INSTALL_DIR} CACHE INTERNAL STRING)
+# set(CMAKE_INSTALL_PREFIX ${BASIS_INSTALL_DIR} CACHE INTERNAL STRING)
 
 if(${BASIS_ENABLE_TESTING})
     enable_testing()
@@ -46,7 +46,7 @@ find_all_targets(ALL_TARGETS)
 # TODO: we probably want https://cmake.org/cmake/help/latest/guide/importing-exporting/index.html#exporting-targets-from-the-build-tree
 # TODO: headers aren't installed this way
 foreach(TARGET IN LISTS ALL_TARGETS)
-get_target_property(TARGET_TYPE ${TARGET} TYPE)
+    get_target_property(TARGET_TYPE ${TARGET} TYPE)
     if(${TARGET_TYPE} STREQUAL "EXECUTABLE")
         install(TARGETS ${TARGET})
     elseif(${TARGET_TYPE} STREQUAL "SHARED_LIBRARY")

@@ -99,11 +99,12 @@
           openssl
           websocketpp
           nlohmann_json
+          zlib
         ];
         # It's really hard to get this propagated via regular patches, somehow
         postPatch = ''
 echo "#define ASIO_STANDALONE
-$(catcpp/foxglove-websocket/src/server_factory.cpp)" > cpp/foxglove-websocket/src/server_factory.cpp
+$(cat cpp/foxglove-websocket/src/server_factory.cpp)" > cpp/foxglove-websocket/src/server_factory.cpp
 '';
         preConfigure = "cd cpp/foxglove-websocket";
       });
@@ -147,8 +148,20 @@ $(catcpp/foxglove-websocket/src/server_factory.cpp)" > cpp/foxglove-websocket/sr
           ];
           cmakeFlags = [
             "-DMCAP_INCLUDE_DIRECTORY=\"${mcap.outPath}\""
+            #"-DBASIS_INSTALL_DIR=${out}"
           ];
           buildPhase = "make -j $NIX_BUILD_CORES";
+          # maybe       
+          # addAutoPatchelfSearchPath $out/opt/pulsesecure/lib
+          # autoPatchelf opt/pulsesecure/bin/*
+
+# todo: this won't work for overlays of basis, will it? we basically need t
+preFixup = ''
+  patchelf $out/bin/* $out/lib/* $out/unit/* --add-rpath $out/plugins/serialization
+  patchelf $out/bin/* $out/lib/* $out/unit/* --add-rpath $out/plugins/transport
+  patchelf $out/bin/* $out/lib/* $out/unit/* --add-rpath $out/unit
+'';
+          # export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${BASIS_ROOT}/lib:${BASIS_ROOT}/plugins/serialization:${BASIS_ROOT}/plugins/transport:${BASIS_ROOT}/unit
         }
       );
       defaultApp = flake-utils.lib.mkApp {
