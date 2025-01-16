@@ -96,9 +96,10 @@ public:
     std::unique_ptr<google::protobuf::Message> message = LoadMessageFromSchema(span, schema_name);
     if (message) {
       std::string out;
-      // TODO: fix nodiscard
-      (void)google::protobuf::util::MessageToJsonString(*message, &out, {});
-      return out;
+      auto status = google::protobuf::util::MessageToJsonString(*message, &out, {});
+      if(status.ok()) {
+        return out;
+      }
     }
     return {};
   }

@@ -72,7 +72,7 @@ std::unordered_map<std::string, std::unique_ptr<core::serialization::Serializati
  */
 template <typename T> void LoadPlugins() {
   char buf[1024] = {};
-  readlink("/proc/self/exe", buf, 1024);
+  std::ignore = readlink("/proc/self/exe", buf, 1024);
 
   std::filesystem::path search_path = buf;
   search_path = search_path.parent_path().parent_path() / "plugins" / T::PLUGIN_TYPE;

@@ -154,7 +154,7 @@ protected:
 
   // basis
   char execv_target[1024] = {};
-  readlink("/proc/self/exe", execv_target, sizeof(execv_target));
+  std::ignore = readlink("/proc/self/exe", execv_target, sizeof(execv_target));
   args_copy.push_back(execv_target);
 
   bool pushed_process = false;

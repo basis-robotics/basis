@@ -332,7 +332,7 @@ void FoxgloveBridge::updateAdvertisedTopics() {
     }
   }
 
-  if (const auto numIgnoredTopics = info->publishers_by_topic_size() - latestTopics.size()) {
+  if ([[maybe_unused]] const auto numIgnoredTopics = info->publishers_by_topic_size() - latestTopics.size()) {
     BASIS_LOG_DEBUG("{} topics have been ignored as they do not match any pattern on the topic whitelist",
                     numIgnoredTopics);
   }

@@ -3,8 +3,8 @@ project(basis_core_unit)
 add_library(basis_unit SHARED src/unit.cpp src/args_template.cpp)
 target_include_directories(basis_unit PUBLIC include)
 target_link_libraries(basis_unit
-    argparse
-    inja
+    argparse::argparse
+    pantor::inja
     basis::arguments
     basis::core::coordinator
     basis::core::logging

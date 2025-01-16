@@ -60,7 +60,8 @@
           };
           installPhase = ''          
               runHook preInstall
-              cp -r cpp/mcap/include $out/
+              mkdir -p $out
+              mv cpp/mcap/include $out/include
               runHook postInstall
           '';
          }
@@ -77,7 +78,8 @@
         };
         preConfigure = ''
           runHook preInstall
-          cp -r asio/include $out/
+          mkdir -p $out
+          mv asio/include $out/include
           runHook postInstall
         '';
       });
@@ -125,21 +127,23 @@ $(catcpp/foxglove-websocket/src/server_factory.cpp)" > cpp/foxglove-websocket/sr
           pname = "basis";
           version = "0.0.8";
           src = self;
+          
           buildInputs = [
+            cmake
+            gtest
+          ];
+          propagatedBuildInputs = [
             argparse
             backward-cpp
             elfutils
-            clang
-            cmake
-            yaml-cpp
             expected-lite
+            foxglove_schemas
+            foxglove_websocket
             inja
             mcap
             protobuf
-            foxglove_websocket
-            foxglove_schemas
-            # only if testing
-            gtest
+            libuuid
+            yaml-cpp
           ];
           cmakeFlags = [
             "-DMCAP_INCLUDE_DIRECTORY=\"${mcap.outPath}\""
@@ -160,6 +164,12 @@ $(catcpp/foxglove-websocket/src/server_factory.cpp)" > cpp/foxglove-websocket/sr
           coreutils
         ];
       });
+      docker = pkgs.dockerTools.buildLayeredImage {
+        name = "basis-env-nix";
+        tag = "latest";
+        contents = [ basis ];
+        config.Cmd = "bash";
+      };
     }
   );
 }

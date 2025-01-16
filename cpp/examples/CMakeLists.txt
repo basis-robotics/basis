@@ -10,7 +10,7 @@ target_link_libraries(
   basis::plugins::serialization::protobuf
   basis::core::coordinator
   basis::synchronizers
-  argparse
+  argparse::argparse
 )
 
 if(BASIS_ENABLE_ROS)

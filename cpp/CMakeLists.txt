@@ -71,7 +71,7 @@ add_library(mcap INTERFACE)
 find_path(MCAP_INCLUDE_DIRECTORY mcap/mcap.hpp)
 if(MCAP_INCLUDE_DIRECTORY)
   message("Found MCAP at " ${MCAP_INCLUDE_DIRECTORY})
-  target_include_directories(mcap INTERFACE ${MCAP_INCLUDE_DIRECTORY})
+  target_include_directories(mcap INTERFACE ${MCAP_INCLUDE_DIRECTORY}/include)
 else()
   FetchContent_Declare(mcap
     GIT_REPOSITORY https://github.com/foxglove/mcap

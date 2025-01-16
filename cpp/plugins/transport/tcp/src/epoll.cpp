@@ -103,7 +103,7 @@ void Epoll::RemoveFd(int fd) {
   epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
 
   // Now lock the inner mutex, to wait out any workers that are using this fd
-  std::lock_guard(node.mapped().mutex);
+  std::lock_guard inner_guard(node.mapped().mutex);
 
   // We're done, return. It's safe to close this handle.
 }

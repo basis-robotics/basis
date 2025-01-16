@@ -16,5 +16,5 @@ target_link_libraries(
   basis::launch
   basis::plugins::transport::tcp
   basis::core::coordinator
-  argparse
+  argparse::argparse
 )
