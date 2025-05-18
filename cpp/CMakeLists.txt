@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON PARENT_SCOPE)
+# Work around old cmake on arm64 (or possibly too new dependency)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 # Enforce c++20 even for FetchContent dependencies
 # This is only needed under l4t cuda image, which changes headers around in a weird manner
@@ -61,11 +63,8 @@ set(INJA_USE_EMBEDDED_JSON OFF CACHE INTERNAL "we will supply json to inja")
 FetchContent_MakeAvailable(inja)
 
 FetchContent_Declare(mcap
-  # GIT_REPOSITORY https://github.com/foxglove/mcap
-  # GIT_TAG releases/cpp/v1.4.0
-  # Fork until https://github.com/foxglove/mcap/pull/1194 is merged
-  GIT_REPOSITORY https://github.com/kyle-basis/mcap
-  GIT_TAG a70352a60fdf655e68f552a3d472484d7d0201ce
+  GIT_REPOSITORY https://github.com/foxglove/mcap
+  GIT_TAG releases/cpp/v2.0.2
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   )

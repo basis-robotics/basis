@@ -37,7 +37,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"
     apt install kitware-archive-keyring -y
     rm /etc/apt/trusted.gpg.d/kitware.gpg
-    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1A127079A92F09ED
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16FAAD7AF99A65E2
 EOF
 
 # nvidia's image preinstalls cmake, nuke it
@@ -103,7 +103,7 @@ ENV CXX=clang++
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    if [  -n "$(uname -a | grep Ubuntu)" ]; then add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi  
+    if [  -n "$(lsb_release -d | grep Ubuntu)" ]; then add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi 
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
@@ -134,8 +134,10 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt install -y --no-install-recommends python3-distutils
 
-RUN if [  -n "$(uname -a | grep Ubuntu)" ]; then \
-        curl -s https://bootstrap.pypa.io/get-pip.py | python3 \
+RUN if [  -n "$(lsb_release -d | grep Ubuntu)" ]; then \
+        curl -s https://bootstrap.pypa.io/pip/$( \
+            python3 -c "import sys; print('.'.join(sys.version.split()[0].split('.')[:2]))" \
+        )/get-pip.py | python3 \
         && pip -q install jsonschema pyyaml jinja2; \
     fi  
 
