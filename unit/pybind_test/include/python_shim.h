@@ -1,0 +1,115 @@
+
+//#define X_PYTHON_API_STATICS
+
+
+#define X_PYTHON_STATICS \
+    X_PY(PyType_Type) \
+    X_PY(PyByteArray_Type) \
+    X_PY(PyCFunction_Type) \
+    X_PY(PyProperty_Type) \
+    X_PY(PyBaseObject_Type) \
+    X_PY(_Py_TrueStruct) \
+    X_PY(_Py_NoneStruct) \
+    X_PY(_Py_NotImplementedStruct) \
+    X_PY(_Py_FalseStruct) \
+    X_PY(PyDict_Type) \
+    X_PY(PyExc_ValueError) \
+    X_PY(PyExc_IndexError) \
+    X_PY(PyExc_MemoryError) \
+    X_PY(PyExc_OverflowError) \
+    X_PY(PyExc_RuntimeError) \
+    X_PY(PyExc_TypeError) \
+    X_PY(PyExc_SystemError) \
+    X_PY(PyInstanceMethod_Type) \
+    X_PY(PyCapsule_Type)
+//Implement ourselves
+//X_PY(PyErr_Format) \
+//X_PY(PyObject_CallFunctionObjArgs) \
+
+
+#define X_PYTHON_API \
+X_PY(PyTuple_SetItem) \
+X_PY(PyObject_Repr) \
+X_PY(PyByteArray_Size) \
+X_PY(PyErr_NormalizeException) \
+X_PY(PyInstanceMethod_New) \
+X_PY(PyEval_AcquireThread) \
+X_PY(PyObject_Str) \
+X_PY(PyDict_GetItemWithError) \
+X_PY(PyThreadState_DeleteCurrent) \
+X_PY(PyGILState_GetThisThreadState) \
+X_PY(PyObject_GetAttrString) \
+X_PY(PyMem_Free) \
+X_PY(PyErr_Restore) \
+X_PY(PyType_IsSubtype) \
+X_PY(PyStatus_IsError) \
+X_PY(PyRun_SimpleStringFlags) \
+X_PY(PyCapsule_SetPointer) \
+X_PY(PyTuple_New) \
+X_PY(PyObject_IsInstance) \
+X_PY(PyException_SetTraceback) \
+X_PY(PyDict_Contains) \
+X_PY(PyStatus_Exception) \
+X_PY(PyDict_Next) \
+X_PY(PyTuple_Size) \
+X_PY(PyConfig_InitPythonConfig) \
+X_PY(PyObject_CallObject) \
+X_PY(Py_Finalize) \
+X_PY(PyUnicode_DecodeUTF8) \
+X_PY(_Py_Dealloc) \
+X_PY(PyByteArray_AsString) \
+X_PY(PyCFunction_NewEx) \
+X_PY(PyImport_ImportModule) \
+X_PY(_PyObject_GetDictPtr) \
+X_PY(PyUnicode_FromString) \
+X_PY(PyCapsule_SetContext) \
+X_PY(PyFrame_GetLineNumber) \
+X_PY(PyThread_tss_get) \
+X_PY(PyBytes_Size) \
+X_PY(PyException_SetContext) \
+X_PY(PyErr_Clear) \
+X_PY(PyObject_HasAttrString) \
+X_PY(PyConfig_Clear) \
+X_PY(PyWeakref_NewRef) \
+X_PY(PyDict_New) \
+X_PY(PyErr_SetString) \
+X_PY(PyCapsule_GetContext) \
+X_PY(Py_InitializeFromConfig) \
+X_PY(PyThreadState_Get) \
+X_PY(PyObject_SetItem) \
+X_PY(PyCapsule_New) \
+X_PY(PyMem_Calloc) \
+X_PY(PyObject_SetAttrString) \
+X_PY(PyGILState_Release) \
+X_PY(PyCapsule_GetPointer) \
+X_PY(PyThread_tss_alloc) \
+X_PY(PyBytes_AsString) \
+X_PY(PyThread_tss_set) \
+X_PY(PyObject_GetItem) \
+X_PY(PyType_Ready) \
+X_PY(PyEval_SaveThread) \
+X_PY(PyObject_ClearWeakRefs) \
+X_PY(PyObject_GC_UnTrack) \
+X_PY(PyEval_GetBuiltins) \
+X_PY(PyErr_WriteUnraisable) \
+X_PY(PyThread_tss_create) \
+X_PY(PyUnicode_AsEncodedString) \
+X_PY(PyErr_Occurred) \
+X_PY(PyConfig_SetBytesArgv) \
+X_PY(PyDict_Copy) \
+X_PY(PyErr_Fetch) \
+X_PY(PyThreadState_New) \
+X_PY(_PyThreadState_UncheckedGet) \
+X_PY(_PyType_Lookup) \
+X_PY(PyDict_Size) \
+X_PY(PyThreadState_Clear) \
+X_PY(PyDict_DelItemString) \
+X_PY(PyUnicode_AsUTF8AndSize) \
+X_PY(PyGILState_Ensure) \
+X_PY(PyCapsule_GetName) \
+X_PY(PyTuple_GetItem) \
+X_PY(PyException_SetCause) \
+X_PY(PyThread_tss_free) \
+X_PY(Py_IsInitialized) \
+X_PY(PyUnicode_AsUTF8String) \
+X_PY(PyBytes_AsStringAndSize) \

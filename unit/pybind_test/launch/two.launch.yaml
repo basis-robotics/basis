@@ -1,0 +1,10 @@
+---
+units:
+  py_a:
+    unit: pybind_test
+    args:
+      pub: True
+  py_b:
+    unit: pybind_test
+    args:
+      pub: False

@@ -91,6 +91,15 @@ FetchContent_Declare(backward
 )
 FetchContent_MakeAvailable(backward)
 
+
+# if(BASIS_ENABLE_PYTHON)
+FetchContent_Declare(pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11.git
+  GIT_TAG v2.13
+)
+FetchContent_MakeAvailable(pybind11)
+# endif()
+
 if(BASIS_ENABLE_ROS)
   set(BUILD_TESTING OFF)
   # TODO: consider using embag instead
