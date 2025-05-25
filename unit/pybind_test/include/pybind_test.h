@@ -7,15 +7,39 @@
 
 #include <memory>
 #include <unit/pybind_test/unit_base.h>
-
-#include "python_shim.h"
-
+// #define _DEBUG
+// #define Py_DEBUG 1
 #include <Python.h>
-#include <python3.8/frameobject.h>
+#define Py_BUILD_CORE 1
+#include <internal/pycore_pystate.h>
 
-
-#include <pybind11/embed.h>
-
+#define X_PYTHON_API \
+    X_PY(Py_InitializeEx) \
+    X_PY(Py_Finalize) \
+    X_PY(Py_IsInitialized) \
+    X_PY(PyRun_SimpleStringFlags) \
+    X_PY(PyEval_SaveThread) \
+    X_PY(PyEval_RestoreThread) \
+    X_PY(PyGILState_Ensure) \
+    X_PY(PyGILState_Release) \
+    X_PY(PyEval_InitThreads) \
+ X_PY(PyEval_AcquireLock) \
+ X_PY(PyThreadState_Swap) \
+ X_PY(PyThreadState_New) \
+ X_PY(PyEval_ReleaseLock) \
+ X_PY(PyThreadState_Clear) \
+ X_PY(PyThreadState_Delete) \
+ X_PY(PyEval_AcquireThread) \
+ X_PY(PyInterpreterState_Head) \
+ X_PY(PyEval_ReleaseThread) \
+ X_PY(PyThreadState_Get) \
+ X_PY(PyGILState_GetThisThreadState)\
+X_PY(_PyInterpreterState_Get) \
+X_PY(_PyRuntime) \
+X_PY(PyThread_tss_get) \
+X_PY(PyThread_tss_set) \
+X_PY(PyThread_tss_delete) \
+X_PY(PyThread_tss_create) 
 class pybind_test : public unit::pybind_test::Base {
 public:
   pybind_test(const Args &args,
@@ -34,6 +58,11 @@ public:
 
 
 private:
-  std::unique_ptr<pybind11::scoped_interpreter> py;
+  #define X_PY(f) decltype(::f)* f = nullptr;
+  X_PYTHON_API
+  #undef X_PY
+
   bool pub = false;
+
+  PyThreadState *py_saved_thread_state;
 };
