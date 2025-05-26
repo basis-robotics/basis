@@ -16,10 +16,4 @@ public:
       const unit::pybind_test::InprocTestTrigger::Input &input) override;
   virtual unit::pybind_test::InprocTest::Output
   InprocTest(const unit::pybind_test::InprocTest::Input &input) override;
-  virtual unit::pybind_test::StereoMatch::Output
-  StereoMatch(const unit::pybind_test::StereoMatch::Input &input) override;
-  virtual unit::pybind_test::TimeTest::Output
-  TimeTest(const unit::pybind_test::TimeTest::Input &input) override;
-  virtual unit::pybind_test::ApproxTest::Output
-  ApproxTest(const unit::pybind_test::ApproxTest::Input &input) override;
 };

@@ -15,12 +15,3 @@ pybind_test::InprocTestTrigger(const InprocTestTrigger::Input &input) {
 InprocTest::Output pybind_test::InprocTest(const InprocTest::Input &input) {
   static_assert(false, "Implement me");
 }
-StereoMatch::Output pybind_test::StereoMatch(const StereoMatch::Input &input) {
-  static_assert(false, "Implement me");
-}
-TimeTest::Output pybind_test::TimeTest(const TimeTest::Input &input) {
-  static_assert(false, "Implement me");
-}
-ApproxTest::Output pybind_test::ApproxTest(const ApproxTest::Input &input) {
-  static_assert(false, "Implement me");
-}
