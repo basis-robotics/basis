@@ -16,6 +16,6 @@ target_link_libraries(basis_unit
 add_library(basis::unit ALIAS basis_unit)
 
 add_library(basis_unit_main SHARED src/unit_main.cpp)
-target_link_libraries(basis_unit_main basis::unit Backward::Interface)
+target_link_libraries(basis_unit_main basis::unit)
 
 add_library(basis::unit::main ALIAS basis_unit_main)

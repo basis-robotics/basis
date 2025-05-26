@@ -4,13 +4,6 @@
 #include <basis/unit/create_unit.h>
 
 #include <basis/recorder/protobuf_log.h>
-#include "backward.hpp"
-
-namespace backward {
-
-backward::SignalHandling sh;
-
-} // namespace backward
 
 int main(int argc, char *argv[]) {
   basis::core::logging::InitializeLoggingSystem();
