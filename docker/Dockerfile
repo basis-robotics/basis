@@ -132,14 +132,14 @@ RUN usermod -a -G video basis
 # Install python dependencies
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    apt install -y --no-install-recommends python3-distutils
+    apt install -y --no-install-recommends python3-distutils python3-dev
 
 RUN if [  -n "$(lsb_release -d | grep Ubuntu)" ]; then \
         curl -s https://bootstrap.pypa.io/pip/$( \
             python3 -c "import sys; print('.'.join(sys.version.split()[0].split('.')[:2]))" \
         )/get-pip.py | python3 \
         && pip -q install jsonschema pyyaml jinja2; \
-    fi  
+    fi
 
 USER basis
 
