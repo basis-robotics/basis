@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-// TODO: if we used C++ we could use
+// TODO: if we used C++ we could use decltype and autogen these definitions
 typedef struct {
   void *(*pthread_getspecific)(pthread_key_t);
   int (*pthread_setspecific)(pthread_key_t, const void *);
