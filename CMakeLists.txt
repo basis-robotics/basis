@@ -13,6 +13,16 @@ set(BASIS_INSTALL_DIR /opt/basis CACHE STRING "Directory to install basis to")
 option(BASIS_ENABLE_ROS "Enable basis support for ROS" OFF)
 option(BASIS_ENABLE_TESTING "Build tests" ${PROJECT_IS_TOP_LEVEL})
 
+option(BASIS_PYTHON_VERSION "Python version to use, defaults to none" $ENV{BASIS_PYTHON_VERSION})
+
+if(${BASIS_PYTHON_VERSION})
+    include(Uv)
+    # store the lock file in source, rather than ephemerally
+    uv_initialize(UV_LOCK_FILE "uv.lock" INSTALL_DIR /opt/basis/venv)
+endif()
+
+
+
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
 # Set variables based on options

@@ -17,4 +17,6 @@ if(${BASIS_ENABLE_ROS})
 
     install(TARGETS python_shim DESTINATION unit/)
 
+    uv_add_pyproject(py/pyproject.toml)
+
 endif()

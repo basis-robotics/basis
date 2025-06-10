@@ -141,6 +141,11 @@ RUN if [  -n "$(lsb_release -d | grep Ubuntu)" ]; then \
         && pip -q install jsonschema pyyaml jinja2; \
     fi
 
+# TODO: migrate to uv
+ENV BASIS_PYTHON_VERSION=3.12
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN uv python install ${BASIS_PYTHON_VERSION}
+
 USER basis
 
 RUN echo "source /basis/bash/source_env.sh" >> /home/basis/.bashrc
