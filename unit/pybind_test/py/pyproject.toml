@@ -1,0 +1,12 @@
+[project]
+name = "basis-unit-pybind-test"
+version = "0.1.0"
+dependencies = ["numpy"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["basis.unit.pybind_test"]
+package-dir = { "basis.unit.pybind_test" = "src" }
