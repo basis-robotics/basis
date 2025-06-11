@@ -7,7 +7,7 @@ if(${BASIS_ENABLE_ROS} AND ${BASIS_ENABLE_TESTING})
     generate_unit(test_unit)
 
     # TODO: query the yaml for the types
-    target_link_libraries(unit_test_unit basis::plugins::serialization::rosmsg rostime)
+    target_link_libraries(unit_test_unit PUBLIC basis::plugins::serialization::rosmsg rostime)
 
     add_subdirectory(test)
 endif()

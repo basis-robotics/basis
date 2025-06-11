@@ -49,7 +49,7 @@ function(generate_unit UNIT_NAME)
         )
 
     target_include_directories(${TARGET_NAME} PUBLIC ${GENERATED_DIR} include)
-    target_link_libraries(${TARGET_NAME} basis::unit basis::synchronizers ${PARSED_ARGS_DEPENDS})
+    target_link_libraries(${TARGET_NAME} PUBLIC basis::unit basis::synchronizers ${PARSED_ARGS_DEPENDS})
     set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${UNIT_NAME}.unit")
     set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "")
 
@@ -58,7 +58,7 @@ function(generate_unit UNIT_NAME)
     add_executable(${TARGET_NAME}_bin 
         ${GENERATED_DIR}/unit/${UNIT_NAME}/dummy.cpp
     )
-    target_link_libraries(${TARGET_NAME}_bin ${TARGET_NAME} basis::unit::main)
+    target_link_libraries(${TARGET_NAME}_bin PUBLIC ${TARGET_NAME} basis::unit::main)
     set_target_properties(${TARGET_NAME}_bin PROPERTIES OUTPUT_NAME ${UNIT_NAME})
 
     add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})
