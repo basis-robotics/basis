@@ -1,3 +1,5 @@
+if(${BASIS_PYTHON_VERSION})
+
 if(${BASIS_ENABLE_ROS})
     include(Unit)
     
@@ -7,7 +9,7 @@ if(${BASIS_ENABLE_ROS})
 
     target_link_libraries(unit_pybind_test basis::plugins::serialization::rosmsg rostime)
 
-    find_package(Python REQUIRED COMPONENTS Development Interpreter)
+    find_package(Python ${BASIS_PYTHON_VERSION} REQUIRED COMPONENTS Development Interpreter)
 
     add_library(python_shim src/python_shim.c)
     target_include_directories(python_shim PUBLIC include)
@@ -16,7 +18,8 @@ if(${BASIS_ENABLE_ROS})
     target_include_directories(unit_pybind_test PUBLIC ${Python_INCLUDE_DIRS})
 
     install(TARGETS python_shim DESTINATION unit/)
+        uv_add_pyproject(py/pyproject.toml)
 
-    uv_add_pyproject(py/pyproject.toml)
+endif()
 
 endif()

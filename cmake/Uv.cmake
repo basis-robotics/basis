@@ -30,6 +30,9 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
             ${UV} python pin ${BASIS_PYTHON_VERSION}
             WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR})
+        
+        # Ensure we always ignore whatever the shell's virtual env is and use the env defined in cmake
+        set(ENV{VIRTUAL_ENV} ${CMAKE_BINARY_DIR}/.venv)
 
         # Allow the lock file to live in the 
         if(DEFINED arg_UV_LOCK_FILE)
@@ -74,10 +77,12 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
 
     # Define the finalization logic
     function(_uv_internal_finish)
+        # 
+
+
         set(OUTPUT ${CMAKE_BINARY_DIR}/pyproject.toml)
 
         file(WRITE ${OUTPUT} "")
-
         get_property(UV_PYTHON_TOMLS GLOBAL PROPERTY UV_PYTHON_TOMLS)
 
         set(UV_PROJECT_NAMES "")
