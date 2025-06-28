@@ -59,6 +59,12 @@ function(generate_unit UNIT_NAME)
         ${GENERATED_DIR}/unit/${UNIT_NAME}/dummy.cpp
     )
     target_link_libraries(${TARGET_NAME}_bin PUBLIC ${TARGET_NAME} basis::unit::main)
+    # Set this to specifically use RPATH over RUNPATH
+    # library search path is RPATH->LD_LOAD_LIBRARY->RUNPATH
+    # so in the case where we're running a binary out of the build dir
+    # we want to always use the shared object we linked against rather than the one in
+    # the global install dir
+    target_link_options(${TARGET_NAME}_bin PUBLIC "-Wl,--disable-new-dtags")
     set_target_properties(${TARGET_NAME}_bin PROPERTIES OUTPUT_NAME ${UNIT_NAME})
 
     add_library("unit::${UNIT_NAME}" ALIAS ${TARGET_NAME})

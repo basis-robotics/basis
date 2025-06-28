@@ -1,44 +1,87 @@
 #include "pybind_test.h"
+#include "basis/core/logging/macros.h"
 
-
+#include <dlfcn.h>
+#include <filesystem>
+#include <stdexcept>
 
 using namespace unit::pybind_test;
+
+std::filesystem::path get_current_so_path() {
+  Dl_info info;
+  if (dladdr((const void *)&get_current_so_path, &info) && info.dli_fname) {
+    return std::string(info.dli_fname);
+  }
+  return {};
+}
 
 pybind_test::pybind_test(const Args &args,
                          const std::optional<std::string_view> &name_override)
     : unit::pybind_test::Base(args, name_override), pub(args.pub) {
-  
-   const char* venv = "/opt/basis/.venv";
 
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
+  const std::filesystem::path so_path = get_current_so_path();
+  BASIS_LOG_INFO("Current so path: {}", so_path.string());
 
-    // TODO: just use isolated=1?
-    config.use_environment = 0;  // Ignore PYTHONPATH etc.
-    config.user_site_directory = 0;
-    // TODO: this isn't needed is it?
-    // TODO: get the proper python location
-    config.home = Py_DecodeLocale("/opt/basis/cache/uv/python/cpython-3.12.10-linux-aarch64-gnu/bin", NULL);
-    config.prefix = Py_DecodeLocale(venv, NULL);
-    config.exec_prefix = Py_DecodeLocale(venv, NULL);
-    config.install_signal_handlers = 0;
-    
+  std::filesystem::path search_dir = so_path;
+  std::filesystem::path venv_dir;
+  while (true) {
+    search_dir = search_dir.parent_path();
 
-    // "/opt/basis/cache/uv/python/cpython-3.12.10-linux-aarch64-gnu/lib/python3.12" 
-    // "/opt/basis/cache/uv/python/cpython-3.12.10-linux-aarch64-gnu/lib/python3.12/lib-dynload"
-    // "/opt/basis/.venv/lib/python3.12/site-packages"
-  PyWideStringList_Append(&config.module_search_paths, Py_DecodeLocale("/opt/basis/cache/uv/python/cpython-3.12.10-linux-aarch64-gnu/lib/python3.12", NULL));
-  PyWideStringList_Append(&config.module_search_paths, Py_DecodeLocale("/opt/basis/cache/uv/python/cpython-3.12.10-linux-aarch64-gnu/lib/python3.1/lib-dynload", NULL));
+    venv_dir = search_dir / ".venv";
+    if (std::filesystem::is_directory(venv_dir)) {
+      break;
+    }
+    BASIS_LOG_INFO("search dir path: {}", search_dir.string());
+    if (search_dir == search_dir.root_path()) {
+      // TODO: BASIS_FATAL?
+      throw std::runtime_error("couldn't find .venv");
+    }
+  }
+  BASIS_LOG_INFO("venv dir path: {}", venv_dir.string());
+  const std::filesystem::path python_link = venv_dir / "bin" / "python";
+  const std::filesystem::path python_canonical =
+      std::filesystem::canonical(python_link);
+  const std::string python_binary_name = python_canonical.filename();
+  BASIS_LOG_INFO("python name {}", python_binary_name);
+  std::cout << python_canonical << " " << python_canonical.parent_path()
+            << "\n";
 
- PyWideStringList_Append(&config.module_search_paths, Py_DecodeLocale("/opt/basis/.venv/lib/python3.12/site-packages", NULL));
- config.module_search_paths_set = 1;  // <== prevents overwrite
+  const std::filesystem::path python_lib_dir =
+      python_canonical.parent_path().parent_path() / "lib";
+  const std::filesystem::path python_so_path =
+      python_lib_dir / ("lib" + python_binary_name + ".so");
 
-//Py_SetPythonHome(Py_DecodeLocale("/opt/basis/.venv", nullptr));
+  BASIS_LOG_INFO("python lib path {}", python_so_path.string());
+  dlopen(python_so_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
 
-std::cout << "initializing" << std::endl;
+  PyConfig config;
+  PyConfig_InitPythonConfig(&config);
+
+  // TODO: just use isolated=1?
+  config.use_environment = 0; // Ignore PYTHONPATH etc.
+  config.user_site_directory = 0;
+
+  config.home = Py_DecodeLocale(python_canonical.parent_path().c_str(), NULL);
+  config.prefix = Py_DecodeLocale(venv_dir.c_str(), NULL);
+  config.exec_prefix = Py_DecodeLocale(venv_dir.c_str(), NULL);
+  config.install_signal_handlers = 0;
+
+  PyWideStringList_Append(
+      &config.module_search_paths,
+      Py_DecodeLocale((python_lib_dir / python_binary_name).c_str(), NULL));
+  PyWideStringList_Append(
+      &config.module_search_paths,
+      Py_DecodeLocale(
+          (python_lib_dir / python_binary_name / "lib-dynload").c_str(), NULL));
+
+  PyWideStringList_Append(
+      &config.module_search_paths,
+      Py_DecodeLocale(
+          (venv_dir / "lib" / python_binary_name / "site-packages").c_str(),
+          NULL));
+  config.module_search_paths_set = 1; // <== prevents overwrite
+
   Py_InitializeFromConfig(&config);
-  std::cout << "blah blash" << std::endl;
-
 
   PyRun_SimpleStringFlags("print('Running on main thread')", NULL);
 
@@ -47,7 +90,6 @@ std::cout << "initializing" << std::endl;
   std::cout << "saved!" << std::endl;
   std::thread t = std::thread([this]() {
     PyGILState_STATE g = PyGILState_Ensure();
-
 
     PyRun_SimpleString("print('Kicking off code on a thread!')");
 

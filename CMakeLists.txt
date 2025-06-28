@@ -16,12 +16,9 @@ option(BASIS_ENABLE_TESTING "Build tests" ${PROJECT_IS_TOP_LEVEL})
 option(BASIS_PYTHON_VERSION "Python version to use, defaults to none" $ENV{BASIS_PYTHON_VERSION})
 
 if(${BASIS_PYTHON_VERSION})
-    include(Uv)
-    # store the lock file in source, rather than ephemerally
-    uv_initialize(UV_LOCK_FILE "uv.lock" INSTALL_DIR /opt/basis/venv)
+    include(BasisUv)
+    basis_uv_initialize()
 endif()
-
-
 
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
