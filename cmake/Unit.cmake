@@ -18,7 +18,7 @@ function(generate_unit UNIT_NAME)
 
     add_custom_command(
         COMMAND 
-            ${BASIS_SOURCE_ROOT}/python/unit/generate_unit.py 
+            ${UV} run ${BASIS_SOURCE_ROOT}/python/unit/generate_unit.py 
                 ${UNIT_FILE_NAME}
                 ${CMAKE_CURRENT_BINARY_DIR}/generated
                 ${CMAKE_CURRENT_SOURCE_DIR}

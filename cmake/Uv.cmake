@@ -25,6 +25,7 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
 
         execute_process(
             COMMAND
+            # create the venv - would normally be done by uv sync but we also want to install the python version
             ${UV} venv --python ${arg_UV_PYTHON_VERSION} --allow-existing
             # COMMAND
             # ${UV} python pin ${arg_UV_PYTHON_VERSION}
@@ -32,6 +33,7 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
             ${CMAKE_BINARY_DIR})
 
         # Ensure we always ignore whatever the shell's virtual env is and use the env defined in cmake
+        # TODO: should this be at the top of the file?
         set(ENV{VIRTUAL_ENV} ${CMAKE_BINARY_DIR}/.venv)
 
         if(NOT DEFINED arg_UV_PROJECT_VERSION)
@@ -57,6 +59,9 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
         define_property(GLOBAL PROPERTY UV_PYTHON_VERSION
             BRIEF_DOCS "Collected pyproject.toml files"
             FULL_DOCS "Accumulated pyproject.toml files from all subprojects")
+        # TODO: check if this has changed and warn otherwise
+        # Switching pythons doesn't currently work if you use FindPython anywhere
+        # It appears to find the binary, but headers and shared objects aren't picked up
         set_property(GLOBAL PROPERTY UV_PYTHON_VERSION ${arg_UV_PYTHON_VERSION})
 
         define_property(GLOBAL PROPERTY UV_PYTHON_TOMLS
@@ -103,22 +108,24 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
         endforeach()
 
         # TODO: funnily enough, we could probably use jinja to generate this
+        # TODO: uv init can do most of this
         file(APPEND ${OUTPUT} "[project]\n")
         file(APPEND ${OUTPUT} "name = \"${UV_PROJECT_NAME}\"\n")
-        file(APPEND ${OUTPUT} "requires-python = \"~=${UV_PYTHON_VERSION}\"\n")
+        file(APPEND ${OUTPUT} "requires-python = \">=${UV_PYTHON_VERSION}\"\n")
         file(APPEND ${OUTPUT} "version = \"${UV_PROJECT_VERSION}\"\n")
         file(APPEND ${OUTPUT} "dependencies = [\n")
-
         foreach(NAME IN LISTS UV_PROJECT_NAMES)
             file(APPEND ${OUTPUT} "  \"${NAME}\",\n")
         endforeach()
-
 
         file(APPEND ${OUTPUT} "]\n")
         file(APPEND ${OUTPUT} "\n")
 
         file(APPEND ${OUTPUT} "[build-system]\n")
-        file(APPEND ${OUTPUT} "requires = [\"setuptools\"]\n")
+        file(APPEND ${OUTPUT} "requires = [\n")
+        file(APPEND ${OUTPUT} "  \"setuptools\",\n")
+        file(APPEND ${OUTPUT} "]\n")
+
         file(APPEND ${OUTPUT} "build-backend = \"setuptools.build_meta\"\n")
         file(APPEND ${OUTPUT} "\n")
 
@@ -140,6 +147,12 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
             file(APPEND ${OUTPUT} "  \"${PROJECT_DIR}\",\n")
         endforeach()
         file(APPEND ${OUTPUT} "]")
+
+
+        # TODO
+        execute_process(COMMAND ${UV} add --dev pyyaml COMMAND_ERROR_IS_FATAL ANY)
+        execute_process(COMMAND ${UV} add --dev jsonschema COMMAND_ERROR_IS_FATAL ANY)
+        execute_process(COMMAND ${UV} add --dev jinja2 COMMAND_ERROR_IS_FATAL ANY)
 
         # todo: requires-python
 
