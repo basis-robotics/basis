@@ -2,14 +2,17 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
     set(_UV_PYPROJECT_INCLUDED TRUE)
     find_program(UV uv REQUIRED)
 
-    # TODO: allow passing in extras/groups to venv 
+    # TODO: allow passing in extras/groups to venv
     # TODO: ability to split off a chunk of the project into a separate pyproject
     # find_program(UVX uvx REQUIRED)
+    # TODO: allow adding build only deps
 
     function(uv_initialize)
         set(options)
         set(oneValueArgs UV_LOCK_FILE UV_PYTHON_VERSION UV_PROJECT_NAME)
         set(multiValueArgs)
+        # TODO: can we use "" instead of arg, and have it work magically with globals as well?
+        # do we want that?
         cmake_parse_arguments(PARSE_ARGV 0 arg
             "${options}" "${oneValueArgs}" "${multiValueArgs}"
         )
@@ -19,15 +22,15 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
         endif()
         set(UV_INITIALIZED TRUE)
 
-        
+
         execute_process(
             COMMAND
             ${UV} venv --python ${arg_UV_PYTHON_VERSION} --allow-existing
-            COMMAND
-            ${UV} python pin ${arg_UV_PYTHON_VERSION}
+            # COMMAND
+            # ${UV} python pin ${arg_UV_PYTHON_VERSION}
             WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR})
-        
+
         # Ensure we always ignore whatever the shell's virtual env is and use the env defined in cmake
         set(ENV{VIRTUAL_ENV} ${CMAKE_BINARY_DIR}/.venv)
 
@@ -42,7 +45,7 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
             cmake_path(ABSOLUTE_PATH arg_UV_LOCK_FILE)
             # Then relative to binary dir
             cmake_path(RELATIVE_PATH arg_UV_LOCK_FILE BASE_DIRECTORY ${CMAKE_BINARY_DIR})
-            # 
+            #
             message("new uv path ${arg_UV_LOCK_FILE}")
             set(UV_ACTUAL_LOCK_FILE ${CMAKE_BINARY_DIR}/uv.lock)
 
@@ -51,6 +54,11 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
         endif()
 
         # Define and initialize global property once
+        define_property(GLOBAL PROPERTY UV_PYTHON_VERSION
+            BRIEF_DOCS "Collected pyproject.toml files"
+            FULL_DOCS "Accumulated pyproject.toml files from all subprojects")
+        set_property(GLOBAL PROPERTY UV_PYTHON_VERSION ${arg_UV_PYTHON_VERSION})
+
         define_property(GLOBAL PROPERTY UV_PYTHON_TOMLS
             BRIEF_DOCS "Collected pyproject.toml files"
             FULL_DOCS "Accumulated pyproject.toml files from all subprojects")
@@ -97,7 +105,7 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
         # TODO: funnily enough, we could probably use jinja to generate this
         file(APPEND ${OUTPUT} "[project]\n")
         file(APPEND ${OUTPUT} "name = \"${UV_PROJECT_NAME}\"\n")
-        # TODO: pass this in
+        file(APPEND ${OUTPUT} "requires-python = \"~=${UV_PYTHON_VERSION}\"\n")
         file(APPEND ${OUTPUT} "version = \"${UV_PROJECT_VERSION}\"\n")
         file(APPEND ${OUTPUT} "dependencies = [\n")
 
@@ -135,23 +143,24 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
 
         # todo: requires-python
 
-        set(INSTALL_EDITABLE_COMMAND ${UV} pip install -e . -r "${OUTPUT}" )
-        list(JOIN INSTALL_EDITABLE_COMMAND " " INSTALL_COMMAND_STR)
-        message(${INSTALL_COMMAND_STR})
-        
-        add_custom_target(uv_pip_install ALL COMMAND ${UV} sync)
+
+        # set(INSTALL_EDITABLE_COMMAND ${UV} pip install -e . -r "${OUTPUT}" )
+        # list(JOIN INSTALL_EDITABLE_COMMAND " " INSTALL_COMMAND_STR)
+        # message(${INSTALL_COMMAND_STR})
+
+        add_custom_target(uv_sync ALL COMMAND ${UV} sync --no-progress)
 
         # We could depend on all pyproject tomls this way, but it wouldn't catch
         # references of references. Instead, just invoke uv every time
-        # add_custom_target(uv_pip_install ALL
+        # add_custom_target(uv_sync ALL
         #     DEPENDS ${CMAKE_BINARY_DIR}/.venv/some_marker)
         # add_custom_command(
         #     OUTPUT ${CMAKE_BINARY_DIR}/.venv/some_marker
         #     DEPENDS ${UV_PYTHON_TOMLS}
-        #     COMMAND ${INSTALL_EDITABLE_COMMAND}
+        #     COMMAND ${UV} sync --no-progress
         #     COMMAND touch ${CMAKE_BINARY_DIR}/.venv/some_marker)
 
-    
+
 #        execute_process(COMMAND ${INSTALL_EDITABLE_COMMAND} COMMAND_ERROR_IS_FATAL ANY)
 
         install(CODE "execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cmake/install_uv.sh COMMAND_ERROR_IS_FATAL ANY)")
@@ -164,14 +173,14 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
 
         # uv export --frozen --no-emit-workspace
 
-        
+
         # uv export --no-emit-workspace --no-hashes -o requirements-frozen.txt
-        # uv build        
+        # uv build
         # make other env
         # https://github.com/astral-sh/uv/issues/8729
-        # pip install -c requirements-frozen.txt dist/foo-0.1.0-py3-none-any.whl 
+        # pip install -c requirements-frozen.txt dist/foo-0.1.0-py3-none-any.whl
 
-        
+
     endfunction()
 
 
