@@ -1,3 +1,9 @@
+include_guard(GLOBAL)
+
+uv_add_dev_dependency("jinja2")
+uv_add_dev_dependency("jsonschema")
+uv_add_dev_dependency("pyyaml")
+
 function(generate_unit UNIT_NAME)
     set(TARGET_NAME "unit_${UNIT_NAME}")
 
