@@ -8,6 +8,12 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
     # TODO: allow adding build only deps
 
     function(uv_initialize)
+        # TODO: 
+        #   CREATE_VENV
+        #   VENV_DIRECTORY
+        #   MANAGE_PYPROJECT 
+        #   PYPROJECT_DIRECTORY
+        #   
         set(options)
         set(oneValueArgs UV_LOCK_FILE UV_PYTHON_VERSION UV_PROJECT_NAME)
         set(multiValueArgs)
@@ -40,6 +46,7 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
             set(arg_UV_PROJECT_VERSION 0.0.0)
         endif()
 
+        # TODO: move pyproject
         # Allow the lock file to live in the repo rather than in build/
         if(DEFINED arg_UV_LOCK_FILE)
             # ${CMAKE_CURRENT_SOURCE_DIR}/${arg_UV_LOCK_FILE}
@@ -107,6 +114,22 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
             list(APPEND UV_PROJECT_NAMES "${THIS_PROJECT_NAME}")
         endforeach()
 
+        # TODO: there's no way to add workspace members programatically
+        # https://github.com/astral-sh/uv/issues/14464
+        # execute_process(COMMAND ${UV} init
+        #                     --name ${UV_PROJECT_NAME}
+        #                     --bare
+        #                     --no-readme
+        #                     --no-description
+        #                     --lib
+        #                     --author-from none
+        #                     --python ${UV_PYTHON_VERSION}
+        #                     --build-backend uv
+        #                 COMMAND_ERROR_IS_FATAL ANY)
+        # execute_process(COMMAND ${UV} version ${UV_PROJECT_VERSION}
+        #                 COMMAND_ERROR_IS_FATAL ANY)
+
+
         # TODO: funnily enough, we could probably use jinja to generate this
         # TODO: uv init can do most of this
         file(APPEND ${OUTPUT} "[project]\n")
@@ -120,7 +143,7 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
 
         file(APPEND ${OUTPUT} "]\n")
         file(APPEND ${OUTPUT} "\n")
-
+        # TODO: uv backend
         file(APPEND ${OUTPUT} "[build-system]\n")
         file(APPEND ${OUTPUT} "requires = [\n")
         file(APPEND ${OUTPUT} "  \"setuptools\",\n")
@@ -149,12 +172,10 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
         file(APPEND ${OUTPUT} "]")
 
 
-        # TODO
+        # TODO pass in
         execute_process(COMMAND ${UV} add --dev pyyaml COMMAND_ERROR_IS_FATAL ANY)
         execute_process(COMMAND ${UV} add --dev jsonschema COMMAND_ERROR_IS_FATAL ANY)
         execute_process(COMMAND ${UV} add --dev jinja2 COMMAND_ERROR_IS_FATAL ANY)
-
-        # todo: requires-python
 
 
         # set(INSTALL_EDITABLE_COMMAND ${UV} pip install -e . -r "${OUTPUT}" )
@@ -162,6 +183,8 @@ if(NOT DEFINED _UV_PYPROJECT_INCLUDED)
         # message(${INSTALL_COMMAND_STR})
 
         add_custom_target(uv_sync ALL COMMAND ${UV} sync --no-progress)
+
+        # todo: run target
 
         # We could depend on all pyproject tomls this way, but it wouldn't catch
         # references of references. Instead, just invoke uv every time
