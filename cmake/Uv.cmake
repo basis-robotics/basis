@@ -7,10 +7,7 @@ find_program(UV uv REQUIRED)
 
 function(uv_initialize)
     # TODO: 
-    #   CREATE_INSTALLATION_VENV
-    #   CREATE_WORKSPACE_VENV
     #   WORKSPACE_VENV_DIRECTORY
-    #   MANAGE_PYPROJECT 
     
     set(POSSIBLE_ARGS
         # Remove me
@@ -23,6 +20,8 @@ function(uv_initialize)
         "UNMANAGED_PYPROJECT_FILE"
         # Name of the generated workspace package
         "WORKSPACE_PACKAGE_NAME"
+
+        "WORKSPACE_ENVIRONMENT"
         # venv directory to install into (if empty, won't have an install step)
         "INSTALLATION_VENV"
         # Cache directory to use for venv
@@ -57,17 +56,19 @@ function(uv_initialize)
         set(UV_USING_MANAGED_PYPROJECT ON)
         # TODO: use REAL_PATH else
     endif()
+    file(REAL_PATH ${UV_PYPROJECT_FILE} UV_PYPROJECT_FILE BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
 
     # Ensure we always ignore whatever the shell's virtual env is and use the env defined in cmake
     # TODO: should this be at the top of the file?
-    file(REAL_PATH .venv WORKSPACE_VENV_DIRECTORY BASE_DIRECTORY "${CMAKE_BINARY_DIRECTORY}")
-    
+    file(REAL_PATH ./.venv WORKSPACE_VENV_DIRECTORY BASE_DIRECTORY "${CMAKE_BINARY_DIRECTORY}")
+
     set(ENV{VIRTUAL_ENV} ${WORKSPACE_VENV_DIRECTORY})
     set(ENV{UV_PROJECT_ENVIRONMENT} ${WORKSPACE_VENV_DIRECTORY})
 
     add_custom_target(uv_sync ALL COMMAND
-        ${CMAKE_COMMAND} -E env WORKSPACE_VENV_DIRECTORY=${WORKSPACE_VENV_DIRECTORY} 
-        ${UV} sync --no-progress --project ${CMAKE_CURRENT_SOURCE_DIR}/${UV_PYPROJECT_FILE})
+        ${CMAKE_COMMAND} -E env UV_PROJECT_ENVIRONMENT=${WORKSPACE_VENV_DIRECTORY} 
+        ${UV} sync --no-progress --project ${UV_PYPROJECT_FILE})
 
     execute_process(
         COMMAND
@@ -76,9 +77,6 @@ function(uv_initialize)
         WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR}
         COMMAND_ERROR_IS_FATAL ANY)
-
-
-    
 
     if(NOT DEFINED UV_PROJECT_VERSION)
         set(UV_PROJECT_VERSION 0.0.0)
@@ -142,9 +140,7 @@ function(uv_add_dev_dependency DEP)
 endfunction()
 
 # Define the finalization logic
-function(_uv_internal_finish UV_PYTHON_VERSION UV_WORKSPACE_PACKAGE_NAME UV_PROJECT_VERSION UV_PYPROJECT_FILE UV_USING_MANAGED_PYPROJECT)
-    file(REAL_PATH ${UV_PYPROJECT_FILE} UV_PYPROJECT_FILE BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-    
+function(_uv_internal_finish UV_PYTHON_VERSION UV_WORKSPACE_PACKAGE_NAME UV_PROJECT_VERSION UV_PYPROJECT_FILE UV_USING_MANAGED_PYPROJECT)    
     if(UV_USING_MANAGED_PYPROJECT)
         file(WRITE ${UV_PYPROJECT_FILE} "")
         get_property(UV_PYTHON_TOMLS GLOBAL PROPERTY UV_PYTHON_TOMLS)

@@ -23,7 +23,7 @@ execute_process(
     
 execute_process(
     COMMAND
-        ${UV} build --wheel --all-packages  --project ${UV_PYPROJECT_FILE}
+        ${UV} build --wheel --all-packages  --project ${UV_PYPROJECT_FILE} --out-dir=dist
     COMMAND_ERROR_IS_FATAL ANY)
 
 if(UV_INSTALLATION_VENV_CACHE)
@@ -42,7 +42,7 @@ execute_process(
     COMMAND_ERROR_IS_FATAL ANY)
 set(ENV{VIRTUAL_ENV} ${UV_INSTALLATION_VENV})
 
-# TODO: glob dist/*.whl
+
 file(GLOB WHEELS dist/*.whl)
 
 execute_process(
