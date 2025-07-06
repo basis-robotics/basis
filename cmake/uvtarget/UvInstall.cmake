@@ -1,8 +1,15 @@
+# Copyright (c) 2025 Kyle Franz / Basis Robotics
+# This work is licensed under the terms of the MIT license.  
+
+# uvtarget is a helpful utility to manage Python in CMake, powered by uv
+# For more details, see the README
+
 function(require VAR)
     if(NOT DEFINED ${VAR})
         message(FATAL_ERROR "${VAR} required")
     endif()
 endfunction()
+
 # This needs passed in due to `sudo` possibly not having it in $PATH
 require(UV)
 require(UV_PROJECT_VERSION)
@@ -41,7 +48,6 @@ execute_process(
         ${UV} venv ${UV_INSTALLATION_VENV} --python ${UV_PYTHON_VERSION}
     COMMAND_ERROR_IS_FATAL ANY)
 set(ENV{VIRTUAL_ENV} ${UV_INSTALLATION_VENV})
-
 
 file(GLOB WHEELS dist/*.whl)
 

@@ -15,9 +15,11 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 namespace = true
+
 [tool.uv.sources]
 test-uv = { workspace = true }
 basis-unit-pybind-test = { workspace = true }
+
 [tool.uv.workspace]
 members = [
   "/basis/python/test_uv",
