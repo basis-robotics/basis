@@ -5,8 +5,11 @@ function(basis_uv_initialize)
 
     uv_initialize(UV_LOCK_FILE "uv.lock"
         INSTALL_DIR /opt/basis/venv
-        UV_PYTHON_VERSION ${BASIS_PYTHON_VERSION}
-        UV_PROJECT_NAME basis_cmake)
+        PYTHON_VERSION ${BASIS_PYTHON_VERSION}
+        PROJECT_NAME basis_cmake
+        INSTALLATION_VENV /opt/basis/.venv
+        INSTALLATION_VENV_CACHE /opt/basis/cache
+        )
 
 
     # TODO: uv pip install pyyaml jsonschema jinja2

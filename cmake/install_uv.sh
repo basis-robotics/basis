@@ -10,8 +10,6 @@ PROJECT_NAME="basis_cmake"
 # UV_PROJECT= ?
 # Don't allow installing if our lockfile isn't up to date
 uv lock --check 
-# Probably not needed
-# uv lock --locked
 
 # TODO: hashes? no hashes?
 uv export --frozen --no-emit-workspace --no-hashes -o dist/requirements.txt

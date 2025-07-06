@@ -20,6 +20,8 @@ if(${BASIS_PYTHON_VERSION})
     basis_uv_initialize()
 endif()
 
+uv_add_pyproject(python/test_uv/pyproject.toml)
+
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
 # Set variables based on options
