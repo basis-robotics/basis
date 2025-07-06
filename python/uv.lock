@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 members = [
     "basis-cmake",
     "basis-unit-pybind-test",
+    "test-uv",
 ]
 
 [[package]]
@@ -23,6 +24,7 @@ version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "basis-unit-pybind-test" },
+    { name = "test-uv" },
 ]
 
 [package.dev-dependencies]
@@ -33,7 +35,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "basis-unit-pybind-test", editable = "../unit/pybind_test/py" }]
+requires-dist = [
+    { name = "basis-unit-pybind-test", editable = "../unit/pybind_test/py" },
+    { name = "test-uv", editable = "test_uv" },
+]
 
 [package.metadata.requires-dev]
 dev = [
@@ -286,6 +291,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6b/c5/347c056a90dc8dd9bc240a08c527315008e1b5042e7a4cf4ac027be9d38a/rpds_py-0.26.0-cp314-cp314t-win32.whl", hash = "sha256:7bdb17009696214c3b66bb3590c6d62e14ac5935e53e929bcdbc5a495987a84f", size = 219027, upload-time = "2025-07-01T15:55:53.874Z" },
     { url = "https://files.pythonhosted.org/packages/75/04/5302cea1aa26d886d34cadbf2dc77d90d7737e576c0065f357b96dc7a1a6/rpds_py-0.26.0-cp314-cp314t-win_amd64.whl", hash = "sha256:f14440b9573a6f76b4ee4770c13f0b5921f71dde3b6fcb8dabbefd13b7fe05d7", size = 232821, upload-time = "2025-07-01T15:55:55.167Z" },
 ]
+
+[[package]]
+name = "test-uv"
+version = "0.1.0"
+source = { editable = "test_uv" }
 
 [[package]]
 name = "typing-extensions"

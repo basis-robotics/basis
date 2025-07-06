@@ -5,24 +5,25 @@ function(require VAR)
 endfunction()
 # This needs passed in due to `sudo` possibly not having it in $PATH
 require(UV)
-require(UV_PROJECT_NAME)
 require(UV_PROJECT_VERSION)
 require(UV_PYTHON_VERSION)
 require(UV_INSTALLATION_VENV)
 require(UV_INSTALLATION_VENV_CACHE)
+require(UV_PYPROJECT_FILE)
+
 execute_process(
     COMMAND
-        ${UV} lock --check
+        ${UV} lock --check --project ${UV_PYPROJECT_FILE}
     COMMAND_ERROR_IS_FATAL ANY)
 
 execute_process(
     COMMAND
-        ${UV} export --frozen --no-emit-workspace --no-hashes -o dist/requirements.txt
+        ${UV} export --frozen --no-emit-workspace --no-hashes -o dist/requirements.txt  --project ${UV_PYPROJECT_FILE}
     COMMAND_ERROR_IS_FATAL ANY)
     
 execute_process(
     COMMAND
-        ${UV} build --wheel --all-packages
+        ${UV} build --wheel --all-packages  --project ${UV_PYPROJECT_FILE}
     COMMAND_ERROR_IS_FATAL ANY)
 
 if(UV_INSTALLATION_VENV_CACHE)

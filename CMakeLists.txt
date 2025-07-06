@@ -17,7 +17,7 @@ option(BASIS_PYTHON_VERSION "Python version to use, defaults to none" $ENV{BASIS
 
 if(${BASIS_PYTHON_VERSION})
     include(BasisUv)
-    basis_uv_initialize()
+    basis_uv_initialize(python/pyproject.toml)
 endif()
 
 uv_add_pyproject(python/test_uv/pyproject.toml)

@@ -1,0 +1,32 @@
+[project]
+name = "basis_cmake"
+requires-python = ">=3.12"
+version = "0.0.0"
+dependencies = [
+  "test-uv",
+  "basis-unit-pybind-test",
+]
+
+[build-system]
+requires = [
+  "uv_build>=0.7.19,<0.8.0",
+]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+namespace = true
+[tool.uv.sources]
+test-uv = { workspace = true }
+basis-unit-pybind-test = { workspace = true }
+[tool.uv.workspace]
+members = [
+  "/basis/python/test_uv",
+  "/basis/unit/pybind_test/py",
+]
+
+[dependency-groups]
+dev = [
+    "jinja2>=3.1.6",
+    "jsonschema>=4.24.0",
+    "pyyaml>=6.0.2",
+]
