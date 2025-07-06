@@ -8,5 +8,4 @@ function(basis_uv_initialize PYPROJECT_FILE)
         INSTALLATION_VENV /opt/basis/.venv
         INSTALLATION_VENV_CACHE /opt/basis/cache
         )
-
 endfunction()
